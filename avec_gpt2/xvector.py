@@ -2,6 +2,8 @@ import warnings
 from typing import List, Union, Optional, Tuple
 
 import torch
+import numpy as np
+import pandas as pd
 from jaxtyping import Float, Int
 import prettytable
 from ipywidgets import Output
@@ -74,6 +76,7 @@ def complete_prompt_with_x_vector(
         layer_num : int=6, 
         control_type : Optional[str] = None,
         random_seed : Optional[int] = None,
+        return_loss : bool = True,
         **sampling_kwargs):
     ''' Compare the model with and without hooks at layer_num, sampling completion_length additional tokens given initial prompt.
     The hooks are specified by a list of ((promptA, promptB), coefficient) tuples, which creates a net x-vector, or a 
@@ -82,6 +85,8 @@ def complete_prompt_with_x_vector(
 
     Returns a tuple of completions as Tensors of tokens, with control completion included if control_type is set.
     '''
+    if isinstance(prompt, str):
+        prompt = [prompt]
     target_tokens = model.to_tokens(prompt)
 
     assert recipe is None or x_vector is None, 'Only one of recipe, x_vector can be provided'
@@ -90,10 +95,6 @@ def complete_prompt_with_x_vector(
     # Set seeds if provided
     if random_seed is not None:
         torch.manual_seed(random_seed)
-
-    # Run the model normally
-    model.remove_all_hook_fns()
-    normal_completion = model.generate(target_tokens, max_new_tokens=completion_length, verbose=False, **sampling_kwargs)
 
     # Patch the model 
     act_name = utils.get_act_name("resid_pre", layer_num)
@@ -109,13 +110,33 @@ def complete_prompt_with_x_vector(
     if control_type == 'randn':
         warnings.warn('Control not supported yet')
 
+    # Run the model normally
+    model.remove_all_hook_fns()
+    normal_completion = model.generate(target_tokens, max_new_tokens=completion_length, verbose=False, **sampling_kwargs)
+    
+    # Put the completions into a DataFrame
+    results = pd.DataFrame({
+        'promt': prompt,
+        'normal_completion': [model.to_string(compl) for compl in normal_completion],
+        'patched_completion': [model.to_string(compl) for compl in patched_completion]
+    })
+
+    # Get the loss on the completions, if requested
+    if return_loss:
+        results['normal_loss'] = model(normal_completion, return_type="loss", 
+            loss_per_token=True).mean(axis=1).detach().cpu().numpy()
+        results['patched_loss'] = model(patched_completion, return_type="loss",
+            loss_per_token=True).mean(axis=1).detach().cpu().numpy()
+
     # Bold the prompt 
     # formatted_A, formatted_B = [f'\033[1m{prompt}\033[0m{model.to_string(completion[0, target_tokens.shape[1]:])}' 
     #                             for completion in (patched_completion, normal_completion)]
     # return formatted_A, formatted_B 
 
-    return [[model.to_string(completion) for completion in completions] 
-            for completions in zip(patched_completion, normal_completion)]
+    # return [[model.to_string(completion) for completion in completions] 
+    #         for completions in zip(patched_completion, normal_completion)]
+
+    return results
 
 
 def print_n_comparisons(num_comparisons : int = 5, **kwargs): # TODO batch? 
@@ -142,7 +163,7 @@ def print_n_comparisons(num_comparisons : int = 5, **kwargs): # TODO batch?
     prompts_list = [prompt]*num_comparisons
 
     # Get the completions
-    all_completions = complete_prompt_with_x_vector(prompt=prompts_list, **kwargs)
+    results = complete_prompt_with_x_vector(prompt=prompts_list, **kwargs)
 
     # Formatting function
     def apply_formatting(str_):
@@ -150,8 +171,9 @@ def print_n_comparisons(num_comparisons : int = 5, **kwargs): # TODO batch?
         return f'\033[1m{prompt}\033[0m{completion}'
     
     # Put into table
-    for idx in range(num_comparisons):
-        patch_str, normal_str = [apply_formatting(ss) for ss in all_completions[idx]]
+    for rr, row in results.iterrows():
+        patch_str = apply_formatting(row['patched_completion'])
+        normal_str = apply_formatting(row['normal_completion'])
         table.add_row([patch_str, normal_str])
 
     with output:
