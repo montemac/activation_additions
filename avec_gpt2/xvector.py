@@ -106,9 +106,17 @@ def complete_prompt_with_x_vector(
     # Run the patched model
     patched_completion = model.generate(target_tokens, max_new_tokens=completion_length, verbose=False, **sampling_kwargs)
 
+    # Set seeds again
+    if random_seed is not None:
+        torch.manual_seed(random_seed)
+
     # Run a control-patched model if desired
     if control_type == 'randn':
         warnings.warn('Control not supported yet')
+
+    # Set seeds again
+    if random_seed is not None:
+        torch.manual_seed(random_seed)
 
     # Run the model normally
     model.remove_all_hook_fns()
@@ -116,9 +124,9 @@ def complete_prompt_with_x_vector(
     
     # Put the completions into a DataFrame
     results = pd.DataFrame({
-        'promt': prompt,
-        'normal_completion': [model.to_string(compl) for compl in normal_completion],
-        'patched_completion': [model.to_string(compl) for compl in patched_completion]
+        'prompt': prompt,
+        'normal_completion': [model.to_string(compl[1:]) for compl in normal_completion],
+        'patched_completion': [model.to_string(compl[1:]) for compl in patched_completion]
     })
 
     # Get the loss on the completions, if requested

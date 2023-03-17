@@ -68,10 +68,10 @@ print("Model loss:", loss)
 # xvector.print_n_comparisons(num_comparisons=5, model=model, recipe=[(["Love", "Hate"], 2)], prompt='I hate you because', completion_length=50,
 #                     layer_num=6, temperature=1, freq_penalty=1, top_p=.3, random_seed=42)
 
-# results = xvector.complete_prompt_with_x_vector(model=model, recipe=[(["Love", "Hate"], 2)], prompt=['I hate you because']*50, completion_length=50,
-#                      layer_num=6, temperature=1, freq_penalty=1, top_p=.3)
+results = xvector.complete_prompt_with_x_vector(model=model, recipe=[(["Love", "Hate"], 2)], prompt=['I hate you because']*50, completion_length=50,
+                     layer_num=6, temperature=1, freq_penalty=1, top_p=.3)
+results.mean()
 
-xvector.print_n_comparisons(num_comparisons=5, model=model, recipe=[(("Want to stay alive", "Okay with dying"), 5)],
-                    prompt='Some people think that death is scary and should be avoided. I think that', completion_length=85,
-                    layer_num=15,  temperature=1, freq_penalty=1, top_p=.3, random_seed=42)
-                    
+# xvector.print_n_comparisons(num_comparisons=5, model=model, recipe=[(("Want to stay alive", "Okay with dying"), 5)],
+#                     prompt='Some people think that death is scary and should be avoided. I think that', completion_length=85,
+#                     layer_num=15,  temperature=1, freq_penalty=1, top_p=.3, random_seed=42)
