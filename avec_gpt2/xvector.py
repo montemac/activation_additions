@@ -13,8 +13,8 @@ from transformer_lens.hook_points import (
     HookPoint,
 )  # Hooking utilities
 
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
+def hello_test():
+    print('Hello!')
 
 def get_x_vector_all_layers(model, x_vector_defs : List[Tuple[Tuple[str, str], float]], act_name):
     '''Takes a list of x-vector definitions in the form (strA, strB, coeff) and makes 
@@ -29,9 +29,11 @@ def get_x_vector_all_layers(model, x_vector_defs : List[Tuple[Tuple[str, str], f
             SPACE_TOKEN = model.to_tokens(' ')[0, -1]
             len_diff = a_tokens.shape[-1] - b_tokens.shape[-1]
             if len_diff > 0: # Add to b_tokens
-                b_tokens = torch.tensor(b_tokens[0].tolist() + [SPACE_TOKEN] * abs(len_diff), dtype=torch.int64, device=device).unsqueeze(0)
+                b_tokens = torch.tensor(b_tokens[0].tolist() + [SPACE_TOKEN] * abs(len_diff), 
+                                        dtype=torch.int64, device=model.cfg.device).unsqueeze(0)
             else: 
-                a_tokens = torch.tensor(a_tokens[0].tolist() + [SPACE_TOKEN] * abs(len_diff), dtype=torch.int64, device=device).unsqueeze(0)
+                a_tokens = torch.tensor(a_tokens[0].tolist() + [SPACE_TOKEN] * abs(len_diff), 
+                                        dtype=torch.int64, device=model.cfg.device).unsqueeze(0)
         assert a_tokens.shape == b_tokens.shape, f"Need same shape to compute an X-vector; instead, we have strA shape of {a_tokens.shape} and baseline shape of {b_tokens.shape}"
 
         # Run forward passes
