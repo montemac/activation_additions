@@ -1,29 +1,32 @@
 """ Utilities for hooking into a model and modifying activations. """
 
-from typing import List, Callable
+from typing import List, Callable, Optional
 from jaxtyping import Float
 import funcy as fn
-
 import torch
+
+from transformer_lens import HookedTransformer
 from transformer_lens.utils import get_act_name
-from transformer_lens.hook_points import HookedModel
+from transformer_lens.hook_points import HookPoint
 from algebraic_value_editing.rich_prompts import RichPrompt
 
 
 def get_prompt_activations(
-    model: HookedModel, rich_prompt: RichPrompt
+    model: HookedTransformer, rich_prompt: RichPrompt
 ) -> Float[torch.Tensor, "batch pos d_model"]:
     """Takes a RichPrompt and returns the rescaled activations for that prompt, for the appropriate act_name. Rescaling is done by running the model forward with the prompt and then multiplying the activations by the coefficient rich_prompt.coeff.
     """
     # Get tokens for prompt
     tokens = model.to_tokens(rich_prompt.prompt)
+
     # Run forward pass
-    cache = model.run_with_cache(tokens, names_filter=lambda ss: ss == rich_prompt.act_name)[1]
+    _, cache = model.run_with_cache(tokens, names_filter=lambda ss: ss == rich_prompt.act_name)
+
     # Return cached activations times coefficient
     return rich_prompt.coeff * cache[rich_prompt.act_name]
 
 
-def get_prompt_hook_fn(model: HookedModel, rich_prompt: RichPrompt) -> Callable:
+def get_prompt_hook_fn(model: HookedTransformer, rich_prompt: RichPrompt) -> Callable:
     """Takes a RichPrompt and returns a hook function that adds the cached activations for that prompt to the existing activations at the hook point.
     """
     # Get cached activations
@@ -31,7 +34,8 @@ def get_prompt_hook_fn(model: HookedModel, rich_prompt: RichPrompt) -> Callable:
 
     # Create and return the hook function
     def prompt_hook(
-        resid_pre: Float[torch.Tensor, "batch pos d_model"]
+        resid_pre: Float[torch.Tensor, "batch pos d_model"],
+        hook: Optional[HookPoint] = None,  # pylint: disable=unused-argument
     ) -> Float[torch.Tensor, "batch pos d_model"]:
         """Add cached_activations to the output.
 
@@ -53,12 +57,12 @@ def get_prompt_hook_fn(model: HookedModel, rich_prompt: RichPrompt) -> Callable:
     return prompt_hook
 
 
-def get_prompt_hook_fns(model: HookedModel, rich_prompts: List[RichPrompt]):
+def get_prompt_hook_fns(model: HookedTransformer, rich_prompts: List[RichPrompt]):
     """Takes a list of x-vector definitions in the form of RichPrompts and makes
     a single activation-modifying forward hook.
 
     @args:
-        model: HookedModel object, with hooks already set up
+        model: HookedTransformer object, with hooks already set up
         x_vector_defs: List of RichPrompt objects
     @returns:
         A function that takes a batch of activations and returns a batch of activations with the
@@ -68,9 +72,9 @@ def get_prompt_hook_fns(model: HookedModel, rich_prompts: List[RichPrompt]):
     prompt_hooks = [get_prompt_hook_fn(model, rich_prompt) for rich_prompt in rich_prompts]
 
     # Get the hook point for each prompt
-    hook_points = [model.get_hook_point(rich_prompt.act_name) for rich_prompt in rich_prompts]
+    hook_points = [rich_prompt.act_name for rich_prompt in rich_prompts]
 
-    # Partition the hooks by hook point
+    # Partition the hooks by hook point name
     hook_fns = {}
     for hook_point, prompt_hook in zip(hook_points, prompt_hooks):
         if hook_point in hook_fns:
@@ -79,12 +83,22 @@ def get_prompt_hook_fns(model: HookedModel, rich_prompts: List[RichPrompt]):
             hook_fns[hook_point] = [prompt_hook]
 
     # Make a single hook function for each hook point via composition
-    hook_fns = {hook_point: fn.compose(*hook_fns[hook_point]) for hook_point in hook_fns}
+    hook_fns = {hook_point: fn.compose(*point_fns) for hook_point, point_fns in hook_fns.items()}
 
     return hook_fns
 
 
+# TODO maybe move to different file
 def get_block_name(block_num: int) -> str:
     """Returns the hook name of the block with the given number, at the input to the
     residual stream."""
     return get_act_name(name="resid_pre", layer=block_num)
+
+
+def load_hooked_model(model_name: str, device_override: Optional[str] = None) -> HookedTransformer:
+    """Loads a model from the TransformerLens library and returns a HookedTransformer object."""
+    if device_override is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    else:
+        device = device_override
+    return HookedTransformer.from_pretrained(model_name, device=device)

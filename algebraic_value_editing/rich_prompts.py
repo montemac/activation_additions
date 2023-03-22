@@ -1,4 +1,4 @@
-""" Tools for specifying prompts and coefficients for the algebraic value editing task. """
+""" Tools for specifying prompts and coefficients for algebraic value editing. """
 
 from typing import Tuple
 from dataclasses import dataclass
@@ -6,9 +6,7 @@ from dataclasses import dataclass
 import torch
 import torch.nn.functional
 
-from transformer_lens.hook_points import (
-    HookedModel,
-)
+from transformer_lens import HookedTransformer
 
 
 @dataclass
@@ -27,7 +25,7 @@ def get_x_vector(
     prompt2: str,
     coeff: float,
     act_name: str,
-    model: HookedModel = None,
+    model: HookedTransformer = None,
     pad_method: str = None,
 ) -> Tuple[RichPrompt, RichPrompt]:
     """Take in two prompts and a coefficient and an activation name, and return two rich prompts spaced according to pad_method.
