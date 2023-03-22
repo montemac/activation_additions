@@ -28,8 +28,8 @@ def get_x_vector(
     model: HookedTransformer = None,
     pad_method: str = None,
 ) -> Tuple[RichPrompt, RichPrompt]:
-    """Take in two prompts and a coefficient and an activation name, and return two rich prompts spaced according to pad_method.
-    """
+    """Take in two prompts and a coefficient and an activation name, and return two rich prompts
+    spaced according to pad_method."""
     # TODO assert that act_name is in the model
 
     if pad_method is not None and model is not None:

@@ -1,4 +1,5 @@
-""" This script demonstrates how to use the algebraic_value_editing library to generate comparisons between two prompts. """
+""" This script demonstrates how to use the algebraic_value_editing library to generate comparisons
+between two prompts. """
 
 from algebraic_value_editing import completions, hook_utils
 from algebraic_value_editing.rich_prompts import RichPrompt

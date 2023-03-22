@@ -151,7 +151,8 @@ def bold_text(text: str) -> str:
 def print_n_comparisons(
     prompt: str, num_comparisons: int = 5, include_normal: bool = True, **kwargs
 ):
-    """Pretty-print generations from the modified and unmodified models. Takes keyword arguments for complete_prompt_with_rich_prompts.
+    """Pretty-print generations from the modified and unmodified models. Takes keyword arguments for
+    complete_prompt_with_rich_prompts.
 
     args:
         prompt: The prompt to use for completion.

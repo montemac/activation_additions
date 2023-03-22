@@ -14,7 +14,9 @@ from algebraic_value_editing.rich_prompts import RichPrompt
 def get_prompt_activations(
     model: HookedTransformer, rich_prompt: RichPrompt
 ) -> Float[torch.Tensor, "batch pos d_model"]:
-    """Takes a RichPrompt and returns the rescaled activations for that prompt, for the appropriate act_name. Rescaling is done by running the model forward with the prompt and then multiplying the activations by the coefficient rich_prompt.coeff.
+    """Takes a RichPrompt and returns the rescaled activations for that prompt, for the appropriate
+    act_name. Rescaling is done by running the model forward with the prompt and then multiplying
+    the activations by the coefficient rich_prompt.coeff.
     """
     # Get tokens for prompt
     tokens = model.to_tokens(rich_prompt.prompt)
@@ -27,7 +29,8 @@ def get_prompt_activations(
 
 
 def get_prompt_hook_fn(model: HookedTransformer, rich_prompt: RichPrompt) -> Callable:
-    """Takes a RichPrompt and returns a hook function that adds the cached activations for that prompt to the existing activations at the hook point.
+    """Takes a RichPrompt and returns a hook function that adds the cached activations for that
+    prompt to the existing activations at the hook point.
     """
     # Get cached activations
     prompt_activations = get_prompt_activations(model, rich_prompt)
@@ -39,13 +42,15 @@ def get_prompt_hook_fn(model: HookedTransformer, rich_prompt: RichPrompt) -> Cal
     ) -> Float[torch.Tensor, "batch pos d_model"]:
         """Add cached_activations to the output.
 
-        If cached_activations covers more residual streams than resid_pre (shape [batch, seq, hidden_dim]), then applies only to the available residual streams.
+        If cached_activations covers more residual streams than resid_pre (shape [batch, seq,
+        hidden_dim]), then applies only to the available residual streams.
         """
         prompt_activ_len = prompt_activations.shape[1]
 
         # Check if prompt_activ_len > sequence length for this batch
         if prompt_activ_len > resid_pre.shape[-2]:
-            # This suggests that we're computing only the new keys and values for the latest residual stream, not the full sequence
+            # This suggests that we're computing only the new keys and values for the latest
+            # residual stream, not the full sequence
             return resid_pre  # NOTE does this work for all cases?
 
         # NOTE this is going to fail when context window starts rolling over
@@ -62,8 +67,8 @@ def get_prompt_hook_fns(model: HookedTransformer, rich_prompts: List[RichPrompt]
     a single activation-modifying forward hook.
 
     @args:
-        model: HookedTransformer object, with hooks already set up
-        x_vector_defs: List of RichPrompt objects
+        model: HookedTransformer object, with hooks already set up x_vector_defs: List of RichPrompt
+        objects
     @returns:
         A function that takes a batch of activations and returns a batch of activations with the
         prompt-modifications added in.
