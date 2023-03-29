@@ -14,7 +14,7 @@ import prettytable
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing.rich_prompts import RichPrompt
-from algebraic_value_editing.hook_utils import get_prompt_hook_fns
+from algebraic_value_editing import hook_utils
 
 
 def prompt_to_tokens(
@@ -123,7 +123,7 @@ def gen_using_rich_prompts(
         )
 
     # Patch the model
-    hook_fns: Dict[str, Callable] = get_prompt_hook_fns(
+    hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_prompts(
         model=model, rich_prompts=rich_prompts
     )
     for act_name, x_vector_fn in hook_fns.items():

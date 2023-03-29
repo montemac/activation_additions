@@ -10,7 +10,7 @@ from algebraic_value_editing.rich_prompts import RichPrompt
 
 if __name__ == "__main__":  # Load the model and set up the rich prompts
     # Inject before this block
-    target_activation_name: str = hook_utils.get_block_name(block_num=0)
+    target_activation_name: str = hook_utils.get_block_name(block_num=6)
     rich_prompts: List[RichPrompt] = [
         RichPrompt(prompt="Love", coeff=10.0, act_name=target_activation_name)
     ]

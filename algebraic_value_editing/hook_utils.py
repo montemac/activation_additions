@@ -32,17 +32,34 @@ def get_prompt_activations(
     return rich_prompt.coeff * cache[rich_prompt.act_name]
 
 
-def get_prompt_hook_fn(
-    model: HookedTransformer, rich_prompt: RichPrompt
+def get_activation_dict(
+    model: HookedTransformer, rich_prompts: List[RichPrompt]
+) -> Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]]:
+    """Takes a list of RichPrompts and returns a dictionary mapping
+    activation names to lists of activations.
+    """
+    # Make the dictionary
+    activation_dict: Dict[
+        str, List[Float[torch.Tensor, "batch pos d_model"]]
+    ] = defaultdict(list)
+
+    # Add activations for each prompt
+    for rich_prompt in rich_prompts:
+        activation_dict[rich_prompt.act_name].append(
+            get_prompt_activations(model, rich_prompt)
+        )
+
+    return activation_dict
+
+
+def hook_fn_from_activations(
+    activations: Float[torch.Tensor, "batch pos d_model"]
 ) -> Callable:
-    """Takes a RichPrompt and returns a hook function that adds the
+    """Takes an activation Tensor and returns a hook function that adds the
     cached activations for that prompt to the existing activations at
     the hook point.
     """
-    # Get cached activations
-    prompt_activations = get_prompt_activations(model, rich_prompt)
 
-    # Create and return the hook function
     def prompt_hook(
         resid_pre: Float[torch.Tensor, "batch pos d_model"],
         hook: Optional[HookPoint] = None,  # pylint: disable=unused-argument
@@ -53,7 +70,7 @@ def get_prompt_hook_fn(
         resid_pre (shape [batch, seq, hidden_dim]), then applies only to
         the available residual streams.
         """
-        prompt_activ_len = prompt_activations.shape[1]
+        prompt_activ_len = activations.shape[1]
 
         # Check if prompt_activ_len > sequence length for this batch
         if prompt_activ_len > resid_pre.shape[-2]:
@@ -65,49 +82,55 @@ def get_prompt_hook_fn(
         # NOTE this is going to fail when context window starts rolling
         # over
         resid_pre[..., :prompt_activ_len, :] = (
-            prompt_activations + resid_pre[..., :prompt_activ_len, :]
+            activations + resid_pre[..., :prompt_activ_len, :]
         )  # Only add to first bit of the stream
         return resid_pre
 
     return prompt_hook
 
 
-def get_prompt_hook_fns(
+def hook_fns_from_act_dict(
+    activation_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]]
+) -> Dict[str, Callable]:
+    """Takes a dictionary from injection positions to lists of prompt
+    activations and returns a dictionary from injection positions to
+    hook functions that add the prompt activations to the existing
+    activations at the injection position.
+    """
+    # Make the dictionary
+    hook_fns: Dict[str, Callable] = {}
+
+    # Add hook functions for each activation name
+    for act_name, act_list in activation_dict.items():
+        # Compose the hook functions for each prompt
+        act_fns: List[Callable] = [
+            hook_fn_from_activations(activations) for activations in act_list
+        ]
+        hook_fns[act_name] = fn.compose(*act_fns)
+
+    return hook_fns
+
+
+def hook_fns_from_prompts(
     model: HookedTransformer, rich_prompts: List[RichPrompt]
 ) -> Dict[str, Callable]:
-    """Takes a list of x-vector definitions in the form of RichPrompts
-    and makes a single activation-modifying forward hook.
+    """Takes a list of RichPrompts and makes a single activation-modifying forward hook.
 
     @args:
         model: HookedTransformer object, with hooks already set up
 
-        x_vector_defs: List of RichPrompt objects
+        rich_prompts: List of RichPrompt objects
 
     @returns:
         A dictionary of functions that takes a batch of activations and
         returns a batch of activations with the prompt-modifications
         added in.
     """
-    # Get the hook functions for each prompt
-    prompt_hooks: List[Callable] = [
-        get_prompt_hook_fn(model, rich_prompt) for rich_prompt in rich_prompts
-    ]
+    # Get the activation dictionary
+    activation_dict = get_activation_dict(model, rich_prompts)
 
-    # Get the hook point for each prompt
-    hook_points: List[str] = [
-        rich_prompt.act_name for rich_prompt in rich_prompts
-    ]
-
-    # Partition the hooks by hook point name
-    hook_fns_multi: Dict[str, List[Callable]] = defaultdict(list)
-    for hook_point, prompt_hook in zip(hook_points, prompt_hooks):
-        hook_fns_multi[hook_point].append(prompt_hook)
-
-    # Make a single hook function for each hook point via composition
-    hook_fns: Dict[str, Callable] = {
-        hook_point: fn.compose(*point_fns)
-        for hook_point, point_fns in hook_fns_multi.items()
-    }
+    # Make the hook functions
+    hook_fns = hook_fns_from_act_dict(activation_dict)
 
     return hook_fns
 
