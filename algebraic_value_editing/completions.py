@@ -3,6 +3,7 @@ and a list of RichPrompts. """
 
 import warnings
 from typing import List, Union, Optional, Tuple, Dict, Callable
+from jaxtyping import Int, Float
 
 import torch
 import torch.nn.functional
@@ -18,7 +19,7 @@ from algebraic_value_editing.hook_utils import get_prompt_hook_fns
 
 def prompt_to_tokens(
     model: HookedTransformer, prompt: Union[str, List[str]]
-) -> torch.Tensor:
+) -> Int[torch.Tensor, "batch pos"]:
     """Converts a prompt (or batch of prompts) to a tensor of tokens."""
     if isinstance(prompt, str):
         prompt = [prompt]
@@ -38,14 +39,16 @@ def complete_prompt_normal(
     Removes all hooks from the model before generating completions.
     TODO remove this function and fold into gen_using_rich_prompts?
     """
-    target_tokens: torch.Tensor = prompt_to_tokens(model, prompt)
+    target_tokens: Int[torch.Tensor, "batch pos"] = prompt_to_tokens(
+        model, prompt
+    )
 
     if seed is not None:
         torch.manual_seed(seed)
 
     # Get the completions
     model.remove_all_hook_fns()
-    completion: torch.Tensor = model.generate(
+    completion: Float[torch.Tensor, "batch pos"] = model.generate(
         target_tokens,
         max_new_tokens=completion_length,
         verbose=False,
@@ -131,7 +134,7 @@ def gen_using_rich_prompts(
         torch.manual_seed(seed)
 
     # Run the patched model
-    patched_completion: torch.Tensor = model.generate(
+    patched_completion: Float[torch.Tensor, "batch pos"] = model.generate(
         target_tokens,
         max_new_tokens=tokens_to_generate,
         verbose=False,
