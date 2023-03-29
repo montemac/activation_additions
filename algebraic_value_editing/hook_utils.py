@@ -1,8 +1,8 @@
 """ Utilities for hooking into a model and modifying activations. """
 
-from typing import List, Callable, Optional, Dict, Any
+from typing import List, Callable, Optional, Dict
 from collections import defaultdict
-from jaxtyping import Float
+from jaxtyping import Float, Int
 import funcy as fn
 import torch
 
@@ -21,12 +21,14 @@ def get_prompt_activations(
     activations by the coefficient rich_prompt.coeff.
     """
     # Get tokens for prompt
-    tokens = model.to_tokens(rich_prompt.prompt)
+    tokens: Int[torch.Tensor, "batch pos"] = model.to_tokens(
+        rich_prompt.prompt
+    )
 
     # Run forward pass
-    _, cache = model.run_with_cache(
+    cache: Dict[str, torch.Tensor] = model.run_with_cache(
         tokens, names_filter=lambda ss: ss == rich_prompt.act_name
-    )
+    )[1]
 
     # Return cached activations times coefficient
     return rich_prompt.coeff * cache[rich_prompt.act_name]
@@ -70,7 +72,7 @@ def hook_fn_from_activations(
         resid_pre (shape [batch, seq, hidden_dim]), then applies only to
         the available residual streams.
         """
-        prompt_activ_len = activations.shape[1]
+        prompt_activ_len: int = activations.shape[1]
 
         # Check if prompt_activ_len > sequence length for this batch
         if prompt_activ_len > resid_pre.shape[-2]:
@@ -127,10 +129,12 @@ def hook_fns_from_prompts(
         added in.
     """
     # Get the activation dictionary
-    activation_dict = get_activation_dict(model, rich_prompts)
+    activation_dict: Dict[
+        str, List[Float[torch.Tensor, "batch pos d_model"]]
+    ] = get_activation_dict(model, rich_prompts)
 
     # Make the hook functions
-    hook_fns = hook_fns_from_act_dict(activation_dict)
+    hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(activation_dict)
 
     return hook_fns
 
