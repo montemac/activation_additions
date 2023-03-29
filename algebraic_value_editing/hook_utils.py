@@ -106,7 +106,7 @@ def get_prompt_hook_fns(
     # Make a single hook function for each hook point via composition
     hook_fns: Dict[str, Callable] = {
         hook_point: fn.compose(*point_fns)
-        for hook_point, point_fns in hook_fns.items()
+        for hook_point, point_fns in hook_fns_multi.items()
     }
 
     return hook_fns
@@ -117,16 +117,3 @@ def get_block_name(block_num: int) -> str:
     """Returns the hook name of the block with the given number, at the
     input to the residual stream."""
     return get_act_name(name="resid_pre", layer=block_num)
-
-
-def load_hooked_model(
-    model_name: str, device_override: Optional[str] = None
-) -> HookedTransformer:
-    """Loads a model from the TransformerLens library and returns a
-    HookedTransformer object."""
-    device: str
-    if device_override is None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-    else:
-        device = device_override
-    return HookedTransformer.from_pretrained(model_name, device=device)

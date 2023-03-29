@@ -12,10 +12,10 @@ if __name__ == "__main__":  # Load the model and set up the rich prompts
     # Inject before this block
     target_activation_name: str = hook_utils.get_block_name(block_num=0)
     rich_prompts: List[RichPrompt] = [
-        RichPrompt(prompt="Love", coeff=1.0, act_name=target_activation_name)
+        RichPrompt(prompt="Love", coeff=10.0, act_name=target_activation_name)
     ]
 
-    model: HookedTransformer = hook_utils.load_hooked_model(
+    model: HookedTransformer = HookedTransformer.from_pretrained(
         model_name="gpt2-small"
     )
 

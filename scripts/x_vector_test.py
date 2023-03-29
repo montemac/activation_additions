@@ -1,46 +1,18 @@
 # %%
 # Imports and setup
-%reload_ext autoreload
-%autoreload 2
+# %reload_ext autoreload # type: ignore
+from IPython import get_ipython
 
-import funcy as fn
+try:
+    get_ipython().run_line_magic("reload_ext", "autoreload")
+    get_ipython().run_line_magic("autoreload", "2")
+except NameError:
+    pass
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import numpy as np
-import einops
-from fancy_einsum import einsum
-import tqdm.auto as tqdm
-import random
-from pathlib import Path
 import plotly.express as px
-from torch.utils.data import DataLoader
-import warnings
 
-from jaxtyping import Float, Int
-from typing import List, Union, Optional, Tuple
-from functools import partial
-import copy
-
-import itertools
-from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
-import dataclasses
-import datasets
-from IPython.display import HTML
-import prettytable
-from ipywidgets import Output
-
-import transformer_lens
-import transformer_lens.utils as utils
-from transformer_lens.hook_points import (
-    HookedRootModule,
-    HookPoint,
-)  # Hooking utilities
-from transformer_lens import HookedTransformer, HookedTransformerConfig, FactoredMatrix, ActivationCache
-
-from avec_gpt2 import xvector
+from algebraic_value_editing import completions
 
 # We turn automatic differentiation off, to save GPU memory, as this notebook focuses on model inference not model training.
 _ = torch.set_grad_enabled(False)
@@ -68,8 +40,16 @@ print("Model loss:", loss)
 # xvector.print_n_comparisons(num_comparisons=5, model=model, recipe=[(["Love", "Hate"], 2)], prompt='I hate you because', completion_length=50,
 #                     layer_num=6, temperature=1, freq_penalty=1, top_p=.3, random_seed=42)
 
-results = xvector.complete_prompt_with_x_vector(model=model, recipe=[(["Love", "Hate"], 2)], prompt=['I hate you because']*50, completion_length=50,
-                     layer_num=6, temperature=1, freq_penalty=1, top_p=.3)
+results = completions.complete_prompt_with_x_vector(
+    model=model,
+    recipe=[(["Love", "Hate"], 2)],
+    prompt=["I hate you because"] * 50,
+    completion_length=50,
+    layer_num=6,
+    temperature=1,
+    freq_penalty=1,
+    top_p=0.3,
+)
 results.mean()
 
 # xvector.print_n_comparisons(num_comparisons=5, model=model, recipe=[(("Want to stay alive", "Okay with dying"), 5)],
