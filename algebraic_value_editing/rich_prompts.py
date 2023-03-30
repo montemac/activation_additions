@@ -1,12 +1,12 @@
 """ Tools for specifying prompts and coefficients for algebraic value
 editing. """
 
-from typing import Tuple, Optional
 from dataclasses import dataclass
 
+from typing import Tuple, Optional, Dict, List
+from jaxtyping import Float, Int
 import torch
 import torch.nn.functional
-
 from transformer_lens import HookedTransformer
 
 
@@ -19,7 +19,61 @@ class RichPrompt:
 
     prompt: str
     coeff: float
-    act_name: str  # TODO include pos_embedding attribute
+    act_name: str
+
+    # Whether to use the position embedding for the forward pass for
+    # this prompt; if False, will probably produce garbage unless
+    # act_name indicates the (initial) embedding layer
+    enable_pos_embedding: bool = True
+
+
+def weighted_prompt_superposition(
+    model: HookedTransformer,
+    weighted_prompts: Dict[str, float],
+    fix_first_tok: bool = True,
+) -> Float[torch.Tensor, "batch pos"]:
+    """Takes a dictionary mapping prompts to coefficients and returns a
+    weighted superposition of the prompt tokenizations.
+
+    Args:
+        model: The model to use for tokenization.
+
+        weighted_prompts: A dictionary mapping prompts to coefficients.
+
+        fix_first_tok: Whether to fix the first token of the
+        superposition to be the same as the first token of the first
+        prompt.
+    """
+    tokenizations: List[Int[torch.Tensor, "batch pos"]] = [
+        model.to_tokens(prompt) for prompt in weighted_prompts.keys()
+    ]
+
+    # Pad each tokenization so it's the same length
+    max_token_len: int = max([toks.shape[-1] for toks in tokenizations])
+    padded_tokenizations: List[Int[torch.Tensor, "batch pos"]] = []
+    for tokenization in tokenizations:
+        padded_tokenization = torch.nn.functional.pad(
+            input=tokenization,
+            pad=(0, max_token_len - tokenization.shape[-1]),
+            mode="constant",
+            value=0.0,
+        )
+        padded_tokenizations.append(padded_tokenization)
+
+    # Sum the tokenizations weighted by the coefficients
+    weighted_tokenization: Float[
+        torch.Tensor, "batch pos"
+    ] = torch.zeros_like(  # pylint: disable=no-member
+        input=padded_tokenizations[0]
+    )
+    for toks, coeff in zip(padded_tokenizations, weighted_prompts.values()):
+        weighted_tokenization += coeff * toks
+
+    # Fix the first token if necessary
+    if fix_first_tok:
+        weighted_tokenization[:, 0] = padded_tokenizations[0][:, 0]
+
+    return weighted_tokenization
 
 
 def get_x_vector(

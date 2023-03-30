@@ -8,7 +8,7 @@ from algebraic_value_editing import completions, hook_utils
 from algebraic_value_editing.rich_prompts import RichPrompt
 
 
-if __name__ == "__main__":  # Load the model and set up the rich prompts
+if __name__ == "__main__":
     # Inject before this block
     target_activation_name: str = hook_utils.get_block_name(block_num=6)
     rich_prompts: List[RichPrompt] = [

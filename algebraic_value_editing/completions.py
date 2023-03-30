@@ -231,11 +231,10 @@ def print_n_comparisons(
 
     # Put into table
     for _, row in results.iterrows():
-        patch_str: str = apply_formatting(row["patched_completion"])
         new_row: List[str] = []
         if include_normal:
             new_row.append(apply_formatting(row["normal_completion"]))
-        new_row.append(patch_str)
+        new_row.append(apply_formatting(row["patched_completion"]))
         table.add_row(new_row)
 
     print(table)
