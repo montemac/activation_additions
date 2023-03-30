@@ -4,18 +4,22 @@ which returns a metric function that can be passed to sweep functions or used di
 metrics for iterables of completions.
 
 The returned metric functions all take an Iterable of strings, and
-return a list of metric outputs, one per string provided. """
+return a DataFrame of metric outputs, with the provided strings as the
+index and one column per output provided by the metric. """
 
 from typing import List, Any
 from collections.abc import Iterable
 
+import pandas as pd
 from transformers import pipeline
 
 
 def get_sentiment_metric(sentiment_model_name: str) -> List[Any]:
+    """Create a metric using a pre-trained sentiment model."""
     sentiment_pipeline = pipeline(sentiment_model_name)
 
     def metric(strs: Iterable[str]):
-        return sentiment_pipeline([ss for ss in strs])
+        strs = [ss for ss in strs]
+        return pd.DataFrame(sentiment_pipeline(strs), index=strs)
 
     return metric
