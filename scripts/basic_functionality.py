@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     completions.print_n_comparisons(
         prompt="Here's how I feel about you.",
-        num_comparisons=15,
+        num_comparisons=5,
         model=model,
         rich_prompts=rich_prompts,
     )
