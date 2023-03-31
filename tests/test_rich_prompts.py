@@ -38,3 +38,6 @@ def test_x_vector_creation():
         assert xvec.prompt == rch_prompt.prompt
         assert xvec.act_name == rch_prompt.act_name
         assert xvec.coeff == rch_prompt.coeff
+
+
+# TODO test x vector padding and tokenization

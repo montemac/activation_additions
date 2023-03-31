@@ -15,10 +15,10 @@ from algebraic_value_editing.rich_prompts import RichPrompt
 def get_prompt_activations(
     model: HookedTransformer, rich_prompt: RichPrompt
 ) -> Float[torch.Tensor, "batch pos d_model"]:
-    """Takes a RichPrompt and returns the rescaled activations for that
-    prompt, for the appropriate act_name. Rescaling is done by running
+    """Takes a `RichPrompt` and returns the rescaled activations for that
+    prompt, for the appropriate `act_name`. Rescaling is done by running
     the model forward with the prompt and then multiplying the
-    activations by the coefficient rich_prompt.coeff.
+    activations by the coefficient `rich_prompt.coeff`.
     """
     # Get tokens for prompt
     tokens: Int[torch.Tensor, "batch pos"] = model.to_tokens(
@@ -38,7 +38,7 @@ def get_prompt_activations(
 def get_activation_dict(
     model: HookedTransformer, rich_prompts: List[RichPrompt]
 ) -> Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]]:
-    """Takes a list of RichPrompts and returns a dictionary mapping
+    """Takes a list of `RichPrompt`s and returns a dictionary mapping
     activation names to lists of activations.
     """
     # Make the dictionary
@@ -58,7 +58,7 @@ def get_activation_dict(
 def hook_fn_from_activations(
     activations: Float[torch.Tensor, "batch pos d_model"]
 ) -> Callable:
-    """Takes an activation Tensor and returns a hook function that adds the
+    """Takes an activation `Tensor` and returns a hook function that adds the
     cached activations for that prompt to the existing activations at
     the hook point.
     """
@@ -117,14 +117,14 @@ def hook_fns_from_act_dict(
 def hook_fns_from_rich_prompts(
     model: HookedTransformer, rich_prompts: List[RichPrompt]
 ) -> Dict[str, Callable]:
-    """Takes a list of RichPrompts and makes a single activation-modifying forward hook.
+    """Takes a list of `RichPrompt`s and makes a single activation-modifying forward hook.
 
-    @args:
-        model: HookedTransformer object, with hooks already set up
+    args:
+        `model`: `HookedTransformer` object, with hooks already set up
 
-        rich_prompts: List of RichPrompt objects
+        `rich_prompts`: List of `RichPrompt` objects
 
-    @returns:
+    returns:
         A dictionary of functions that takes a batch of activations and
         returns a batch of activations with the prompt-modifications
         added in.

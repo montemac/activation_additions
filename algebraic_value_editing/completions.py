@@ -20,7 +20,7 @@ from algebraic_value_editing import hook_utils
 
 
 def preserve_rng_state(func):
-    """Decorator that preserves the torch RNG state before and after a
+    """Decorator that preserves the `torch` RNG state before and after a
     function call."""
 
     @wraps(func)  # Preserve function metadata
@@ -49,23 +49,24 @@ def gen_using_hooks(
     seed: Optional[int] = None,
     **sampling_kwargs,
 ) -> pd.DataFrame:
-    """Run the model using the given hooks. Returns a DataFrame with the completions and losses.
+    """Run `model` using the given `hook_fns`. Returns a `DataFrame` with the completions and losses.
 
     args:
-        model: The model to use for completion. prompt: The prompt to
-        use for completion.
+        `model`: The model to use for completion.
 
-        hook_fns: A dictionary mapping activation names to hook
+        `prompt`: The prompt to use for completion.
 
-        tokens_to_generate: The number of additional tokens to generate.
+        `hook_fns`: A dictionary mapping activation names to hook
 
-        seed: A random seed to use for generation.
+        `tokens_to_generate`: The number of additional tokens to generate.
 
-        sampling_kwargs: Keyword arguments to pass to the model's
-        generate function.
+        `seed`: A random seed to use for generation.
+
+        `sampling_kwargs`: Keyword arguments to pass to the model's
+        `generate` function.
 
     returns:
-        A DataFrame with the completions and losses.
+        A `DataFrame` with the completions and losses.
     """
     if seed is not None:
         torch.manual_seed(seed)
@@ -113,14 +114,14 @@ def gen_using_rich_prompts(
     """Generate completions using the given rich prompts.
 
     args:
-        model: The model to use for completion.
+        `model`: The model to use for completion.
 
-        rich_prompts: A list of RichPrompts to use to create hooks.
+        `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
 
-        kwargs: Keyword arguments to pass to gen_using_hooks.
+        `kwargs`: Keyword arguments to pass to gen_using_hooks.
 
     returns:
-        A DataFrame with the completions and losses.
+        A `DataFrame` with the completions and losses.
     """
     # Create the hook functions
     hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
@@ -134,6 +135,27 @@ def bold_text(text: str) -> str:
     return f"\033[1m{text}\033[0m"
 
 
+def pretty_print_completions(
+    completions: pd.DataFrame,
+) -> None:
+    """Pretty-print the given completions."""
+    # Generate the table
+    table = prettytable.PrettyTable()
+    table.align = "l"
+    column_names = completions.columns  # TODO ensure works
+    table.field_names = map(bold_text, [])
+    table.min_width = table.max_width = 60
+
+    # Separate completions
+    table.hrules = prettytable.ALL
+
+    # Add the completions to the table
+    for _, row in completions.iterrows():
+        table.add_row(row)
+
+    print(table)
+
+
 def print_n_comparisons(
     model: HookedTransformer,
     prompt: str,
@@ -143,27 +165,26 @@ def print_n_comparisons(
     rich_prompts: Optional[List[RichPrompt]] = None,
     **kwargs,
 ) -> None:
-    """Pretty-print generations from the modified and unmodified models.
-    Takes keyword arguments for gen_using_rich_prompts.
+    """Pretty-print generations from `model` using the appropriate hook functions. Takes keyword arguments for `gen_using_rich_prompts`.
 
     args:
-        model: The model to use for completion.
+        `model`: The model to use for completion.
 
-        prompt: The prompt to use for completion.
+        `prompt`: The prompt to use for completion.
 
-        num_comparisons: The number of comparisons to make.
+        `num_comparisons`: The number of comparisons to make.
 
-        include_normal: Whether to include completions from the
+        `include_normal`: Whether to include completions from the
         unmodified model.
 
-        include_modified: Whether to include completions from the
-        modified model.
+        `include_modified`: Whether to include completions from the
+        modified model, using the hook functions derived from `rich_prompts`.
 
-        rich_prompts: A list of RichPrompts to use to create hooks for
+        `rich_prompts`: A list of `RichPrompt`s to use to create hooks for
         the modified forward pass.
 
-        kwargs: Keyword arguments to pass to
-        gen_using_rich_prompts.
+        `kwargs`: Keyword arguments to pass to
+        `gen_using_rich_prompts`.
     """
     if rich_prompts is None and include_modified:
         raise ValueError(

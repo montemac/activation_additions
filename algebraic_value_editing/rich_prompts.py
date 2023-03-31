@@ -4,7 +4,6 @@ editing. """
 from dataclasses import dataclass
 
 from typing import Tuple, Optional, Dict, List
-from jaxtyping import Float
 import torch
 import torch.nn.functional
 from transformer_lens.HookedTransformer import HookedTransformer
@@ -31,7 +30,7 @@ def get_x_vector(
     pad_method: Optional[str] = None,
 ) -> Tuple[RichPrompt, RichPrompt]:
     """Take in two prompts and a coefficient and an activation name, and
-    return two rich prompts spaced according to pad_method."""
+    return two rich prompts spaced according to `pad_method`."""
     if pad_method is not None and model is not None:
         assert pad_method in [
             "tokens_left",
@@ -66,27 +65,36 @@ def get_x_vector(
 
 def weighted_prompt_superposition(
     model: HookedTransformer,
-    weighted_prompts: Dict[str, float],
-    fix_init_tok: bool = True,  # TODO ignore first resid stream in RichPropmt?
-) -> Float[torch.Tensor, "batch pos"]:
-    """Takes a dictionary mapping prompts to coefficients and returns a
-    weighted superposition of the prompt tokenizations.
+    weighted_prompts: Dict[str, float],  # TODO handle zero token
+) -> Tuple[str, List[RichPrompt]]:
+    """Produce a list of `RichPrompt`s that simulate the superposition of
+    the weighted prompts.
 
     Args:
-        model: The model to use for tokenization.
+        `model`: The model to use for tokenization.
+        `weighted_prompts`: A dictionary mapping prompts to coefficients.
 
-        weighted_prompts: A dictionary mapping prompts to coefficients.
-
-        fix_init_tok: Whether to fix the first token of the
-        superposition to be the same as the first token of the first
-        prompt.
-    """  # TODO fix -- need to embed first
+    Returns:
+        A tuple containing a dummy prompt and a list of `RichPrompt`s.
+    """
     # Make rich prompts for act_name="hook_embed"
     rich_prompts: List[RichPrompt] = [
         RichPrompt(prompt=prompt, coeff=coeff, act_name="hook_embed")
         for prompt, coeff in weighted_prompts.items()
     ]
 
-    # First embed all of the prompts
-    embedded_prompts = model.embed(weighted_prompts.keys())
-    print(embedded_prompts)
+    # Make a dummy prompt whose length is equal to the max token length
+    # of the rich prompts
+    max_len: int = max(
+        len(model.to_tokens([prompt])[0]) for prompt in weighted_prompts
+    )
+    dummy_tokens: torch.Tensor = torch.zeros(max_len, dtype=torch.int32)
+    dummy_prompt = model.to_string(dummy_tokens)
+
+    # Add in a prompt with a coefficient of -1.0 to cancel out the
+    # activations of the dummy prompt
+    dummy_rich_prompt = RichPrompt(
+        prompt=dummy_prompt, coeff=-1.0, act_name="hook_embed"
+    )
+    rich_prompts.append(dummy_rich_prompt)
+    return dummy_prompt, rich_prompts
