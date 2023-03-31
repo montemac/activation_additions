@@ -3,7 +3,8 @@ from setuptools import setup, find_packages
 setup(
     name="algebraic_value_editing",
     description=(
-        "Tools for testing the algebraic value-editing conjecture (AVEC) on language models"
+        "Tools for testing the algebraic value-editing conjecture (AVEC) on"
+        " language models"
     ),
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
@@ -19,6 +20,5 @@ setup(
         "pandas>=1.4.4",
         "jaxtyping>=0.2.14",
         "prettytable>=3.6.0",
-        "ipywidgets>=7.7",
     ],
 )
