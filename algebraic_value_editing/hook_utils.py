@@ -6,7 +6,7 @@ from jaxtyping import Float, Int
 import funcy as fn
 import torch
 
-from transformer_lens import HookedTransformer
+from transformer_lens.HookedTransformer import HookedTransformer
 from transformer_lens.utils import get_act_name
 from transformer_lens.hook_points import HookPoint
 from algebraic_value_editing.rich_prompts import RichPrompt
@@ -27,7 +27,8 @@ def get_prompt_activations(
 
     # Run forward pass
     cache: Dict[str, torch.Tensor] = model.run_with_cache(
-        tokens, names_filter=lambda ss: ss == rich_prompt.act_name
+        tokens,
+        names_filter=lambda act_name: act_name == rich_prompt.act_name,
     )[1]
 
     # Return cached activations times coefficient
@@ -113,7 +114,7 @@ def hook_fns_from_act_dict(
     return hook_fns
 
 
-def hook_fns_from_prompts(
+def hook_fns_from_rich_prompts(
     model: HookedTransformer, rich_prompts: List[RichPrompt]
 ) -> Dict[str, Callable]:
     """Takes a list of RichPrompts and makes a single activation-modifying forward hook.
@@ -139,7 +140,7 @@ def hook_fns_from_prompts(
     return hook_fns
 
 
-# TODO maybe move to different file
+# NOTE maybe move to different file
 def get_block_name(block_num: int) -> str:
     """Returns the hook name of the block with the given number, at the
     input to the residual stream."""
