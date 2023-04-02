@@ -91,11 +91,12 @@ def sweep_over_prompts(
                 columns={
                     "patched_completion": "completion",
                     "patched_loss": "loss",
-                }
+                },
+                inplace=True,
             )
             patched_df["rich_prompt_index"] = ri
             # Store for later
             patched_list.append(patched_df)
-    normal_all = pd.concat(normal_list)
-    patched_all = pd.concat(patched_list)
-    return normal_df, patched_df
+    normal_all = pd.concat(normal_list).reset_index(names="completion_index")
+    patched_all = pd.concat(patched_list).reset_index(names="completion_index")
+    return normal_all, patched_all

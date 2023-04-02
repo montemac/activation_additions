@@ -12,6 +12,7 @@ import pytest
 import numpy as np
 import pandas as pd
 import pandas.testing
+import pickle
 
 from transformer_lens import HookedTransformer
 
@@ -21,8 +22,11 @@ from algebraic_value_editing.rich_prompts import RichPrompt
 
 
 @pytest.fixture
-def gpt2_model() -> HookedTransformer:
+def model() -> HookedTransformer:
     return HookedTransformer.from_pretrained(model_name="gpt2-small")
+
+
+SWEEP_OVER_PROMPTS_CACHE_FN = "sweep_over_prompts_cache.pkl"
 
 
 def test_sweep_over_prompts(model):
@@ -48,5 +52,7 @@ def test_sweep_over_prompts(model):
         num_patched_completions=4,
         seed=42,
     )
-    print(normal_df)
-    print(patched_df)
+    with open(SWEEP_OVER_PROMPTS_CACHE_FN, "rb") as fl:
+        normal_target, patched_target = pickle.load(fl)
+    pd.testing.assert_frame_equal(normal_df, normal_target)
+    pd.testing.assert_frame_equal(patched_df, patched_target)
