@@ -121,6 +121,10 @@ def gen_using_rich_prompts(
         ) = complete_prompt_normal(
             model, prompt, tokens_to_generate, seed, **sampling_kwargs
         )
+    else:
+        target_tokens: Int[torch.Tensor, "batch pos"] = prompt_to_tokens(
+            model, prompt
+        )
 
     # Patch the model
     hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_prompts(

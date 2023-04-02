@@ -14,12 +14,21 @@ import pandas as pd
 from transformers import pipeline
 
 
-def get_sentiment_metric(sentiment_model_name: str) -> List[Any]:
-    """Create a metric using a pre-trained sentiment model."""
-    sentiment_pipeline = pipeline(sentiment_model_name)
+def get_sentiment_metric(
+    sentiment_model_name: str, positive_labels: List[str] = None
+) -> List[Any]:
+    """Create a metric using a pre-trained sentiment model. The metric
+    function returns the raw outputs of the sentiment model as columns
+    (e.g. label and score), the meaning of which will vary by model;
+    it also returns an 'is_positive' column if the positive_labels
+    list is provided."""
+    sentiment_pipeline = pipeline(model=sentiment_model_name)
 
-    def metric(strs: Iterable[str]):
+    def metric_func(strs: Iterable[str]):
         strs = [ss for ss in strs]
-        return pd.DataFrame(sentiment_pipeline(strs), index=strs)
+        df: pd.DataFrame = pd.DataFrame(sentiment_pipeline(strs), index=strs)
+        if positive_labels is not None:
+            df["is_positive"] = df["label"].isin(positive_labels)
+        return df
 
-    return metric
+    return metric_func
