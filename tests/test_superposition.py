@@ -8,7 +8,7 @@ from algebraic_value_editing import rich_prompts
 
 # Load GPT-2 small using transformerlens
 model: HookedTransformer = HookedTransformer.from_pretrained(
-    model_name="gpt2-small"
+    model_name="attn-only-1l"
 )
 
 
@@ -18,12 +18,10 @@ def test_superposition_hello_bye():
         "Hello": 1.0,
         "Bye": 1.0,
     }
-    superposition: Float[
-        torch.Tensor, "batch pos"
-    ] = rich_prompts.weighted_prompt_superposition(
+    dummy_prompt, superpos_rps = rich_prompts.weighted_prompt_superposition(
         model=model, weighted_prompts=weighted_prompts
     )
-    assert superposition.shape == (1, 3)
+    assert dummy_prompt.len() == 2  # 2 characters in the dummy prompt
 
 
 def test_superposition_empty():
@@ -31,9 +29,7 @@ def test_superposition_empty():
     weighted_prompts: Dict[str, float] = {
         "": 1.0,
     }
-    superposition: Float[
-        torch.Tensor, "batch pos"
-    ] = rich_prompts.weighted_prompt_superposition(
+    dummy_prompt, superpos_rps = rich_prompts.weighted_prompt_superposition(
         model=model, weighted_prompts=weighted_prompts
     )
     assert superposition.shape == (1, 1)
@@ -46,9 +42,7 @@ def test_superposition_cancel():
         "A B": 1.0,
         "A C": -1.0,
     }
-    superposition: Float[
-        torch.Tensor, "batch pos"
-    ] = rich_prompts.weighted_prompt_superposition(
+    dummy_prompt, superpos_rps = rich_prompts.weighted_prompt_superposition(
         model=model, weighted_prompts=weighted_prompts
     )
     assert superposition.shape == (1, 3)
@@ -65,9 +59,7 @@ def test_superposition_cancel_all():
         "A B": 1.0,
         "A C": -1.0,
     }
-    superposition: Float[
-        torch.Tensor, "batch pos"
-    ] = rich_prompts.weighted_prompt_superposition(
+    dummy_prompt, superpos_rps = rich_prompts.weighted_prompt_superposition(
         model=model, weighted_prompts=weighted_prompts, fix_init_tok=False
     )
     assert superposition.shape == (1, 3)

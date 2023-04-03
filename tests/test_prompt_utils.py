@@ -1,7 +1,14 @@
-""" Tests for the rich_prompts module. """
+""" Tests for the prompt_utils module. """
 
-from algebraic_value_editing.rich_prompts import RichPrompt
-from algebraic_value_editing import rich_prompts
+from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing import prompt_utils
+
+
+# from transformer_lens.HookedTransformer import HookedTransformer
+
+# model: HookedTransformer = HookedTransformer.from_pretrained(
+#     model_name="attn-only-1l"
+# )
 
 
 def test_creation():
@@ -23,7 +30,7 @@ def test_x_vector_creation():
         prompt="Goodbye world!", act_name="", coeff=-1.0
     )
 
-    x_vector_positive, x_vector_negative = rich_prompts.get_x_vector(
+    x_vector_positive, x_vector_negative = prompt_utils.get_x_vector(
         prompt1="Hello world!",
         prompt2="Goodbye world!",
         coeff=1.0,

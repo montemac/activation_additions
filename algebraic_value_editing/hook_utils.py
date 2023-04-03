@@ -7,9 +7,8 @@ import funcy as fn
 import torch
 
 from transformer_lens.HookedTransformer import HookedTransformer
-from transformer_lens.utils import get_act_name
 from transformer_lens.hook_points import HookPoint
-from algebraic_value_editing.rich_prompts import RichPrompt
+from algebraic_value_editing.prompt_utils import RichPrompt
 
 
 def get_prompt_activations(
@@ -138,10 +137,3 @@ def hook_fns_from_rich_prompts(
     hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(activation_dict)
 
     return hook_fns
-
-
-# NOTE maybe move to different file
-def get_block_name(block_num: int) -> str:
-    """Returns the hook name of the block with the given number, at the
-    input to the residual stream."""
-    return get_act_name(name="resid_pre", layer=block_num)
