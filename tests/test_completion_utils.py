@@ -60,7 +60,7 @@ def test_large_coeff_leads_to_garbage():
     ), f"Got: {first_completion}"
 
 
-def test_x_vec_generations():
+def test_x_vec_coefficient_matters():
     """Generate an x-vector and use it to get completions. Ensure that
     the coefficient choice matters."""
     # Generate an x-vector
@@ -87,6 +87,78 @@ def test_x_vec_generations():
     assert (
         completions_list[0] != completions_list[1]
     ), "Coefficient choice doesn't matter."
+
+
+def test_x_vec_inverse_equality():
+    """Generate an x vector with a given prompt ordering, and another x
+     vector with flipped ordering and flipped coefficient. The generations
+    should be identical."""
+    # Generate an x-vector
+    x_vector1: Tuple[RichPrompt, RichPrompt] = get_x_vector(
+        prompt1="Love",
+        prompt2="Hate",
+        coeff=1.0,
+        act_name=0,
+        model=model,
+    )
+
+    # Generate another x-vector
+    x_vector2: Tuple[RichPrompt, RichPrompt] = get_x_vector(
+        prompt1="Hate",
+        prompt2="Love",
+        coeff=-1.0,
+        act_name=0,
+        model=model,
+    )
+
+    # Generate completions using the x-vectors
+    results1: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+        prompts=["I think you're "],
+        model=model,
+        rich_prompts=[*x_vector1],
+        seed=0,
+    )
+    results2: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+        prompts=["I think you're "],
+        model=model,
+        rich_prompts=[*x_vector2],
+        seed=0,
+    )
+
+    # Ensure that the generations are identical
+    assert (
+        results1["completions"][0] == results2["completions"][0]
+    ), "Generations should be identical."
+
+
+def test_x_vec_padding_matters():
+    """Generate an x-vector and use it to get completions. Ensure that
+    the padding choice matters."""
+    # Generate an x-vector
+    completions_list: List[str] = []
+    for pad_method in [None, "tokens_right"]:
+        x_vector: Tuple[RichPrompt, RichPrompt] = get_x_vector(
+            prompt1="Love",
+            prompt2="Hate",
+            coeff=1.0,
+            act_name=0,
+            model=model,
+            pad_method=pad_method,
+        )
+
+        # Generate completions using the x-vector
+        results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+            prompts=["I think you're "],
+            model=model,
+            rich_prompts=[*x_vector],
+            seed=0,
+        )
+        completions_list.append(results["completions"][0])
+
+    # Ensure that the padding choice matters
+    assert (
+        completions_list[0] != completions_list[1]
+    ), "Padding choice doesn't matter."
 
 
 def test_seed_choice_matters():
