@@ -81,10 +81,14 @@ def get_x_vector(
 
 def weighted_prompt_superposition(
     model: HookedTransformer,
-    weighted_prompts: Dict[str, float],  # TODO handle zero token
+    weighted_prompts: Dict[str, float],  # TODO currently broken
 ) -> Tuple[str, List[RichPrompt]]:
     """Produce a list of `RichPrompt`s that simulate the superposition of
     the weighted prompts.
+
+    NOTE: Currently, this requires superimposing on top
+    of a normal prompt with length greater than or equal to the length
+    of the longest prompt in `weighted_prompts`.
 
     Args:
         `model`: The model to use for tokenization.
@@ -98,7 +102,7 @@ def weighted_prompt_superposition(
     # Make rich prompts for act_name="hook_embed"
     rich_prompts: List[RichPrompt] = [
         RichPrompt(
-            prompt=prompt, coeff=coeff, act_name=embed_name
+            prompt=prompt, coeff=coeff, act_name=3
         )  # TODO doesn't seem to work
         for prompt, coeff in weighted_prompts.items()
     ]

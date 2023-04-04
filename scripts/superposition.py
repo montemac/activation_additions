@@ -1,7 +1,8 @@
 """ This script demonstrates how to use the algebraic_value_editing library to generate comparisons
 between two prompts. """
 # %%
-
+%load_ext autoreload # TODO ignore these
+%autoreload 2 # pyright: ignore
 
 # %%
 
@@ -17,7 +18,7 @@ model: HookedTransformer = HookedTransformer.from_pretrained(
 dummy_prompt, superpos_rps = prompt_utils.weighted_prompt_superposition(
     model=model,
     weighted_prompts={
-        "ABCDEF.ABCDEF.ABCDE": 10000.0,
+        "ABCDEF.ABCDEF.ABCDE": 6.0,
         # "The store has lots of clowns": 3.0,
     },
 )
@@ -31,7 +32,7 @@ assert (
 ), "Last rich prompt should be dummy prompt"
 
 completions.print_n_comparisons(
-    prompt=dummy_prompt,
+    prompt="I went outside and saw",
     num_comparisons=5,
     model=model,
     rich_prompts=superpos_rps[:-1],
@@ -39,13 +40,5 @@ completions.print_n_comparisons(
     # include_normal=False,
     # include_modified=False,
 )
-
-# completions.print_n_comparisons(
-#     prompt="ABCDEF.ABCDEF.ABCDE",
-#     num_comparisons=5,
-#     model=model,
-#     rich_prompts=[],
-#     seed=0,
-# )
 
 # %%

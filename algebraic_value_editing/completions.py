@@ -25,7 +25,7 @@ def preserve_rng_state(func):
     @wraps(func)  # Preserve function metadata
     def wrapper(*args, **kwargs):
         # Save the current RNG state
-        rng_state = t.random.get_rng_state()
+        rng_state: t.Tensor = t.random.get_rng_state()
 
         # Call the original function
         result = func(*args, **kwargs)
