@@ -20,5 +20,6 @@ setup(
         "pandas>=1.4.4",
         "jaxtyping>=0.2.14",
         "prettytable>=3.6.0",
+        "funcy>=2.0",
     ],
 )
