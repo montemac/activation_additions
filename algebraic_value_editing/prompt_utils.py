@@ -86,8 +86,26 @@ def get_x_vector(
     pad_method: Optional[str] = None,
 ) -> Tuple[RichPrompt, RichPrompt]:
     """Take in two prompts and a coefficient and an activation name, and
-    return two rich prompts spaced according to `pad_method`."""
-    # TODO document more
+    return two rich prompts spaced according to `pad_method`.
+
+    Args:
+        `prompt1`: The first prompt.
+        `prompt2`: The second prompt.
+        `coeff`: The coefficient to multiply the activations by.
+        `act_name`: The name of the activation location to use. If
+        `act_name` is an `int`, then it specifies the input activations
+        to that block number.
+        `model`: The model which tokenizes the prompts, if `pad_method`
+        is not `None`.
+        `pad_method`: The method to use to pad the prompts. If `None`,
+        then no padding will be done. If "tokens_right", then the
+        prompts will be padded with the model's `pad_token` to the right
+        until the tokenizations are equal length.
+
+    Returns:
+        A tuple of two `RichPrompt`s, the first of which has the prompt
+        `prompt1` and the second of which has the prompt `prompt2`.
+    """
     if pad_method == "tokens_left":
         raise NotImplementedError("tokens_left not implemented yet.")
 
