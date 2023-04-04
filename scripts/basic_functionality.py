@@ -30,5 +30,3 @@ completion_utils.print_n_comparisons(
     rich_prompts=rich_prompts,
     seed=0,
 )
-
-# %%

@@ -1,12 +1,12 @@
 """ Tests for the `completions` module. """
 
-from typing import List
+from typing import List, Tuple
 import pandas as pd
 import torch
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from algebraic_value_editing import completion_utils, prompt_utils
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 
 model: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="attn-only-2l"
@@ -58,6 +58,35 @@ def test_large_coeff_leads_to_garbage():
         first_completion
         == "I think you're （（（（（（（（（（（（（（（（（）（（）（）（）（（（（）（（）））（（（（）"
     ), f"Got: {first_completion}"
+
+
+def test_x_vec_generations():
+    """Generate an x-vector and use it to get completions. Ensure that
+    the coefficient choice matters."""
+    # Generate an x-vector
+    completions_list: List[str] = []
+    for coeff in [1.0, 2.0]:
+        x_vector: Tuple[RichPrompt, RichPrompt] = get_x_vector(
+            prompt1="Love",
+            prompt2="Hate",
+            coeff=coeff,
+            act_name=0,
+            model=model,
+        )
+
+        # Generate completions using the x-vector
+        results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+            prompts=["I think you're "],
+            model=model,
+            rich_prompts=[*x_vector],
+            seed=0,
+        )
+        completions_list.append(results["completions"][0])
+
+    # Ensure that the coefficient choice matters
+    assert (
+        completions_list[0] != completions_list[1]
+    ), "Coefficient choice doesn't matter."
 
 
 def test_seed_choice_matters():

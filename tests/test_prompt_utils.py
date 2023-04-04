@@ -1,20 +1,22 @@
 """ Tests for the prompt_utils module. """
 
+from transformer_lens.HookedTransformer import HookedTransformer
+
 from algebraic_value_editing.prompt_utils import RichPrompt
 from algebraic_value_editing import prompt_utils
 
 
-# from transformer_lens.HookedTransformer import HookedTransformer
-
-# model: HookedTransformer = HookedTransformer.from_pretrained(
-#     model_name="attn-only-1l"
-# )
+model: HookedTransformer = HookedTransformer.from_pretrained(
+    model_name="attn-only-1l"
+)
 
 
 def test_creation():
     """Test that we can create a RichPrompt."""
     rich_prompt = RichPrompt(
-        prompt="Hello world!", act_name="encoder", coeff=1.0
+        prompt="Hello world!",
+        act_name="encoder",
+        coeff=1.0,
     )
     assert rich_prompt.prompt == "Hello world!"
     assert rich_prompt.act_name == "encoder"
@@ -47,4 +49,18 @@ def test_x_vector_creation():
         assert xvec.coeff == rch_prompt.coeff
 
 
-# TODO test x vector padding and tokenization
+def test_x_vector_right_pad():
+    """Test that we can right pad the x_vector."""
+    xv_pos, xv_neg = prompt_utils.get_x_vector(
+        prompt1="Hello world fdsa dfsa fsad!",
+        prompt2="Goodbye world!",
+        coeff=1.0,
+        act_name="",
+        pad_method="tokens_right",
+        model=model,
+    )
+
+    assert xv_pos.tokens.shape == xv_neg.tokens.shape, "Padding failed."
+    assert (
+        model.to_string(xv_neg.tokens[-1]) == "<|PAD|>"
+    ), "Padded with incorrect token."
