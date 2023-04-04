@@ -2,7 +2,7 @@
 
 from typing import List, Callable, Optional, Dict
 from collections import defaultdict
-from jaxtyping import Float, Int
+from jaxtyping import Float
 import funcy as fn
 import torch
 
