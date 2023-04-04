@@ -6,7 +6,7 @@ setup(
         "Tools for testing the algebraic value-editing conjecture (AVEC) on"
         " language models"
     ),
-    long_description=open("README.md").read(),
+    long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     version="0.2.0",
     packages=find_packages(),

@@ -121,7 +121,7 @@ def get_x_vector(
         # Pad the shorter token sequence
         pad_partial: Callable = lambda tokens: torch.nn.functional.pad(
             tokens,
-            (0, max_token_len - tokens.shape[-1]),
+            (0, (max_token_len - 1) - tokens.shape[-1]),
             mode="constant",
             value=model.tokenizer.pad_token_id,  # type: ignore
         )
