@@ -7,11 +7,27 @@ The returned metric functions all take an Iterable of strings, and
 return a DataFrame of metric outputs, with the provided strings as the
 index and one column per output provided by the metric. """
 
-from typing import List, Any
+from typing import List, Any, Dict, Callable
 from collections.abc import Iterable
 
 import pandas as pd
 from transformers import pipeline
+
+
+def add_metric_cols(
+    df: pd.DataFrame,
+    metrics_dict: Dict[str, Callable[[Iterable[str]], pd.DataFrame]],
+    completion_col: str = "completion",
+):
+    """Apply a dict of named metrics to a series of completions
+    specified by by a particular DataFrame column, adding the metric
+    outputs as additional columns and returning the resulting DataFrame."""
+    for metric_name, metric_func in metrics_dict.items():
+        metric_df = metric_func(df[completion_col].to_list()).add_prefix(
+            f"{metric_name}_"
+        )
+        df = df.join(metric_df, on=completion_col)
+    return df
 
 
 def get_sentiment_metric(

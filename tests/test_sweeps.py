@@ -26,6 +26,327 @@ def model() -> HookedTransformer:
     return HookedTransformer.from_pretrained(model_name="gpt2-small")
 
 
+def test_make_rich_prompts():
+    rich_prompts_df = sweeps.make_rich_prompts(
+        [[("Good", 1.0), ("Bad", -1.0)], [("Amazing", 2.0)]],
+        [hook_utils.get_block_name(block_num=num) for num in [6, 7, 8]],
+        np.array([1.0, 5, 10.0, 20.0]),
+    )
+    target = pd.DataFrame(
+        {
+            "rich_prompts": [
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=1.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-1.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=5.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-5.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=10.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-10.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=20.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-20.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=1.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-1.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=5.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-5.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=10.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-10.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=20.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-20.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=1.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-1.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=5.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-5.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=10.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-10.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Good",
+                        coeff=20.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    ),
+                    RichPrompt(
+                        prompt="Bad",
+                        coeff=-20.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    ),
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=2.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    )
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=10.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    )
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=20.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    )
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=40.0,
+                        act_name="blocks.6.hook_resid_pre",
+                    )
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=2.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    )
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=10.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    )
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=20.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    )
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=40.0,
+                        act_name="blocks.7.hook_resid_pre",
+                    )
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=2.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    )
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=10.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    )
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=20.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    )
+                ],
+                [
+                    RichPrompt(
+                        prompt="Amazing",
+                        coeff=40.0,
+                        act_name="blocks.8.hook_resid_pre",
+                    )
+                ],
+            ],
+            "phrases": [
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Good", 1.0), ("Bad", -1.0)],
+                [("Amazing", 2.0)],
+                [("Amazing", 2.0)],
+                [("Amazing", 2.0)],
+                [("Amazing", 2.0)],
+                [("Amazing", 2.0)],
+                [("Amazing", 2.0)],
+                [("Amazing", 2.0)],
+                [("Amazing", 2.0)],
+                [("Amazing", 2.0)],
+                [("Amazing", 2.0)],
+                [("Amazing", 2.0)],
+                [("Amazing", 2.0)],
+            ],
+            "act_name": [
+                "blocks.6.hook_resid_pre",
+                "blocks.6.hook_resid_pre",
+                "blocks.6.hook_resid_pre",
+                "blocks.6.hook_resid_pre",
+                "blocks.7.hook_resid_pre",
+                "blocks.7.hook_resid_pre",
+                "blocks.7.hook_resid_pre",
+                "blocks.7.hook_resid_pre",
+                "blocks.8.hook_resid_pre",
+                "blocks.8.hook_resid_pre",
+                "blocks.8.hook_resid_pre",
+                "blocks.8.hook_resid_pre",
+                "blocks.6.hook_resid_pre",
+                "blocks.6.hook_resid_pre",
+                "blocks.6.hook_resid_pre",
+                "blocks.6.hook_resid_pre",
+                "blocks.7.hook_resid_pre",
+                "blocks.7.hook_resid_pre",
+                "blocks.7.hook_resid_pre",
+                "blocks.7.hook_resid_pre",
+                "blocks.8.hook_resid_pre",
+                "blocks.8.hook_resid_pre",
+                "blocks.8.hook_resid_pre",
+                "blocks.8.hook_resid_pre",
+            ],
+            "coeff": [
+                1.0,
+                5.0,
+                10.0,
+                20.0,
+                1.0,
+                5.0,
+                10.0,
+                20.0,
+                1.0,
+                5.0,
+                10.0,
+                20.0,
+                1.0,
+                5.0,
+                10.0,
+                20.0,
+                1.0,
+                5.0,
+                10.0,
+                20.0,
+                1.0,
+                5.0,
+                10.0,
+                20.0,
+            ],
+        }
+    )
+    pd.testing.assert_frame_equal(rich_prompts_df, target)
+
+
 SWEEP_OVER_PROMPTS_CACHE_FN = "sweep_over_prompts_cache.pkl"
 
 
