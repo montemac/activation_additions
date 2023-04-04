@@ -4,7 +4,7 @@ between two prompts. """
 from typing import List
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import completions
+from algebraic_value_editing import completion_utils
 from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 
 
@@ -23,7 +23,7 @@ rich_prompts: List[RichPrompt] = [
         model=model,
     ),
 ]
-completions.print_n_comparisons(
+completion_utils.print_n_comparisons(
     prompt="I hate you because",
     num_comparisons=5,
     model=model,

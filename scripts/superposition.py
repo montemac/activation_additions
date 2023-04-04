@@ -7,7 +7,7 @@ between two prompts. """
 # %%
 
 from transformer_lens.HookedTransformer import HookedTransformer
-from algebraic_value_editing import prompt_utils, completions
+from algebraic_value_editing import prompt_utils, completion_utils
 
 # %%
 model: HookedTransformer = HookedTransformer.from_pretrained(
@@ -31,7 +31,7 @@ assert (
     dummy_prompt == superpos_rps[-1].prompt
 ), "Last rich prompt should be dummy prompt"
 
-completions.print_n_comparisons(
+completion_utils.print_n_comparisons(
     prompt="I went outside and saw",
     num_comparisons=5,
     model=model,

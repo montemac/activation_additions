@@ -1,9 +1,7 @@
 """ Tests for superimposing prompts. """
 from typing import Dict
 
-import torch
 from transformer_lens.HookedTransformer import HookedTransformer
-from jaxtyping import Float
 from algebraic_value_editing import prompt_utils
 
 # Load GPT-2 small using transformerlens

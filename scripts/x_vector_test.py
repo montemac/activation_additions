@@ -12,7 +12,7 @@ except NameError:
 import torch
 import plotly.express as px
 
-from algebraic_value_editing import completions
+from algebraic_value_editing import completion_utils
 
 # We turn automatic differentiation off, to save GPU memory, as this notebook focuses on model inference not model training.
 _ = torch.set_grad_enabled(False)
@@ -40,7 +40,7 @@ print("Model loss:", loss)
 # xvector.print_n_comparisons(num_comparisons=5, model=model, recipe=[(["Love", "Hate"], 2)], prompt='I hate you because', completion_length=50,
 #                     layer_num=6, temperature=1, freq_penalty=1, top_p=.3, random_seed=42)
 
-results = completions.complete_prompt_with_x_vector(
+results = completion_utils.complete_prompt_with_x_vector(
     model=model,
     recipe=[(["Love", "Hate"], 2)],
     prompt=["I hate you because"] * 50,
