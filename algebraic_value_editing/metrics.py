@@ -7,7 +7,7 @@ The returned metric functions all take an Iterable of strings, and
 return a DataFrame of metric outputs, with the provided strings as the
 index and one column per output provided by the metric. """
 
-from typing import List, Any, Dict, Callable
+from typing import List, Dict, Callable, Optional
 from collections.abc import Iterable
 
 import pandas as pd
@@ -31,8 +31,8 @@ def add_metric_cols(
 
 
 def get_sentiment_metric(
-    sentiment_model_name: str, positive_labels: List[str] = None
-) -> List[Any]:
+    sentiment_model_name: str, positive_labels: Optional[List[str]] = None
+) -> Callable:
     """Create a metric using a pre-trained sentiment model. The metric
     function returns the raw outputs of the sentiment model as columns
     (e.g. label and score), the meaning of which will vary by model;

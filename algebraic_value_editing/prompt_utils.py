@@ -56,19 +56,12 @@ class RichPrompt:
     def __repr__(self) -> str:
         return f"RichPrompt({self.prompt}, {self.coeff}, {self.act_name})"
 
-    def __eq__(self, other):
-        if hasattr(self, "prompt"):
-            return (
-                self.prompt == other.prompt
-                and self.coeff == other.coeff
-                and self.act_name == other.act_name
-            )
-        else:
-            return (
-                self.tokens == other.tokens
-                and self.coeff == other.coeff
-                and self.act_name == other.act_name
-            )
+    def __eq__(self, other) -> bool:
+        return (
+            self.prompt == other.prompt
+            and self.coeff == other.coeff
+            and self.act_name == other.act_name
+        )
 
 
 def get_x_vector(
@@ -94,7 +87,7 @@ def get_x_vector(
         `pad_method`: The method to use to pad the prompts. If `None`,
         then no padding will be done. If "tokens_right", then the
         prompts will be padded with the model's `pad_token` to the right
-        until the tokenizations are equal length.
+        until their tokenizations are equal length.
 
     Returns:
         A tuple of two `RichPrompt`s, the first of which has the prompt

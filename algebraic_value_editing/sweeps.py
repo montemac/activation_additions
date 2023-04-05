@@ -18,8 +18,8 @@ from algebraic_value_editing.completion_utils import (
 
 def make_rich_prompts(
     phrases: List[List[Tuple[str, float]]],
-    act_names: Union[List[str], np.array],
-    coeffs: Union[List[float], np.array] = [1.0],
+    act_names: Union[List[str], np.ndarray],
+    coeffs: Union[List[float], np.ndarray] = [1.0],
 ) -> pd.DataFrame:
     """Make a single series of RichPrompt lists by combining all permutations
     of lists of phrases with initial coeffs, activation names (i.e. layers), and

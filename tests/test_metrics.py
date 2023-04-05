@@ -8,10 +8,7 @@ if is_ipython:
     get_ipython().run_line_magic("reload_ext", "autoreload")
     get_ipython().run_line_magic("autoreload", "2")
 
-import pytest
-import numpy as np
 import pandas as pd
-import pandas.testing
 
 import algebraic_value_editing.metrics as metrics
 
