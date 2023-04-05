@@ -2,30 +2,33 @@
 
 from typing import List, Callable, Optional, Dict
 from collections import defaultdict
-from jaxtyping import Float, Int
+from jaxtyping import Float
 import funcy as fn
 import torch
 
-from transformer_lens import HookedTransformer
-from transformer_lens.utils import get_act_name
+from transformer_lens.HookedTransformer import HookedTransformer
 from transformer_lens.hook_points import HookPoint
-from algebraic_value_editing.rich_prompts import RichPrompt
+from algebraic_value_editing.prompt_utils import RichPrompt
 
 
 def get_prompt_activations(
     model: HookedTransformer, rich_prompt: RichPrompt
 ) -> Float[torch.Tensor, "batch pos d_model"]:
-    """Takes a RichPrompt and returns the rescaled activations for that
-    prompt, for the appropriate act_name. Rescaling is done by running
+    """Takes a `RichPrompt` and returns the rescaled activations for that
+    prompt, for the appropriate `act_name`. Rescaling is done by running
     the model forward with the prompt and then multiplying the
-    activations by the coefficient rich_prompt.coeff.
+    activations by the coefficient `rich_prompt.coeff`.
     """
     # Get tokens for prompt
-    tokens: Int[torch.Tensor, "batch pos"] = model.to_tokens(rich_prompt.prompt)
+    if hasattr(rich_prompt, "tokens"):
+        tokens = rich_prompt.tokens
+    else:
+        tokens = model.to_tokens(rich_prompt.prompt)
 
     # Run forward pass
     cache: Dict[str, torch.Tensor] = model.run_with_cache(
-        tokens, names_filter=lambda ss: ss == rich_prompt.act_name
+        tokens,
+        names_filter=lambda act_name: act_name == rich_prompt.act_name,
     )[1]
 
     # Return cached activations times coefficient
@@ -35,7 +38,7 @@ def get_prompt_activations(
 def get_activation_dict(
     model: HookedTransformer, rich_prompts: List[RichPrompt]
 ) -> Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]]:
-    """Takes a list of RichPrompts and returns a dictionary mapping
+    """Takes a list of `RichPrompt`s and returns a dictionary mapping
     activation names to lists of activations.
     """
     # Make the dictionary
@@ -55,7 +58,7 @@ def get_activation_dict(
 def hook_fn_from_activations(
     activations: Float[torch.Tensor, "batch pos d_model"]
 ) -> Callable:
-    """Takes an activation Tensor and returns a hook function that adds the
+    """Takes an activation `Tensor` and returns a hook function that adds the
     cached activations for that prompt to the existing activations at
     the hook point.
     """
@@ -111,17 +114,17 @@ def hook_fns_from_act_dict(
     return hook_fns
 
 
-def hook_fns_from_prompts(
+def hook_fns_from_rich_prompts(
     model: HookedTransformer, rich_prompts: List[RichPrompt]
 ) -> Dict[str, Callable]:
-    """Takes a list of RichPrompts and makes a single activation-modifying forward hook.
+    """Takes a list of `RichPrompt`s and makes a single activation-modifying forward hook.
 
-    @args:
-        model: HookedTransformer object, with hooks already set up
+    args:
+        `model`: `HookedTransformer` object, with hooks already set up
 
-        rich_prompts: List of RichPrompt objects
+        `rich_prompts`: List of `RichPrompt` objects
 
-    @returns:
+    returns:
         A dictionary of functions that takes a batch of activations and
         returns a batch of activations with the prompt-modifications
         added in.
@@ -135,10 +138,3 @@ def hook_fns_from_prompts(
     hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(activation_dict)
 
     return hook_fns
-
-
-# TODO maybe move to different file
-def get_block_name(block_num: int) -> str:
-    """Returns the hook name of the block with the given number, at the
-    input to the residual stream."""
-    return get_act_name(name="resid_pre", layer=block_num)
