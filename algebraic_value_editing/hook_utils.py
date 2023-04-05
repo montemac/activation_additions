@@ -2,7 +2,7 @@
 
 from typing import List, Callable, Optional, Dict
 from collections import defaultdict
-from jaxtyping import Float
+from jaxtyping import Float, Int
 import funcy as fn
 import torch
 
@@ -20,6 +20,7 @@ def get_prompt_activations(
     activations by the coefficient `rich_prompt.coeff`.
     """
     # Get tokens for prompt
+    tokens: Int[torch.Tensor, "seq"]
     if hasattr(rich_prompt, "tokens"):
         tokens = rich_prompt.tokens
     else:

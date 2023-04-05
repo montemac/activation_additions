@@ -73,7 +73,7 @@ class RichPrompt:
     def __repr__(self) -> str:
         if hasattr(self, "prompt"):
             return f"RichPrompt({self.prompt}, {self.coeff}, {self.act_name})"
-        else:
+        else:  # We know it must have tokens
             return f"RichPrompt({self.tokens}, {self.coeff}, {self.act_name})"
 
 
@@ -115,26 +115,28 @@ def get_x_vector(
         ], "pad_method must be 'tokens_right'"
         assert model is not None, "model must be specified if pad_method is"
 
-        tokens1, tokens2 = model.to_tokens([prompt1, prompt2])
+        tokens1, tokens2 = [
+            model.to_tokens(prompt)[0] for prompt in [prompt1, prompt2]
+        ]
+
         max_token_len: int = max(tokens1.shape[-1], tokens2.shape[-1])
 
         # Pad the shorter token sequence
         pad_partial: Callable = lambda tokens: torch.nn.functional.pad(
             tokens,
-            (0, (max_token_len - 1) - tokens.shape[-1]),
+            (0, max_token_len - tokens.shape[-1]),
             mode="constant",
             value=model.tokenizer.pad_token_id,  # type: ignore
         )
 
-        padded_tokens1, padded_tokens2 = map(
-            pad_partial, [tokens1[..., 1:], tokens2[..., 1:]]
-        )
+        if tokens1.shape[0] > tokens2.shape[0]:
+            tokens2 = pad_partial(tokens2)
+        else:
+            tokens1 = pad_partial(tokens1)
 
-        end_point = RichPrompt(
-            tokens=padded_tokens1, coeff=coeff, act_name=act_name
-        )
+        end_point = RichPrompt(tokens=tokens1, coeff=coeff, act_name=act_name)
         start_point = RichPrompt(
-            tokens=padded_tokens2, coeff=-1 * coeff, act_name=act_name
+            tokens=tokens2, coeff=-1 * coeff, act_name=act_name
         )
         return end_point, start_point
 

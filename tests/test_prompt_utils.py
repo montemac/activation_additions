@@ -52,9 +52,10 @@ def test_x_vector_creation():
 def test_x_vector_right_pad():
     """Test that we can right pad the x_vector."""
     prompt1 = "Hello world fdsa dfsa fsad!"
+    prompt2 = "Goodbye world!"
     xv_pos, xv_neg = prompt_utils.get_x_vector(
         prompt1=prompt1,
-        prompt2="Goodbye world!",
+        prompt2=prompt2,
         coeff=1.0,
         act_name="",
         pad_method="tokens_right",
@@ -66,5 +67,18 @@ def test_x_vector_right_pad():
         model.to_string(xv_neg.tokens[-1]) == "<|PAD|>"
     ), "Padded with incorrect token."
 
-    xv_pos_prompt = model.to_string(xv_pos.tokens)
+    # Check that the first token is BOS
+    for first_token in [xv_pos.tokens[0], xv_neg.tokens[0]]:
+        assert (
+            first_token == model.tokenizer.bos_token_id
+        ), "BOS token missing."
+
+    # Get the prompt by skipping the first BOS token
+    xv_pos_prompt = model.to_string(xv_pos.tokens[1:])
     assert xv_pos_prompt == prompt1, "Accidentally padded the longer string."
+
+    # Ensure that prompt2 is a prefix of xv_neg_prompt
+    xv_neg_prompt = model.to_string(xv_neg.tokens[1:])
+    assert xv_neg_prompt.startswith(
+        prompt2
+    ), "The second prompt is not a prefix of the padded prompt."
