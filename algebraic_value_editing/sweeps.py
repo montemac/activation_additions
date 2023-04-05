@@ -9,9 +9,9 @@ from tqdm.auto import tqdm
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import metrics
-from algebraic_value_editing.rich_prompts import RichPrompt
-from algebraic_value_editing.completions import (
-    complete_prompt_normal,
+from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.completion_utils import (
+    gen_using_hooks,
     gen_using_rich_prompts,
 )
 
@@ -37,7 +37,7 @@ def make_rich_prompts(
                 rich_prompts_this = []
                 for phrase, init_coeff in phrases_this:
                     rich_prompts_this.append(
-                        RichPrompt(phrase, init_coeff * coeff, act_name)
+                        RichPrompt(init_coeff * coeff, act_name, phrase)
                     )
                 rows.append(
                     {
@@ -99,38 +99,26 @@ def sweep_over_prompts(
     patched_list = []
     for prompt in tqdm(prompts):
         # Generate the normal completions for this prompt
-        completions, losses, _ = complete_prompt_normal(
-            model,
-            [prompt] * num_normal_completions,
-            completion_length=tokens_to_generate,
+        normal_df: pd.DataFrame = gen_using_hooks(
+            model=model,
+            prompts=[prompt] * num_normal_completions,
+            hook_fns={},
+            tokens_to_generate=tokens_to_generate,
             seed=seed,
             **sampling_kwargs,
         )
-        # Turn into DataFrame
-        normal_df: pd.DataFrame = pd.DataFrame(
-            {"completion": completions, "loss": losses, "prompt": prompt}
-        ).set_index("prompt")
         # Append for later concatenation
         normal_list.append(normal_df)
         # Iterate over RichPrompts
         for ri, rich_prompts_this in enumerate(tqdm(rich_prompts)):
             # Generate the patched completions
             patched_df: pd.DataFrame = gen_using_rich_prompts(
-                model,
-                [prompt] * num_patched_completions,
-                rich_prompts_this,
+                model=model,
+                rich_prompts=rich_prompts_this,
+                prompts=[prompt] * num_patched_completions,
                 tokens_to_generate=tokens_to_generate,
                 seed=seed,
-                include_normal=False,
                 **sampling_kwargs,
-            )
-            # Adust columns
-            patched_df.rename(
-                columns={
-                    "patched_completion": "completion",
-                    "patched_loss": "loss",
-                },
-                inplace=True,
             )
             patched_df["rich_prompt_index"] = ri
             # Store for later

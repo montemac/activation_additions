@@ -76,6 +76,20 @@ class RichPrompt:
         else:
             return f"RichPrompt({self.tokens}, {self.coeff}, {self.act_name})"
 
+    def __eq__(self, other):
+        if hasattr(self, "prompt"):
+            return (
+                self.prompt == other.prompt
+                and self.coeff == other.coeff
+                and self.act_name == other.act_name
+            )
+        else:
+            return (
+                self.tokens == other.tokens
+                and self.coeff == other.coeff
+                and self.act_name == other.act_name
+            )
+
 
 def get_x_vector(
     prompt1: str,

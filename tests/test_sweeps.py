@@ -17,8 +17,8 @@ import pickle
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import sweeps
-from algebraic_value_editing import hook_utils
-from algebraic_value_editing.rich_prompts import RichPrompt
+from algebraic_value_editing import prompt_utils
+from algebraic_value_editing.prompt_utils import RichPrompt
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def model() -> HookedTransformer:
 def test_make_rich_prompts():
     rich_prompts_df = sweeps.make_rich_prompts(
         [[("Good", 1.0), ("Bad", -1.0)], [("Amazing", 2.0)]],
-        [hook_utils.get_block_name(block_num=num) for num in [6, 7, 8]],
+        [prompt_utils.get_block_name(block_num=num) for num in [6, 7, 8]],
         np.array([1.0, 5, 10.0, 20.0]),
     )
     target = pd.DataFrame(
@@ -351,7 +351,7 @@ SWEEP_OVER_PROMPTS_CACHE_FN = "sweep_over_prompts_cache.pkl"
 
 
 def test_sweep_over_prompts(model):
-    act_name = hook_utils.get_block_name(block_num=6)
+    act_name = prompt_utils.get_block_name(block_num=6)
     normal_df, patched_df = sweeps.sweep_over_prompts(
         model,
         [
@@ -361,12 +361,12 @@ def test_sweep_over_prompts(model):
         ],
         [
             [
-                RichPrompt("Love", 1.0, act_name),
-                RichPrompt("Fear", -1.0, act_name),
+                RichPrompt(1.0, act_name, "Love"),
+                RichPrompt(-1.0, act_name, "Fear"),
             ],
             [
-                RichPrompt("Love", 10.0, act_name),
-                RichPrompt("Fear", -10.0, act_name),
+                RichPrompt(10.0, act_name, "Love"),
+                RichPrompt(-10.0, act_name, "Fear"),
             ],
         ],
         num_normal_completions=4,

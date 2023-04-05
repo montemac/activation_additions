@@ -19,16 +19,14 @@ import torch
 
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import sweeps, metrics, hook_utils
+from algebraic_value_editing import sweeps, metrics, prompt_utils
 
 
 # %%
 # Load a model
-model = (
-    HookedTransformer.from_pretrained(model_name="gpt2-xl", device="cpu")
-    # .half()
-    .to("cuda:0")
-)
+model = HookedTransformer.from_pretrained(
+    model_name="gpt2-xl", device="cpu"
+).to("cuda:0")
 
 
 # %%
@@ -37,7 +35,7 @@ model = (
 rich_prompts_df = sweeps.make_rich_prompts(
     [[("Good", 1.0), ("Bad", -1.0)], [("Fantastic", 1.0)]],
     [
-        hook_utils.get_block_name(block_num=num)
+        prompt_utils.get_block_name(block_num=num)
         for num in range(0, len(model.blocks), 6)
     ],
     np.array([-10, -5, -2, -1, 1, 2, 5, 10]),
