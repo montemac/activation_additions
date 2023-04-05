@@ -20,11 +20,7 @@ def get_prompt_activations(
     activations by the coefficient `rich_prompt.coeff`.
     """
     # Get tokens for prompt
-    tokens: Int[torch.Tensor, "seq"]
-    if hasattr(rich_prompt, "tokens"):
-        tokens = rich_prompt.tokens
-    else:
-        tokens = model.to_tokens(rich_prompt.prompt)
+    tokens: Int[torch.Tensor, "seq"] = model.to_tokens(rich_prompt.prompt)
 
     # Run forward pass
     cache: Dict[str, torch.Tensor] = model.run_with_cache(

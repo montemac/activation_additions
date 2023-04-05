@@ -2,7 +2,6 @@
 editing. """
 
 from typing import Tuple, Optional, Union, Callable
-from jaxtyping import Int
 import torch
 import torch.nn.functional
 
@@ -26,20 +25,16 @@ class RichPrompt:
     coeff: float
     act_name: str
     prompt: str
-    tokens: Int[torch.Tensor, "seq"]
 
     def __init__(
         self,
         coeff: float,
         act_name: Union[str, int],
-        prompt: Optional[str] = None,
-        tokens: Optional[Int[torch.Tensor, "seq"]] = None,
+        prompt: str,
     ):
         """Specifies a model location (`act_name`) from which to
-        extract activations, which will then be multiplied by `coeff`.
-        If `prompt` is specified, it will be used to compute the
-        activations. If `tokens` is specified, it will be used to
-        compute the activations. If neither or both are specified, an error will be raised.
+        extract activations for the given `prompt`, which will then be
+        multiplied by `coeff`.
 
         Args:
             `coeff  : The coefficient to multiply the activations by.
@@ -47,14 +42,7 @@ class RichPrompt:
             is an `int`, then it specifies the input activations to
             that block number.
             `prompt`: The prompt to use to compute the activations.
-            `tokens`: The tokens to use to compute the activations.
-            `model`: The model which tokenizes the prompt, or which
-            converts the tokens to text.
         """
-        assert (prompt is not None) ^ (
-            tokens is not None
-        ), "Must specify either prompt or tokens, but not both."
-
         self.coeff = coeff
 
         # Set the activation name
@@ -63,18 +51,10 @@ class RichPrompt:
         else:
             self.act_name = act_name
 
-        # Set the tokens
-        if tokens is not None:
-            assert len(tokens.shape) == 1, "Tokens must be a 1D tensor."
-            self.tokens = tokens
-        else:
-            self.prompt = prompt  # type: ignore (this is guaranteed to be str)
+        self.prompt = prompt
 
     def __repr__(self) -> str:
-        if hasattr(self, "prompt"):
-            return f"RichPrompt({self.prompt}, {self.coeff}, {self.act_name})"
-        else:  # We know it must have tokens
-            return f"RichPrompt({self.tokens}, {self.coeff}, {self.act_name})"
+        return f"RichPrompt({self.prompt}, {self.coeff}, {self.act_name})"
 
 
 def get_x_vector(
