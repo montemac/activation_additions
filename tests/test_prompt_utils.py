@@ -82,3 +82,27 @@ def test_x_vector_right_pad():
     assert xv_neg_prompt.startswith(
         prompt2
     ), "The second prompt is not a prefix of the padded prompt."
+
+
+def test_x_vector_right_pad_blank():
+    """Test that a padded blank string has the appropriate composition:
+    a BOS token followed by PAD tokens."""
+    prompt1 = "Hello world fdsa dfsa fsad!"
+    prompt2 = ""
+    xv_pos, xv_neg = prompt_utils.get_x_vector(
+        prompt1=prompt1,
+        prompt2=prompt2,
+        coeff=1.0,
+        act_name="",
+        pad_method="tokens_right",
+        model=model,
+    )
+
+    assert xv_pos.tokens.shape == xv_neg.tokens.shape, "Padding failed."
+    assert (
+        xv_neg.tokens[0] == model.tokenizer.bos_token_id
+    ), "BOS token missing."
+    for tok in xv_neg.tokens[1:]:
+        assert (
+            tok == model.tokenizer.pad_token_id
+        ), "Padded with incorrect token."
