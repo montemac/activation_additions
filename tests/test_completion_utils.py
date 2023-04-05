@@ -1,6 +1,6 @@
 """ Tests for the `completions` module. """
 
-from typing import List, Tuple
+from typing import List, Tuple, Set
 import pandas as pd
 import torch
 from transformer_lens.HookedTransformer import HookedTransformer
@@ -58,6 +58,28 @@ def test_large_coeff_leads_to_garbage():
         first_completion
         == "I think you're （（（（（（（（（（（（（（（（（）（（）（）（）（（（（）（（）））（（（（）"
     ), f"Got: {first_completion}"
+
+
+def test_each_block_injection_produces_diff_results():
+    """Test that each block injection produces different results."""
+    completions_set: Set[str] = set()
+    for block in range(model.cfg.n_layers):
+        rich_prompts: List[RichPrompt] = [
+            RichPrompt(prompt="Love", coeff=1.0, act_name=block)
+        ]
+
+        results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+            prompts=["I think you're "],
+            model=model,
+            rich_prompts=rich_prompts,
+            seed=0,
+        )
+        completion = results["completions"][0]
+        assert completion not in completions_set, (
+            f"Block {block} produced a completion that was already "
+            "produced by a previous block."
+        )
+        completions_set.add(results["completions"][0])
 
 
 def test_x_vec_coefficient_matters():
