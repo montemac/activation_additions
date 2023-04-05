@@ -51,8 +51,9 @@ def test_x_vector_creation():
 
 def test_x_vector_right_pad():
     """Test that we can right pad the x_vector."""
+    prompt1 = "Hello world fdsa dfsa fsad!"
     xv_pos, xv_neg = prompt_utils.get_x_vector(
-        prompt1="Hello world fdsa dfsa fsad!",
+        prompt1=prompt1,
         prompt2="Goodbye world!",
         coeff=1.0,
         act_name="",
@@ -64,3 +65,6 @@ def test_x_vector_right_pad():
     assert (
         model.to_string(xv_neg.tokens[-1]) == "<|PAD|>"
     ), "Padded with incorrect token."
+
+    xv_pos_prompt = model.to_string(xv_pos.tokens)
+    assert xv_pos_prompt == prompt1, "Accidentally padded the longer string."
