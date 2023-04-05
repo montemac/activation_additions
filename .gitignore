@@ -127,18 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-.vscode*
-=======
-
-# Misc
-*.pkl.vscode*
->>>>>>> Stashed changes
-=======
 
 # Misc
 *.pkl
 .vscode
 *~
->>>>>>> main
