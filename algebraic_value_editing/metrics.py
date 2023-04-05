@@ -15,7 +15,7 @@ from transformers import pipeline
 
 
 def add_metric_cols(
-    df: pd.DataFrame,
+    data: pd.DataFrame,
     metrics_dict: Dict[str, Callable[[Iterable[str]], pd.DataFrame]],
     completion_col: str = "completion",
 ):
@@ -23,16 +23,16 @@ def add_metric_cols(
     specified by by a particular DataFrame column, adding the metric
     outputs as additional columns and returning the resulting DataFrame."""
     for metric_name, metric_func in metrics_dict.items():
-        metric_df = metric_func(df[completion_col].to_list()).add_prefix(
+        metric_df = metric_func(data[completion_col].to_list()).add_prefix(
             f"{metric_name}_"
         )
-        df = df.join(metric_df, on=completion_col)
-    return df
+        data = data.join(metric_df, on=completion_col)
+    return data
 
 
 def get_sentiment_metric(
     sentiment_model_name: str, positive_labels: Optional[List[str]] = None
-) -> Callable:
+) -> Callable[[Iterable[str]], pd.DataFrame]:
     """Create a metric using a pre-trained sentiment model. The metric
     function returns the raw outputs of the sentiment model as columns
     (e.g. label and score), the meaning of which will vary by model;
@@ -40,11 +40,15 @@ def get_sentiment_metric(
     list is provided."""
     sentiment_pipeline = pipeline(model=sentiment_model_name)
 
-    def metric_func(strs: Iterable[str]):
-        strs = [ss for ss in strs]
-        df: pd.DataFrame = pd.DataFrame(sentiment_pipeline(strs), index=strs)
+    def metric_func(strs: Iterable[str]) -> pd.DataFrame:
+        strs = list(strs)
+        metric_results: pd.DataFrame = pd.DataFrame(
+            sentiment_pipeline(strs), index=strs
+        )
         if positive_labels is not None:
-            df["is_positive"] = df["label"].isin(positive_labels)
-        return df
+            metric_results["is_positive"] = metric_results["label"].isin(
+                positive_labels
+            )
+        return metric_results
 
     return metric_func

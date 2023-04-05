@@ -19,7 +19,7 @@ from algebraic_value_editing.completion_utils import (
 def make_rich_prompts(
     phrases: List[List[Tuple[str, float]]],
     act_names: Union[List[str], np.ndarray],
-    coeffs: Union[List[float], np.ndarray] = [1.0],
+    coeffs: Union[List[float], np.ndarray],
 ) -> pd.DataFrame:
     """Make a single series of RichPrompt lists by combining all permutations
     of lists of phrases with initial coeffs, activation names (i.e. layers), and
@@ -59,7 +59,9 @@ def sweep_over_prompts(
     num_patched_completions: int = 100,
     tokens_to_generate: int = 40,
     seed: Optional[int] = None,
-    metrics_dict: Dict[str, Callable[[Iterable[str]], pd.DataFrame]] = {},
+    metrics_dict: Optional[
+        Dict[str, Callable[[Iterable[str]], pd.DataFrame]]
+    ] = None,
     **sampling_kwargs,
 ) -> pd.DataFrame:
     """Apply each provided RichPrompt to each prompt num_completions
@@ -110,7 +112,7 @@ def sweep_over_prompts(
         # Append for later concatenation
         normal_list.append(normal_df)
         # Iterate over RichPrompts
-        for ri, rich_prompts_this in enumerate(tqdm(rich_prompts)):
+        for index, rich_prompts_this in enumerate(tqdm(rich_prompts)):
             # Generate the patched completions
             patched_df: pd.DataFrame = gen_using_rich_prompts(
                 model=model,
@@ -120,13 +122,14 @@ def sweep_over_prompts(
                 seed=seed,
                 **sampling_kwargs,
             )
-            patched_df["rich_prompt_index"] = ri
+            patched_df["rich_prompt_index"] = index
             # Store for later
             patched_list.append(patched_df)
     # Create the final normal and patched completion frames
     normal_all = pd.concat(normal_list).reset_index(names="completion_index")
     patched_all = pd.concat(patched_list).reset_index(names="completion_index")
     # Create and add metric columns
-    normal_all = metrics.add_metric_cols(normal_all, metrics_dict)
-    patched_all = metrics.add_metric_cols(patched_all, metrics_dict)
+    if metrics_dict is not None:
+        normal_all = metrics.add_metric_cols(normal_all, metrics_dict)
+        patched_all = metrics.add_metric_cols(patched_all, metrics_dict)
     return normal_all, patched_all

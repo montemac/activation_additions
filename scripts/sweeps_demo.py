@@ -1,30 +1,24 @@
+"""Basic demonstration of sweeps and sentiment metrics operation."""
+
 # %%
 # Imports, etc.
-try:
-    get_ipython().__class__.__name__
-    is_ipython = True
-except:
-    is_ipython = False
-if is_ipython:
-    get_ipython().run_line_magic("reload_ext", "autoreload")
-    get_ipython().run_line_magic("autoreload", "2")
-
-import pickle
-
-import pytest
 import numpy as np
-import pandas as pd
-import pandas.testing
-import torch
 
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import sweeps, metrics, prompt_utils
 
+try:
+    from IPython import get_ipython
+
+    get_ipython().run_line_magic("reload_ext", "autoreload")
+    get_ipython().run_line_magic("autoreload", "2")
+except AttributeError:
+    pass
 
 # %%
 # Load a model
-model = HookedTransformer.from_pretrained(
+MODEL = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
 ).to("cuda:0")
 
@@ -36,7 +30,7 @@ rich_prompts_df = sweeps.make_rich_prompts(
     [[("Good", 1.0), ("Bad", -1.0)], [("Fantastic", 1.0)]],
     [
         prompt_utils.get_block_name(block_num=num)
-        for num in range(0, len(model.blocks), 6)
+        for num in range(0, len(MODEL.blocks), 6)
     ],
     np.array([-10, -5, -2, -1, 1, 2, 5, 10]),
 )
@@ -67,7 +61,7 @@ metrics_dict = {
 # %%
 # Run the sweep of completions
 normal_df, patched_df = sweeps.sweep_over_prompts(
-    model,
+    MODEL,
     prompts,
     rich_prompts_df["rich_prompts"],
     num_normal_completions=10,
@@ -78,5 +72,3 @@ normal_df, patched_df = sweeps.sweep_over_prompts(
     freq_penalty=1,
     top_p=0.3,
 )
-
-# TODO: figure out where lots of GPU memory is being used during completions.

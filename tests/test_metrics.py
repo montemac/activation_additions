@@ -1,19 +1,23 @@
-# %%
-try:
-    get_ipython().__class__.__name__
-    is_ipython = True
-except:
-    is_ipython = False
-if is_ipython:
-    get_ipython().run_line_magic("reload_ext", "autoreload")
-    get_ipython().run_line_magic("autoreload", "2")
+"""Test suite for metrics.py"""
 
+# %%
 import pandas as pd
 
-import algebraic_value_editing.metrics as metrics
+from algebraic_value_editing import metrics
+
+try:
+    from IPython import get_ipython
+
+    get_ipython().run_line_magic("reload_ext", "autoreload")
+    get_ipython().run_line_magic("autoreload", "2")
+except AttributeError:
+    pass
 
 
 def test_get_sentiment_metric():
+    """Test for get_sentiment_metric().  Creates a sentiment metric,
+    applies it to some strings, and checks the results against
+    pre-defined constants."""
     metric = metrics.get_sentiment_metric(
         "distilbert-base-uncased-finetuned-sst-2-english", ["POSITIVE"]
     )
@@ -34,6 +38,9 @@ def test_get_sentiment_metric():
 
 
 def test_add_metric_cols():
+    """Test for add_metric_cols().  Creates two metrics, applies them to
+    several strings with the function under tests, then tests that the
+    resulting DataFrame matches a pre-defined constant."""
     metrics_dict = {
         "sentiment1": metrics.get_sentiment_metric(
             "distilbert-base-uncased-finetuned-sst-2-english", ["POSITIVE"]
@@ -50,7 +57,7 @@ def test_add_metric_cols():
             ]
         }
     )
-    df = metrics.add_metric_cols(prompts_df, metrics_dict)
+    results_df = metrics.add_metric_cols(prompts_df, metrics_dict)
     target = pd.DataFrame(
         {
             "completion": prompts_df["completion"],
@@ -62,4 +69,4 @@ def test_add_metric_cols():
             "sentiment2_is_positive": [True, False],
         }
     )
-    pd.testing.assert_frame_equal(df, target)
+    pd.testing.assert_frame_equal(results_df, target)
