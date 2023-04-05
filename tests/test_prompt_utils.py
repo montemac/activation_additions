@@ -62,23 +62,27 @@ def test_x_vector_right_pad():
         model=model,
     )
 
-    assert xv_pos.tokens.shape == xv_neg.tokens.shape, "Padding failed."
-    assert (
-        model.to_string(xv_neg.tokens[-1]) == "<|PAD|>"
+    pos_tokens, neg_tokens = [
+        model.to_tokens(prompt)[0] for prompt in [xv_pos.prompt, xv_neg.prompt]
+    ]
+
+    assert pos_tokens.shape == neg_tokens.shape, "Padding failed."
+    assert model.to_string(neg_tokens[-1]).endswith(
+        model.tokenizer.pad_token
     ), "Padded with incorrect token."
 
     # Check that the first token is BOS
-    for first_token in [xv_pos.tokens[0], xv_neg.tokens[0]]:
+    for first_token in [pos_tokens[0], neg_tokens[0]]:
         assert (
             first_token == model.tokenizer.bos_token_id
         ), "BOS token missing."
 
     # Get the prompt by skipping the first BOS token
-    xv_pos_prompt = model.to_string(xv_pos.tokens[1:])
+    xv_pos_prompt = model.to_string(pos_tokens[1:])
     assert xv_pos_prompt == prompt1, "Accidentally padded the longer string."
 
     # Ensure that prompt2 is a prefix of xv_neg_prompt
-    xv_neg_prompt = model.to_string(xv_neg.tokens[1:])
+    xv_neg_prompt = model.to_string(neg_tokens[1:])
     assert xv_neg_prompt.startswith(
         prompt2
     ), "The second prompt is not a prefix of the padded prompt."
@@ -98,11 +102,16 @@ def test_x_vector_right_pad_blank():
         model=model,
     )
 
-    assert xv_pos.tokens.shape == xv_neg.tokens.shape, "Padding failed."
-    assert (
-        xv_neg.tokens[0] == model.tokenizer.bos_token_id
-    ), "BOS token missing."
-    for tok in xv_neg.tokens[1:]:
+    pos_tokens, neg_tokens = [
+        model.to_tokens(prompt)[0] for prompt in [xv_pos.prompt, xv_neg.prompt]
+    ]
+
+    assert pos_tokens.shape == neg_tokens.shape, "Padding failed."
+    assert neg_tokens[0] == model.tokenizer.bos_token_id, "BOS token missing."
+    for tok in neg_tokens[1:]:
         assert (
             tok == model.tokenizer.pad_token_id
         ), "Padded with incorrect token."
+
+
+# TODO test identity mapping of xvec padding for a variety of models

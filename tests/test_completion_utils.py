@@ -39,6 +39,26 @@ def test_gen_using_rich_prompts():
     ), f"Got: {completions[0][:20]} instead."
 
 
+def test_zero_coeff_does_nothing():
+    """Test that using a RichPrompt with a zero coefficient
+    produces no change in the output."""
+    zero_prompt = RichPrompt(prompt="Hate", coeff=0.0, act_name=0)
+
+    completions: List[str] = []
+    for rich_prompts in [[], [zero_prompt]]:
+        results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+            prompts=["I think you're "],
+            model=model,
+            rich_prompts=rich_prompts,
+            seed=0,
+        )
+        completions.append(results["completions"][0])
+
+    assert (
+        completions[0] == completions[1]
+    ), f"Got completions: {completions[0]} and {completions[1]}"
+
+
 def test_large_coeff_leads_to_garbage():
     """Test that using a RichPrompt with an enormous coefficient
     produces garbage outputs."""
@@ -151,6 +171,29 @@ def test_x_vec_inverse_equality():
     assert (
         results1["completions"][0] == results2["completions"][0]
     ), "Generations should be identical."
+
+
+def test_x_vec_same_prompt_cancels():
+    """Show that an x-vector with the same prompt in both positions has
+    no effect."""
+    x_vec: Tuple[RichPrompt, RichPrompt] = get_x_vector(
+        prompt1="Love",
+        prompt2="Love",
+        coeff=1.0,
+        act_name=0,
+    )
+
+    completions: List[str] = []
+    for rich_prompts in [[], list(x_vec)]:
+        results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+            prompts=["I think you're "],
+            model=model,
+            rich_prompts=rich_prompts,
+            seed=0,
+        )
+        completions.append(results["completions"][0])
+
+    assert completions[0] == completions[1], "X-vector should have no effect."
 
 
 def test_x_vec_padding_matters():

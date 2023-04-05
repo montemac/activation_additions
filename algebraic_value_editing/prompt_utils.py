@@ -128,17 +128,16 @@ def get_x_vector(
             mode="constant",
             value=model.tokenizer.pad_token_id,  # type: ignore
         )
-
+        padded_toks_1, padded_toks_2 = tokens1, tokens2
         if tokens1.shape[0] > tokens2.shape[0]:
-            tokens2 = pad_partial(tokens2)
+            padded_toks_2 = pad_partial(tokens2)
         else:
-            tokens1 = pad_partial(tokens1)
+            padded_toks_1 = pad_partial(tokens1)
 
-        end_point = RichPrompt(tokens=tokens1, coeff=coeff, act_name=act_name)
-        start_point = RichPrompt(
-            tokens=tokens2, coeff=-1 * coeff, act_name=act_name
-        )
-        return end_point, start_point
+        prompt1, prompt2 = [
+            model.to_string(toks[1:])
+            for toks in [padded_toks_1, padded_toks_2]
+        ]
 
     end_point = RichPrompt(prompt=prompt1, coeff=coeff, act_name=act_name)
     start_point = RichPrompt(

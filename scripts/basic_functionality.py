@@ -16,11 +16,12 @@ model: HookedTransformer = HookedTransformer.from_pretrained(
 # %%
 rich_prompts: List[RichPrompt] = [
     *get_x_vector(
-        prompt1="I love you",
-        prompt2="Fuck you",
+        prompt1="I love you tesnariots setirao",
+        prompt2="I love geese",
         coeff=1.0,
         act_name=6,
         model=model,
+        pad_method="tokens_right",
     ),
 ]
 completion_utils.print_n_comparisons(
