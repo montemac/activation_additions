@@ -9,11 +9,13 @@ if is_ipython:
     get_ipython().run_line_magic("reload_ext", "autoreload")
     get_ipython().run_line_magic("autoreload", "2")
 
+import pickle
+
 import pytest
 import numpy as np
 import pandas as pd
 import pandas.testing
-import pickle
+import torch
 
 from transformer_lens import HookedTransformer
 
@@ -22,7 +24,11 @@ from algebraic_value_editing import sweeps, metrics, hook_utils
 
 # %%
 # Load a model
-model = HookedTransformer.from_pretrained(model_name="gpt2-xl")
+model = (
+    HookedTransformer.from_pretrained(model_name="gpt2-xl", device="cpu")
+    # .half()
+    .to("cuda:0")
+)
 
 
 # %%
@@ -61,14 +67,18 @@ metrics_dict = {
 
 
 # %%
-# Run the sweet of completions
+# Run the sweep of completions
 normal_df, patched_df = sweeps.sweep_over_prompts(
     model,
     prompts,
     rich_prompts_df["rich_prompts"],
+    num_normal_completions=10,
+    num_patched_completions=10,
     seed=42,
     metrics_dict=metrics_dict,
     temperature=1,
     freq_penalty=1,
     top_p=0.3,
 )
+
+# TODO: figure out where lots of GPU memory is being used during completions.
