@@ -128,10 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Code profiling
-*prof
-
 # Misc
 *.pkl
 .vscode
 *~
+*prof
