@@ -2,9 +2,7 @@
 
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing.prompt_utils import RichPrompt
-from algebraic_value_editing import prompt_utils
-
+from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 
 model: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="attn-only-1l"
@@ -32,7 +30,7 @@ def test_x_vector_creation():
         prompt="Goodbye world!", act_name="", coeff=-1.0
     )
 
-    x_vector_positive, x_vector_negative = prompt_utils.get_x_vector(
+    x_vector_positive, x_vector_negative = get_x_vector(
         prompt1="Hello world!",
         prompt2="Goodbye world!",
         coeff=1.0,
@@ -53,7 +51,7 @@ def test_x_vector_right_pad():
     """Test that we can right pad the x_vector."""
     prompt1 = "Hello world fdsa dfsa fsad!"
     prompt2 = "Goodbye world!"
-    xv_pos, xv_neg = prompt_utils.get_x_vector(
+    xv_pos, xv_neg = get_x_vector(
         prompt1=prompt1,
         prompt2=prompt2,
         coeff=1.0,
@@ -93,7 +91,7 @@ def test_x_vector_right_pad_blank():
     a BOS token followed by PAD tokens."""
     prompt1 = "Hello world fdsa dfsa fsad!"
     prompt2 = ""
-    xv_pos, xv_neg = prompt_utils.get_x_vector(
+    xv_pos, xv_neg = get_x_vector(
         prompt1=prompt1,
         prompt2=prompt2,
         coeff=1.0,

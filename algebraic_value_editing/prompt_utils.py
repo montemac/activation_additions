@@ -108,6 +108,7 @@ def get_x_vector(
             mode="constant",
             value=model.tokenizer.pad_token_id,  # type: ignore
         )
+
         padded_toks_1, padded_toks_2 = tokens1, tokens2
         if tokens1.shape[0] > tokens2.shape[0]:
             padded_toks_2 = pad_partial(tokens2)
