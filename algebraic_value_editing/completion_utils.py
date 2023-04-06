@@ -80,13 +80,12 @@ def gen_using_hooks(
         model.add_hook(act_name, hook_fn)
 
     tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(prompts)
-    with t.inference_mode():
-        completions: Float[t.Tensor, "batch pos"] = model.generate(
-            input=tokenized_prompts,
-            max_new_tokens=tokens_to_generate,
-            verbose=False,
-            **sampling_kwargs,
-        )
+    completions: Float[t.Tensor, "batch pos"] = model.generate(
+        input=tokenized_prompts,
+        max_new_tokens=tokens_to_generate,
+        verbose=False,
+        **sampling_kwargs,
+    )
     model.remove_all_hook_fns()
 
     # Compute the loss per token
