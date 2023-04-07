@@ -144,7 +144,7 @@ def gen_using_rich_prompts(
 
 def gen_normal_and_modified(
     model: HookedTransformer,
-    rich_prompts: List[RichPrompt],
+    rich_prompts: Optional[List[RichPrompt]] = None,
     include_normal: bool = True,
     include_modified: bool = True,
     **kwargs,
@@ -177,26 +177,30 @@ def gen_normal_and_modified(
             "At least one of `include_normal` and `include_modified` "
             "must be True."
         )
-    if rich_prompts is None and include_modified:
-        raise ValueError(
-            "rich_prompts must be specified if include_modified is True"
-        )
-
-    # Create the hook functions
-    hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
-        model=model, rich_prompts=rich_prompts
-    )
 
     data_frames: List[pd.DataFrame] = []
-    for include, hooks in zip(
-        [include_normal, include_modified], [{}, hook_fns]
-    ):
-        if include:
-            tmp_df: pd.DataFrame = gen_using_hooks(
-                model=model, hook_fns=hooks, **kwargs
+    if include_modified:
+        if rich_prompts is None:
+            raise ValueError(
+                "rich_prompts must be specified if include_modified is True"
             )
-            tmp_df["is_modified"] = hooks != {}
-            data_frames.append(tmp_df)
+
+        # Create the hook functions
+        hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
+            model=model, rich_prompts=rich_prompts
+        )
+        tmp_df: pd.DataFrame = gen_using_hooks(
+            model=model, hook_fns=hook_fns, **kwargs
+        )
+        tmp_df["is_modified"] = True
+        data_frames.append(tmp_df)
+
+    if include_normal:
+        tmp_df: pd.DataFrame = gen_using_hooks(
+            model=model, hook_fns={}, **kwargs
+        )
+        tmp_df["is_modified"] = False
+        data_frames.append(tmp_df)
 
     return pd.concat(data_frames)  # Combine the completions
 
@@ -220,25 +224,35 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
 
     # Assert that an equal number of rows have `is_modified` True and
     # False
-    num_rows_t, num_rows_f = [
+    n_rows_mod, n_rows_unmod = [
         len(results[results["is_modified"] == cond]) for cond in [True, False]
     ]
-    assert (
-        num_rows_t == num_rows_f
-    ), "The number of modified and normal completions must be the same."
+    all_modified: bool = n_rows_unmod == 0
+    all_normal: bool = n_rows_mod == 0
+    assert all_normal or all_modified or (n_rows_mod == n_rows_unmod), (
+        "The number of modified and normal completions must be the same, or we"
+        " must be printing all (un)modified completions."
+    )
 
     # Replace `completions` with `Normal completions` and `Modified
     # completions`
     results_cp: pd.DataFrame = results.copy()
 
-    completion_cols: List[str] = ["Normal completions", "Modified completions"]
-    for is_mod, col in zip([True, False], completion_cols):
+    # Figure out which columns to add
+    completion_cols: List[str] = []
+    completion_cols += ["Normal completions"] if n_rows_unmod > 0 else []
+    completion_cols += ["Modified completions"] if n_rows_mod > 0 else []
+    for col in completion_cols:
+        is_mod = col == "Modified completions"
         results_cp[col] = results_cp[results_cp["is_modified"] == is_mod][
             "completions"
         ]
 
     # Format the DataFrame for printing
     prompt: str = results_cp["prompts"].tolist()[0]
+    results_cp = results_cp.drop(
+        columns=["prompts", "completions", "is_modified", "loss"]
+    )
 
     # Generate the table
     table = prettytable.PrettyTable()
