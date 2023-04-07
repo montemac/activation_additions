@@ -8,9 +8,12 @@ from transformer_lens.HookedTransformer import HookedTransformer
 from algebraic_value_editing import completion_utils, prompt_utils
 from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 
-model: HookedTransformer = HookedTransformer.from_pretrained(
+sampling_kwargs: dict = {"temperature": 1, "freq_penalty": 1, "top_p": 0.3}
+
+attn_2l_model: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="attn-only-2l"
 )
+
 
 # gen_using_rich_prompts tests
 def test_gen_using_rich_prompts():
@@ -21,7 +24,7 @@ def test_gen_using_rich_prompts():
 
     results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
         prompts=["I think you're "],
-        model=model,
+        model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
     )
@@ -48,7 +51,7 @@ def test_zero_coeff_does_nothing():
     for rich_prompts in [[], [zero_prompt]]:
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompts=["I think you're "],
-            model=model,
+            model=attn_2l_model,
             rich_prompts=rich_prompts,
             seed=0,
         )
@@ -68,7 +71,7 @@ def test_large_coeff_leads_to_garbage():
 
     results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
         prompts=["I think you're "],
-        model=model,
+        model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
     )
@@ -76,21 +79,59 @@ def test_large_coeff_leads_to_garbage():
     first_completion: str = results["completions"][0]
     assert (
         first_completion
-        == "I think you're （（（（（（（（（（（（（（（（（）（（）（）（）（（（（）（（）））（（（（）"
+        == "I think you're"
+        " （（（（（（（（（（（（（（（（（）（（）（）（）（（（（）（（）））（（（（）"
+    ), f"Got: {first_completion}"
+
+
+def test_sad_scenario_2000() -> None:
+    """Make sure that our favorite happy-delusion responses are generated."""
+    rich_prompts: List[RichPrompt] = [
+        *get_x_vector(
+            prompt1="Happy",
+            prompt2=" ",
+            coeff=2000,
+            act_name=1,
+            model=attn_2l_model,
+            pad_method="tokens_right",
+        ),
+    ]
+
+    prompt: str = (
+        "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling"
+    )
+
+    first_completion: str = completion_utils.gen_using_rich_prompts(
+        prompts=[prompt] * 5,
+        model=attn_2l_model,
+        rich_prompts=rich_prompts,
+        seed=0,
+        **sampling_kwargs,
+    )["completions"][0]
+    # Skip the prompt we gave
+    generated_str: str = first_completion.split(prompt)[1]
+
+    target_completion: str = (
+        " better now and that is when you're on the hunt for the right hand"
+        " side of your dog!"
+    )
+
+    assert generated_str.startswith(
+        target_completion
     ), f"Got: {first_completion}"
 
 
 def test_each_block_injection_produces_diff_results():
     """Test that each block injection produces different results."""
     completions_set: Set[str] = set()
-    for block in range(model.cfg.n_layers):
+    for block in range(attn_2l_model.cfg.n_layers):
         rich_prompts: List[RichPrompt] = [
             RichPrompt(prompt="Love", coeff=1.0, act_name=block)
         ]
 
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompts=["I think you're "],
-            model=model,
+            model=attn_2l_model,
             rich_prompts=rich_prompts,
             seed=0,
         )
@@ -113,13 +154,13 @@ def test_x_vec_coefficient_matters():
             prompt2="Hate",
             coeff=coeff,
             act_name=0,
-            model=model,
+            model=attn_2l_model,
         )
 
         # Generate completions using the x-vector
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompts=["I think you're "],
-            model=model,
+            model=attn_2l_model,
             rich_prompts=[*x_vector],
             seed=0,
         )
@@ -141,7 +182,7 @@ def test_x_vec_inverse_equality():
         prompt2="Hate",
         coeff=1.0,
         act_name=0,
-        model=model,
+        model=attn_2l_model,
     )
 
     # Generate another x-vector
@@ -150,19 +191,19 @@ def test_x_vec_inverse_equality():
         prompt2="Love",
         coeff=-1.0,
         act_name=0,
-        model=model,
+        model=attn_2l_model,
     )
 
     # Generate completions using the x-vectors
     results1: pd.DataFrame = completion_utils.gen_using_rich_prompts(
         prompts=["I think you're "],
-        model=model,
+        model=attn_2l_model,
         rich_prompts=[*x_vector1],
         seed=0,
     )
     results2: pd.DataFrame = completion_utils.gen_using_rich_prompts(
         prompts=["I think you're "],
-        model=model,
+        model=attn_2l_model,
         rich_prompts=[*x_vector2],
         seed=0,
     )
@@ -187,7 +228,7 @@ def test_x_vec_same_prompt_cancels():
     for rich_prompts in [[], list(x_vec)]:
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompts=["I think you're "],
-            model=model,
+            model=attn_2l_model,
             rich_prompts=rich_prompts,
             seed=0,
         )
@@ -207,14 +248,14 @@ def test_x_vec_padding_matters():
             prompt2="Hate",
             coeff=1.0,
             act_name=0,
-            model=model,
+            model=attn_2l_model,
             pad_method=pad_method,
         )
 
         # Generate completions using the x-vector
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompts=["I think you're "],
-            model=model,
+            model=attn_2l_model,
             rich_prompts=[*x_vector],
             seed=0,
         )
@@ -232,7 +273,7 @@ def test_seed_choice_matters():
     for seed in (0, 1):
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompts=["I think you're "],
-            model=model,
+            model=attn_2l_model,
             rich_prompts=[],
             seed=seed,
         )
@@ -248,7 +289,7 @@ def test_rng_reset():
     # Generate a completion
     completion_utils.gen_using_rich_prompts(
         prompts=["I think you're "],
-        model=model,
+        model=attn_2l_model,
         rich_prompts=[],
         seed=0,
     )
@@ -269,7 +310,7 @@ def test_simple_generation():
     completion_utils.print_n_comparisons(
         prompt="Here's how I feel about you.",
         num_comparisons=1,
-        model=model,
+        model=attn_2l_model,
         rich_prompts=rich_prompts,
     )
 
@@ -284,7 +325,7 @@ def test_n_comparisons_seed_selection():
     completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
-        model=model,
+        model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
     )
@@ -301,7 +342,7 @@ def test_multiple_prompts():
     completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
-        model=model,
+        model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
     )
@@ -317,7 +358,7 @@ def test_empty_prompt():
     completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
-        model=model,
+        model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
     )
@@ -333,7 +374,7 @@ def test_no_normal():
     completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
-        model=model,
+        model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
         include_normal=False,
@@ -345,7 +386,7 @@ def test_no_modified():
     completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
-        model=model,
+        model=attn_2l_model,
         seed=0,
         include_modified=False,
     )
