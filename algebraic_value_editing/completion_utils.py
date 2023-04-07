@@ -102,8 +102,10 @@ def gen_using_hooks(
         loss, "batch pos -> batch", "mean"
     ).numpy()  # NOTE why are we casting to numpy?
 
-    # Remove the <EOS> token
-    trimmed_completions: Int[t.Tensor, "batch pos"] = completions[:, 1:]
+    # Remove the <EOS> token and the prompt tokens
+    trimmed_completions: Int[t.Tensor, "batch pos"] = completions[
+        :, tokenized_prompts.shape[1] :
+    ]
 
     # Put the completions into a DataFrame and return
     results = pd.DataFrame(
@@ -172,8 +174,7 @@ def gen_normal_and_modified(
         A `DataFrame` with the completions and losses. The `DataFrame`
         will have the following columns:
             - `prompts`: The prompts used to generate the completions.
-            - `completions`: The generated completions. # TODO remove
-              prompts
+            - `completions`: The generated completions.
             - `is_modified`: Whether the completion was generated using
                 the rich prompts.
             - `loss`: The average loss per token of the completions.
@@ -262,16 +263,10 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
     # Separate completions
     table.hrules = prettytable.ALL
 
-    def apply_formatting(unformatted_str: str, initial: str = prompt) -> str:
-        completion: str = "".join(
-            unformatted_str.split(initial)[1:]
-        )  # Remove the prompt
-        return f"{bold_text(initial)}{completion}"
-
     # Put into table
     for row in zip(*completion_dict.values()):
         table.add_row(
-            [apply_formatting(unformatted_str) for unformatted_str in row]
+            [f"{bold_text(prompt)}{completion}" for completion in row]
         )
     print(table)
 

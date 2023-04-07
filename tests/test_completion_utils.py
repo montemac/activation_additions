@@ -33,7 +33,7 @@ def test_gen_using_rich_prompts():
     assert len(completions) == 1  # We only passed in one prompt
 
     target_str = (
-        "I think you're particularly interested in classroom resources as to"
+        "particularly interested in classroom resources as to"
         " what you do.\nIt's what we say. All needs to be in good times. But"
         " when you go very slow, I think your classes are interesting."
     )
@@ -79,8 +79,7 @@ def test_large_coeff_leads_to_garbage():
     first_completion: str = results["completions"][0]
     assert (
         first_completion
-        == "I think you're"
-        " （（（（（（（（（（（（（（（（（）（（）（）（）（（（（）（（）））（（（（）"
+        == "（（（（（（（（（（（（（（（（（）（（）（）（）（（（（）（（）））（（（（）"
     ), f"Got: {first_completion}"
 
 
@@ -108,15 +107,13 @@ def test_sad_scenario_2000() -> None:
         seed=0,
         **sampling_kwargs,
     )["completions"][0]
-    # Skip the prompt we gave
-    generated_str: str = first_completion.split(prompt)[1]
 
     target_completion: str = (
         " better now and that is when you're on the hunt for the right hand"
         " side of your dog!"
     )
 
-    assert generated_str.startswith(
+    assert first_completion.startswith(
         target_completion
     ), f"Got: {first_completion}"
 
