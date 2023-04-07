@@ -25,7 +25,7 @@ rich_prompts: List[RichPrompt] = [
     *get_x_vector(
         prompt1="Happy",
         prompt2=" ",
-        coeff=2000,
+        coeff=200,
         act_name=1,
         model=model,
         pad_method="tokens_right",

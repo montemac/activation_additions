@@ -140,7 +140,7 @@ def gen_using_rich_prompts(
         A `DataFrame` with the completions and losses. The `DataFrame`
         will have the following columns:
                 `prompts`: The prompts used to generate the completions.
-                `completions`: The generated completions. # TODO remove prompts
+                `completions`: The generated completions.
                 `loss`: The average loss per token of the completions.
     """
     # Create the hook functions
