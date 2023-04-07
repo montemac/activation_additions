@@ -60,9 +60,7 @@ def test_x_vector_right_pad():
         model=model,
     )
 
-    pos_tokens, neg_tokens = [
-        model.to_tokens(prompt)[0] for prompt in [xv_pos.prompt, xv_neg.prompt]
-    ]
+    pos_tokens, neg_tokens = xv_pos.tokens, xv_neg.tokens
 
     assert pos_tokens.shape == neg_tokens.shape, "Padding failed."
     assert model.to_string(neg_tokens[-1]).endswith(
@@ -77,7 +75,7 @@ def test_x_vector_right_pad():
 
     # Get the prompt by skipping the first BOS token
     xv_pos_prompt = model.to_string(pos_tokens[1:])
-    assert xv_pos_prompt == prompt1, "Accidentally padded the longer string."
+    assert xv_pos_prompt == prompt1, "The longer prompt was changed."
 
     # Ensure that prompt2 is a prefix of xv_neg_prompt
     xv_neg_prompt = model.to_string(neg_tokens[1:])
@@ -100,9 +98,7 @@ def test_x_vector_right_pad_blank():
         model=model,
     )
 
-    pos_tokens, neg_tokens = [
-        model.to_tokens(prompt)[0] for prompt in [xv_pos.prompt, xv_neg.prompt]
-    ]
+    pos_tokens, neg_tokens = xv_pos.tokens, xv_neg.tokens
 
     assert pos_tokens.shape == neg_tokens.shape, "Padding failed."
     assert neg_tokens[0] == model.tokenizer.bos_token_id, "BOS token missing."
@@ -110,6 +106,21 @@ def test_x_vector_right_pad_blank():
         assert (
             tok == model.tokenizer.pad_token_id
         ), "Padded with incorrect token."
+
+
+def test_custom_pad() -> None:
+    """See whether we can pad with a custom token."""
+    _, xv_neg = get_x_vector(
+        prompt1="Hello",
+        prompt2="",
+        coeff=1.0,
+        act_name="",
+        pad_method="tokens_right",
+        model=model,
+        custom_pad_id=model.to_single_token(" "),
+    )
+
+    assert xv_neg.tokens[1] == model.to_single_token(" ")
 
 
 # TODO test identity mapping of xvec padding for a variety of models
