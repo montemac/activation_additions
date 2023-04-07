@@ -23,7 +23,7 @@ def test_gen_using_rich_prompts():
     ]
 
     results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
-        prompts=["I think you're "],
+        prompt_batch=["I think you're "],
         model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
@@ -50,7 +50,7 @@ def test_zero_coeff_does_nothing():
     completions: List[str] = []
     for rich_prompts in [[], [zero_prompt]]:
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
-            prompts=["I think you're "],
+            prompt_batch=["I think you're "],
             model=attn_2l_model,
             rich_prompts=rich_prompts,
             seed=0,
@@ -70,7 +70,7 @@ def test_large_coeff_leads_to_garbage():
     ]
 
     results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
-        prompts=["I think you're "],
+        prompt_batch=["I think you're "],
         model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
@@ -102,7 +102,7 @@ def test_sad_scenario_2000() -> None:
     )
 
     first_completion: str = completion_utils.gen_using_rich_prompts(
-        prompts=[prompt] * 5,
+        prompt_batch=[prompt] * 5,
         model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
@@ -130,7 +130,7 @@ def test_each_block_injection_produces_diff_results():
         ]
 
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
-            prompts=["I think you're "],
+            prompt_batch=["I think you're "],
             model=attn_2l_model,
             rich_prompts=rich_prompts,
             seed=0,
@@ -159,7 +159,7 @@ def test_x_vec_coefficient_matters():
 
         # Generate completions using the x-vector
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
-            prompts=["I think you're "],
+            prompt_batch=["I think you're "],
             model=attn_2l_model,
             rich_prompts=[*x_vector],
             seed=0,
@@ -196,13 +196,13 @@ def test_x_vec_inverse_equality():
 
     # Generate completions using the x-vectors
     results1: pd.DataFrame = completion_utils.gen_using_rich_prompts(
-        prompts=["I think you're "],
+        prompt_batch=["I think you're "],
         model=attn_2l_model,
         rich_prompts=[*x_vector1],
         seed=0,
     )
     results2: pd.DataFrame = completion_utils.gen_using_rich_prompts(
-        prompts=["I think you're "],
+        prompt_batch=["I think you're "],
         model=attn_2l_model,
         rich_prompts=[*x_vector2],
         seed=0,
@@ -227,7 +227,7 @@ def test_x_vec_same_prompt_cancels():
     completions: List[str] = []
     for rich_prompts in [[], list(x_vec)]:
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
-            prompts=["I think you're "],
+            prompt_batch=["I think you're "],
             model=attn_2l_model,
             rich_prompts=rich_prompts,
             seed=0,
@@ -254,7 +254,7 @@ def test_x_vec_padding_matters():
 
         # Generate completions using the x-vector
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
-            prompts=["I think you're "],
+            prompt_batch=["I think you're "],
             model=attn_2l_model,
             rich_prompts=[*x_vector],
             seed=0,
@@ -272,7 +272,7 @@ def test_seed_choice_matters():
     generations: List[str] = []
     for seed in (0, 1):
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
-            prompts=["I think you're "],
+            prompt_batch=["I think you're "],
             model=attn_2l_model,
             rich_prompts=[],
             seed=seed,
@@ -288,7 +288,7 @@ def test_rng_reset():
 
     # Generate a completion
     completion_utils.gen_using_rich_prompts(
-        prompts=["I think you're "],
+        prompt_batch=["I think you're "],
         model=attn_2l_model,
         rich_prompts=[],
         seed=0,

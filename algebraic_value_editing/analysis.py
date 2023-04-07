@@ -1,7 +1,5 @@
 """ Tools for analyzing the results of algebraic value editing. """
 
-from typing import List
-
 import numpy as np
 import pandas as pd
 from ipywidgets import widgets

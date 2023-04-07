@@ -1,5 +1,9 @@
 """ This script demonstrates how to use the algebraic_value_editing library to generate comparisons
 between two prompts. """
+# %% 
+%load_ext autoreload
+%autoreload 2
+
 # %%
 from typing import List
 from transformer_lens.HookedTransformer import HookedTransformer
@@ -37,3 +41,5 @@ completion_utils.print_n_comparisons(
     freq_penalty=1,
     top_p=0.3,
 )
+
+# %%
