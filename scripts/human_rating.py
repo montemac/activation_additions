@@ -34,14 +34,13 @@ rich_prompts: List[RichPrompt] = [
 prompt: str = (
     "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling"
 )
-mixed_df: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+mixed_df: pd.DataFrame = completion_utils.gen_normal_and_modified(
     prompt_batch=[prompt] * 5,
     model=model,
     rich_prompts=rich_prompts,
     seed=0,
 )
 
-# %%
 rate_completions(data_frame=mixed_df, criterion="happy")
 
 # %%

@@ -16,14 +16,23 @@ def rate_completions(
     indicating which condition they came from. Modifies the `data_frame`
     in place.
 
-    # TODO document args
+    args:
+        `data_frame`: The `DataFrame` should have the following columns:
+                `prompts`: The prompts used to generate the completions.
+                `completions`: The generated completions.
+                `is_modified`: Whether the completion was generated
+                using a modified forward pass.
+
+        `criterion`: The criterion to use for rating the completions.
+    TODO create unit tests
     """
     # Prepare the user
     print(
         "The model was run with the bolded text as the prompt. Please rate the"
         " completions below.\n\n"
     )
-    print(f"Prompt: {completion_utils.bold_text(data_frame['prompts'][0])}")
+    prompt: str = data_frame["prompts"].tolist()[0]
+    print(f"Prompt: {completion_utils.bold_text(prompt)}\n")
 
     criterion_fstr: str = f"To what extent is this completion {criterion}?"
     criterion_fmt: str = completion_utils.bold_text(criterion_fstr)
@@ -64,3 +73,7 @@ def rate_completions(
 
         # Save the rating
         data_frame.loc[i, "rating"] = rating
+
+    # Print the average ratings for each condition (modified vs. normal)
+    print("Average ratings:")
+    print(data_frame.groupby("is_modified")["rating"].mean())

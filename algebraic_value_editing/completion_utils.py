@@ -206,7 +206,8 @@ def gen_normal_and_modified(
         )
         data_frames.append(tmp_df)
 
-    return pd.concat(data_frames)  # Combine the completions
+    # Combine the completions, ensuring that the indices are unique
+    return pd.concat(data_frames, ignore_index=True)
 
 
 # Display utils #
@@ -238,31 +239,24 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
         " must be printing all (un)modified completions."
     )
 
-    # Replace `completions` with `Normal completions` and `Modified
-    # completions`
-    results_cp: pd.DataFrame = results.copy()
-
     # Figure out which columns to add
     completion_cols: List[str] = []
     completion_cols += ["Normal completions"] if n_rows_unmod > 0 else []
     completion_cols += ["Modified completions"] if n_rows_mod > 0 else []
+    completion_dict: dict = {}
     for col in completion_cols:
         is_mod = col == "Modified completions"
-        results_cp[col] = results_cp[results_cp["is_modified"] == is_mod][
+        completion_dict[col] = results[results["is_modified"] == is_mod][
             "completions"
         ]
 
     # Format the DataFrame for printing
-    prompt: str = results_cp["prompts"].tolist()[0]
-    results_cp = results_cp.drop(
-        columns=["prompts", "completions", "is_modified", "loss"]
-    )
+    prompt: str = results["prompts"].tolist()[0]
 
     # Generate the table
     table = prettytable.PrettyTable()
     table.align = "c"
-    column_names = list(results_cp.columns)
-    table.field_names = map(bold_text, column_names)
+    table.field_names = map(bold_text, completion_cols)
     table.min_width = table.max_width = 60
 
     # Separate completions
@@ -275,11 +269,10 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
         return f"{bold_text(initial)}{completion}"
 
     # Put into table
-    for _, data in results_cp.iterrows():
-        new_row: List[str] = []
-        for col_name in completion_cols:
-            new_row.append(apply_formatting(data[col_name]))
-        table.add_row(new_row)
+    for row in zip(*completion_dict.values()):
+        table.add_row(
+            [apply_formatting(unformatted_str) for unformatted_str in row]
+        )
     print(table)
 
 
