@@ -15,11 +15,12 @@ setup(
             "transformer-lens @"
             " git+https://github.com/neelnanda-io/TransformerLens.git@1f65f4bf35d91677deea2331561ae6a9d2e92d38"
         ),
-        "torch>=1.13.0",
+        "torch==1.13.0",
         "numpy>=1.22.1",
         "pandas>=1.4.4",
         "jaxtyping>=0.2.14",
         "prettytable>=3.6.0",
         "funcy>=2.0",
+        "wandb==0.13.5",  # transformer_lens 0.0.0 requires <0.14.0, >=0.13.5
     ],
 )
