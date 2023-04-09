@@ -103,7 +103,7 @@ def sweep_over_prompts(
         # Generate the normal completions for this prompt
         normal_df: pd.DataFrame = gen_using_hooks(
             model=model,
-            prompts=[prompt] * num_normal_completions,
+            prompt_batch=[prompt] * num_normal_completions,
             hook_fns={},
             tokens_to_generate=tokens_to_generate,
             seed=seed,
@@ -117,7 +117,7 @@ def sweep_over_prompts(
             patched_df: pd.DataFrame = gen_using_rich_prompts(
                 model=model,
                 rich_prompts=rich_prompts_this,
-                prompts=[prompt] * num_patched_completions,
+                prompt_batch=[prompt] * num_patched_completions,
                 tokens_to_generate=tokens_to_generate,
                 seed=seed,
                 **sampling_kwargs,
