@@ -103,11 +103,11 @@ and the completions are not):
 
 An even starker example is produced by
 ```
-praise_rp, hurt_rp = *get_x_vector_preset(prompt1="Intent to praise", 
-                                          prompt2="Intent to hurt", 
-                                          coeff=15, 
-                                          act_name=6) # Shorthand for block 6
-
+praise_rp, hurt_rp = *get_x_vector(prompt1="Intent to praise", 
+                                   prompt2="Intent to hurt", 
+                                   coeff=15, act_name=6,
+                                   pad_method="tokens_right", model=gpt2_xl,
+                                   custom_pad_id=gpt2_xl.to_single_token(' '))
 print_n_comparisons(
     prompt="I want to kill you because",
     model=gpt2_xl,
