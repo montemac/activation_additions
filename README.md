@@ -92,13 +92,33 @@ print_n_comparisons(
     tokens_to_generate=100,
     rich_prompts=[love_rp, hate_rp],
     num_comparisons=15,
-    seed=42
+    seed=42,
+    temperature=1, freq_penalty=1, top_p=.3
 )
 ```
 
 This produces an output like the following (where the prompt is bolded,
 and the completions are not):
 ![](https://i.imgur.com/CJc4SVt.png)
+
+An even starker example is produced by
+```
+praise_rp, hurt_rp = *get_x_vector_preset(prompt1="Intent to praise", 
+                                          prompt2="Intent to hurt", 
+                                          coeff=15, 
+                                          act_name=6) # Shorthand for block 6
+
+print_n_comparisons(
+    prompt="I want to kill you because",
+    model=gpt2_xl,
+    tokens_to_generate=50,
+    rich_prompts=[praise_rp, hurt_rp],
+    num_comparisons=15,
+    seed=0,
+    temperature=1, freq_penalty=1, top_p=.3
+)
+```
+![](https://i.imgur.com/ewD0IKT.png)
 
 For more examples, consult our [Google
 Colab](https://colab.research.google.com/drive/183boiXfIBEdo6ch8RwOyqIZizJd6vwDl?usp=sharing).
