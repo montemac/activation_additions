@@ -13,7 +13,7 @@ sampling_kwargs: dict = {"temperature": 1, "freq_penalty": 1, "top_p": 0.3}
 
 
 # Fixtures
-@pytest.fixture(name="attn_2l_model")
+@pytest.fixture(name="attn_2l_model", scope="module")
 def fixture_model() -> HookedTransformer:
     """Test fixture that returns a small pre-trained transformer."""
     return HookedTransformer.from_pretrained(model_name="attn-only-2l")
