@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 from ipywidgets import widgets
-from IPython.display import display
+from IPython.display import display, clear_output
 
 from algebraic_value_editing import completion_utils
 
@@ -43,6 +43,7 @@ def rate_completions(
         layout=widgets.Layout(width="400px", height="200px"),
         disabled=True,
     )
+    display(completion_box)
 
     # Stop the disabled text box from being grayed out
     completion_box.add_class("custom-textarea")
@@ -56,7 +57,6 @@ def rate_completions(
     """
 
     display(widgets.HTML(custom_css))
-    display(completion_box)
 
     # Prompt the user to rate the completions, selected in random order
     for i in np.random.permutation(len(data_frame)):
