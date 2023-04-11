@@ -11,16 +11,13 @@ setup(
     version="0.2.0",
     packages=find_packages(),
     install_requires=[
-        (
-            "transformer-lens @"
-            " git+https://github.com/neelnanda-io/TransformerLens.git@1f65f4bf35d91677deea2331561ae6a9d2e92d38"
-        ),
+        "transformer_lens==1.2.1",
         "torch==1.13.1",
         "numpy>=1.22.1",
         "pandas>=1.4.4",
         "jaxtyping>=0.2.14",
         "prettytable>=3.6.0",
         "funcy>=2.0",
-        "wandb==0.13.5",  # transformer_lens 0.0.0 requires <0.14.0, >=0.13.5
+        "wandb==0.13.5",  # transformer_lens requires <0.14.0, >=0.13.5
     ],
 )
