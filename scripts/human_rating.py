@@ -10,7 +10,7 @@ import pandas as pd
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from algebraic_value_editing import completion_utils
-from algebraic_value_editing.analysis import rate_completions
+from algebraic_value_editing.analysis import rate_completions, rate_completions_openai
 from algebraic_value_editing.prompt_utils import get_x_vector
 
 
@@ -34,22 +34,41 @@ wedding_prompts = [*get_x_vector_preset(prompt1="I talk about weddings constantl
                               coeff=3, act_name=14),
                               *get_x_vector_preset(prompt1="I bring up weddings in every situation",
                               prompt2="I do not bring up weddings in every situation",
-                              coeff=5, act_name=22),] 
+                              coeff=50, act_name=22),] 
 
 
-prompt: str = "I hate talking about weddings. Instead, let's talk about a totally different topic, like the impact of NGDP on the price of gold."
-mixed_df: pd.DataFrame = completion_utils.gen_normal_and_modified(
-    prompt_batch=[prompt] * 5,
+wedding_prompt: str = "I hate talking about weddings. Instead, let's talk about a totally different topic, like the impact of NGDP on the price of gold."
+
+# %%
+wedding_df: pd.DataFrame = completion_utils.gen_normal_and_modified(
+    prompt_batch=[wedding_prompt] * 5,
     rich_prompts=wedding_prompts,
-    seed=1,
+    seed=0,
     tokens_to_generate=60,
     **default_kwargs,
 )
+rate_completions_openai(data_frame=wedding_df, criterion="mentions weddings")
 
 # %%
-completion_utils.pretty_print_completions(mixed_df)
+
+shrek_prompts = [*get_x_vector_preset(prompt1="I talk about Shrek constantly", 
+                              prompt2="I do not talk about Shrek constantly", 
+                              coeff=3, act_name=14),
+                              *get_x_vector_preset(prompt1="I bring up Shrek in every situation",
+                              prompt2="I do not bring up Shrek in every situation",
+                              coeff=10, act_name=22),] 
+
+shrek_prompt: str = "I hate talking about weddings. Instead, let's talk about a totally different topic, like the impact of NGDP on the price of gold."
 
 # %%
-rate_completions(data_frame=mixed_df, criterion="about weddings")
+shrek_df: pd.DataFrame = completion_utils.gen_normal_and_modified(
+    prompt_batch=[shrek_prompt] * 5,
+    rich_prompts=shrek_prompts,
+    seed=0,
+    tokens_to_generate=60,
+    **default_kwargs,
+)
+rate_completions_openai(data_frame=shrek_df, criterion="mentions Shrek")
+completion_utils.pretty_print_completions(shrek_df)
 
 # %%

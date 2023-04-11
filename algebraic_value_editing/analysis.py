@@ -6,11 +6,28 @@ import numpy as np
 import pandas as pd
 from ipywidgets import widgets
 from IPython.display import display
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 
 from algebraic_value_editing import completion_utils
 
 
+def assert_df_contains_cols(
+    data_frame: pd.DataFrame,
+    required_cols: List[str] = ["prompts", "completions", "is_modified"],
+) -> None:
+    """Assert that `data_frame` contains all of the columns in
+    `required_cols`.
+
+    args:
+        `data_frame`: The `DataFrame` to check.
+
+        `required_cols`: The columns that should be in `data_frame`.
+    """
+    for col in required_cols:
+        assert col in data_frame.columns, f"Missing column: {col}"
+
+
+# TODO create unit tests
 def rate_completions(
     data_frame: pd.DataFrame,
     criterion: str = "happy",
@@ -27,8 +44,9 @@ def rate_completions(
                 using a modified forward pass.
 
         `criterion`: The criterion to use for rating the completions.
-    TODO create unit tests
     """
+    assert_df_contains_cols(data_frame)
+
     # Prepare the user
     print(
         "The model was run with the bolded text as the prompt. Please rate the"
@@ -77,16 +95,14 @@ def rate_completions(
         # Save the rating
         data_frame.loc[i, "rating"] = rating
 
-    # Print the average ratings for each condition (modified vs. normal)
-    print("Average ratings:")
-    print(data_frame.groupby("is_modified")["rating"].mean())
+    print_average_ratings(data_frame)
 
 
 def rate_completions_openai(
     data_frame: pd.DataFrame,
     criterion: Optional[str] = None,
     prompt_prefix: Optional[str] = None,
-) -> pd.DataFrame:
+) -> None:
     """
     Rate completions using the OpenAI API.
 
@@ -102,23 +118,21 @@ def rate_completions_openai(
         `prompt_prefix`: The prefix to use for the prompt. If `None`, the
                 default prompt is created from the `criterion` argument.
 
-    returns:
-        The `data_frame` with the following columns added:
+    Modifies:
+        The `data_frame` to have the following columns added:
             `rating`: The rating given to the completion.
             `rating_text`: The text of the rating.
     """
-    for col in ("prompts", "completions", "is_modified"):
-        assert col in data_frame.columns, f"Missing column: {col}"
-
-    assert (
-        criterion ^ prompt_prefix  # type:ignore
+    assert_df_contains_cols(data_frame=data_frame)
+    assert (criterion is not None) ^ (
+        prompt_prefix is not None
     ), "Must specify either criterion or prompt_prefix, but not both"
 
     # Prompt template
     # NOTE: Few-shot would work better. Might require increasing max tokens.
     prompt_prefix = (
         prompt_prefix
-        or f'To what extent is this text {criterion}? Give your reasoning, followed by saying "the rating is X" for a rating X between 1 and 10. The text is:'
+        or f'To what extent does this text {criterion}? Give your reasoning, followed by saying "the rating is X" for a rating X between 1 and 10. The text is:'
     )
     create_prompt: Callable = lambda text: f"{prompt_prefix}\n{text}"
 
@@ -129,20 +143,22 @@ def rate_completions_openai(
 
     # Send a single batched inference request
     response: pd.DataFrame = openai.Completion.create(
-        model="text-curie-001",
+        model="text-davinci-002",
         prompt=[
             create_prompt(row["completions"])
             for _, row in data_frame.iterrows()
         ],
-        temperature=0,
+        temperature=1,
+        top_p=0.3,
+        max_tokens=MAX_TOKENS,
     )
 
     # Extract the rating from message contents
     for choice in response["choices"]:
-        content = choice["text"]
-        match = re.search(r"[rR]ating is (\d)", content) or re.search(
-            r"rated (\d)", content
-        )
+        content: str = choice["text"]
+        match: Optional[re.Match] = re.search(
+            r"[rR]ating is (\d)", content
+        ) or re.search(r"rated (\d)", content)
         rating: Optional[int] = int(match.group(1)) if match else None
 
         # Save the rating
@@ -151,8 +167,14 @@ def rate_completions_openai(
         data_frame.loc[index, "rating"] = rating
         data_frame.loc[index, "rating_text"] = content
 
-    # Print the average ratings for each condition (modified vs. normal)
+    print_average_ratings(data_frame)
+
+
+def print_average_ratings(data_frame: pd.DataFrame) -> None:
+    """Print the average ratings for each condition (modified vs.
+    normal)."""
+    for col in ("rating", "is_modified"):
+        assert col in data_frame.columns, f"Missing column: {col}"
+
     print("Average ratings:")
     print(data_frame.groupby("is_modified")["rating"].mean())
-
-    return data_frame
