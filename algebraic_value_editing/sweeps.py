@@ -37,7 +37,11 @@ def make_rich_prompts(
                 rich_prompts_this = []
                 for phrase, init_coeff in phrases_this:
                     rich_prompts_this.append(
-                        RichPrompt(init_coeff * coeff, act_name, phrase)
+                        RichPrompt(
+                            coeff=init_coeff * coeff,
+                            act_name=act_name,
+                            prompt=phrase,
+                        )
                     )
                 rows.append(
                     {
