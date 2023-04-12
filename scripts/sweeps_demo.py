@@ -3,6 +3,7 @@
 # %%
 # Imports, etc.
 import numpy as np
+import torch
 
 from transformer_lens import HookedTransformer
 
@@ -15,6 +16,9 @@ try:
     get_ipython().run_line_magic("autoreload", "2")
 except AttributeError:
     pass
+
+# We turn automatic differentiation off, to save GPU memory, as this notebook focuses on model inference not model training.
+_ = torch.set_grad_enabled(False)
 
 # %%
 # Load a model
@@ -64,8 +68,8 @@ normal_df, patched_df = sweeps.sweep_over_prompts(
     MODEL,
     prompts,
     rich_prompts_df["rich_prompts"],
-    num_normal_completions=10,
-    num_patched_completions=10,
+    num_normal_completions=100,
+    num_patched_completions=100,
     seed=42,
     metrics_dict=metrics_dict,
     temperature=1,
