@@ -50,10 +50,9 @@ def test_make_rich_prompts():
     pd.testing.assert_frame_equal(rich_prompts_df, MAKE_RICH_PROMPTS_TARGET)
 
 
-def test_sweep_over_prompts(model):
-    """Test for sweep_over_prompts().  Uses a toy model fixture, passes
-    a handful of RichPrompts and prompts, and compares results to a
-    pre-cached reference output."""
+def do_sweep(model):
+    """Convenience function to perform a small example sweep and return
+    the resulting DataFrames"""
     act_name = prompt_utils.get_block_name(block_num=0)
     normal_df, patched_df = sweeps.sweep_over_prompts(
         model,
@@ -76,6 +75,25 @@ def test_sweep_over_prompts(model):
         num_patched_completions=4,
         seed=42,
     )
+    return normal_df, patched_df
+
+
+def make_and_save_sweep_results(model):
+    """Convenience function for performing a sweep and cache the
+    results, which is required any time a breaking change is made that
+    would render the existing cached targets incorrect.  New target
+    results saved by this function should be verified for correctness
+    when they are created."""
+    normal_df, patched_df = do_sweep(model)
+    with open(SWEEP_OVER_PROMPTS_CACHE_FN, "wb") as file:
+        pickle.dump((normal_df, patched_df), file)
+
+
+def test_sweep_over_prompts(model):
+    """Test for sweep_over_prompts().  Uses a toy model fixture, passes
+    a handful of RichPrompts and prompts, and compares results to a
+    pre-cached reference output."""
+    normal_df, patched_df = do_sweep(model)
     with open(SWEEP_OVER_PROMPTS_CACHE_FN, "rb") as file:
         normal_target, patched_target = pickle.load(file)
     pd.testing.assert_frame_equal(normal_df, normal_target)
