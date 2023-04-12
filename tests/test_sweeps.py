@@ -29,7 +29,9 @@ SWEEP_OVER_PROMPTS_CACHE_FN = "tests/sweep_over_prompts_cache.pkl"
 def fixture_model() -> HookedTransformer:
     """Test fixture that returns a small pre-trained transformer used
     for fast sweep testing."""
-    return HookedTransformer.from_pretrained(model_name="attn-only-2l")
+    return HookedTransformer.from_pretrained(
+        model_name="attn-only-2l", device="cpu"
+    )
 
 
 def test_make_rich_prompts():
