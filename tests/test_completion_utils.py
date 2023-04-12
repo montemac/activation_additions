@@ -13,14 +13,14 @@ sampling_kwargs: dict = {"temperature": 1, "freq_penalty": 1, "top_p": 0.3}
 
 
 # Fixtures
-@pytest.fixture(name="attn_2l_model")
+@pytest.fixture(name="attn_2l_model", scope="module")
 def fixture_model() -> HookedTransformer:
     """Test fixture that returns a small pre-trained transformer."""
     return HookedTransformer.from_pretrained(model_name="attn-only-2l")
 
 
 # gen_using_rich_prompts tests
-def test_gen_using_rich_prompts(attn_2l_model):
+def test_gen_using_rich_prompts(attn_2l_model: HookedTransformer):
     """Test that we can generate a comparison using rich prompts."""
     rich_prompts: List[RichPrompt] = [
         RichPrompt(prompt="Love", coeff=1.0, act_name=1),
@@ -46,7 +46,7 @@ def test_gen_using_rich_prompts(attn_2l_model):
     ), f"Got: {completions[0][:20]} instead."
 
 
-def test_zero_coeff_does_nothing(attn_2l_model):
+def test_zero_coeff_does_nothing(attn_2l_model: HookedTransformer):
     """Test that using a RichPrompt with a zero coefficient
     produces no change in the output."""
     zero_prompt = RichPrompt(prompt="Hate", coeff=0.0, act_name=0)
@@ -66,7 +66,7 @@ def test_zero_coeff_does_nothing(attn_2l_model):
     ), f"Got completions: {completions[0]} and {completions[1]}"
 
 
-def test_large_coeff_leads_to_garbage(attn_2l_model):
+def test_large_coeff_leads_to_garbage(attn_2l_model: HookedTransformer):
     """Test that using a RichPrompt with an enormous coefficient
     produces garbage outputs."""
     rich_prompts: List[RichPrompt] = [
@@ -82,12 +82,11 @@ def test_large_coeff_leads_to_garbage(attn_2l_model):
 
     first_completion: str = results["completions"][0]
     assert (
-        first_completion
-        == "（（（（（（（（（（（（（（（（（）（（）（）（）（（（（）（（）））（（（（）"
+        first_completion == "（（（（（（（（（（（（（（（（（）（（）（）（）（（（（）（（）））（（（（）"
     ), f"Got: {first_completion}"
 
 
-def test_sad_scenario_2000(attn_2l_model) -> None:
+def test_sad_scenario_2000(attn_2l_model: HookedTransformer) -> None:
     """Make sure that our favorite happy-delusion responses are generated."""
     rich_prompts: List[RichPrompt] = [
         *get_x_vector(
@@ -122,7 +121,9 @@ def test_sad_scenario_2000(attn_2l_model) -> None:
     ), f"Got: {first_completion}"
 
 
-def test_each_block_injection_produces_diff_results(attn_2l_model):
+def test_each_block_injection_produces_diff_results(
+    attn_2l_model: HookedTransformer,
+):
     """Test that each block injection produces different results."""
     completions_set: Set[str] = set()
     for block in range(attn_2l_model.cfg.n_layers):
@@ -144,7 +145,7 @@ def test_each_block_injection_produces_diff_results(attn_2l_model):
         completions_set.add(results["completions"][0])
 
 
-def test_x_vec_coefficient_matters(attn_2l_model):
+def test_x_vec_coefficient_matters(attn_2l_model: HookedTransformer):
     """Generate an x-vector and use it to get completions. Ensure that
     the coefficient choice matters."""
     # Generate an x-vector
@@ -173,7 +174,7 @@ def test_x_vec_coefficient_matters(attn_2l_model):
     ), "Coefficient choice doesn't matter."
 
 
-def test_x_vec_inverse_equality(attn_2l_model):
+def test_x_vec_inverse_equality(attn_2l_model: HookedTransformer):
     """Generate an x vector with a given prompt ordering, and another x
      vector with flipped ordering and flipped coefficient. The generations
     should be identical."""
@@ -215,7 +216,7 @@ def test_x_vec_inverse_equality(attn_2l_model):
     ), "Generations should be identical."
 
 
-def test_x_vec_same_prompt_cancels(attn_2l_model):
+def test_x_vec_same_prompt_cancels(attn_2l_model: HookedTransformer):
     """Show that an x-vector with the same prompt in both positions has
     no effect."""
     x_vec: Tuple[RichPrompt, RichPrompt] = get_x_vector(
@@ -238,7 +239,7 @@ def test_x_vec_same_prompt_cancels(attn_2l_model):
     assert completions[0] == completions[1], "X-vector should have no effect."
 
 
-def test_x_vec_padding_matters(attn_2l_model):
+def test_x_vec_padding_matters(attn_2l_model: HookedTransformer):
     """Generate an x-vector and use it to get completions. Ensure that
     the padding choice matters."""
     # Generate an x-vector
@@ -268,7 +269,7 @@ def test_x_vec_padding_matters(attn_2l_model):
     ), "Padding choice doesn't matter."
 
 
-def test_seed_choice_matters(attn_2l_model):
+def test_seed_choice_matters(attn_2l_model: HookedTransformer):
     """Test that the seed is being used by gen_using_rich_prompts."""
     generations: List[str] = []
     for seed in (0, 1):
@@ -282,7 +283,7 @@ def test_seed_choice_matters(attn_2l_model):
     assert generations[0] != generations[1], "Seed choice should matter."
 
 
-def test_rng_reset(attn_2l_model):
+def test_rng_reset(attn_2l_model: HookedTransformer):
     """Test that our @preserve_rng_state decorator works."""
     # Get the current random state
     init_rng: torch.Tensor = torch.get_rng_state()
@@ -302,7 +303,7 @@ def test_rng_reset(attn_2l_model):
 
 
 # print_n_comparisons tests, just testing that the function runs
-def test_simple_generation(attn_2l_model):
+def test_simple_generation(attn_2l_model: HookedTransformer):
     """Test that we can generate a comparison."""
     rich_prompts: List[RichPrompt] = [
         RichPrompt(prompt="Love", coeff=100.0, act_name=1)
@@ -316,7 +317,7 @@ def test_simple_generation(attn_2l_model):
     )
 
 
-def test_n_comparisons_seed_selection(attn_2l_model):
+def test_n_comparisons_seed_selection(attn_2l_model: HookedTransformer):
     """Test that we can set the seed and generate multiple completions."""
 
     rich_prompts: List[RichPrompt] = [
@@ -332,7 +333,7 @@ def test_n_comparisons_seed_selection(attn_2l_model):
     )
 
 
-def test_multiple_prompts(attn_2l_model):
+def test_multiple_prompts(attn_2l_model: HookedTransformer):
     """Test that we can generate multiple comparisons."""
     rich_prompts: List[RichPrompt] = [
         *prompt_utils.get_x_vector(
@@ -349,7 +350,7 @@ def test_multiple_prompts(attn_2l_model):
     )
 
 
-def test_empty_prompt(attn_2l_model):
+def test_empty_prompt(attn_2l_model: HookedTransformer):
     """Test that we can generate a comparison with an empty prompt."""
 
     rich_prompts: List[RichPrompt] = [
@@ -365,7 +366,7 @@ def test_empty_prompt(attn_2l_model):
     )
 
 
-def test_no_normal(attn_2l_model):
+def test_no_normal(attn_2l_model: HookedTransformer):
     """Test that we can generate only modified completions."""
 
     rich_prompts: List[RichPrompt] = [
@@ -382,7 +383,7 @@ def test_no_normal(attn_2l_model):
     )
 
 
-def test_no_modified(attn_2l_model):
+def test_no_modified(attn_2l_model: HookedTransformer):
     """Test that we can generate only normal completions."""
     completion_utils.print_n_comparisons(
         prompt="I think you're ",
@@ -391,3 +392,24 @@ def test_no_modified(attn_2l_model):
         seed=0,
         include_modified=False,
     )
+
+
+def test_seed_completions_reproducible(attn_2l_model: HookedTransformer):
+    """Test that seed 0 reproduces the same completion for a
+    prompt."""
+
+    # Generate two completions using the same seed
+    generations: List[str] = []
+    for seed in (0, 0):
+        result: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+            prompt_batch=["I think you're "],
+            model=attn_2l_model,
+            rich_prompts=[],
+            seed=seed,
+        )
+        generations.append(result["completions"][0])
+
+    # Ensure that the completions are the same
+    assert (
+        generations[0] == generations[1]
+    ), "Seeds should produce reproducible completions."
