@@ -6,7 +6,7 @@ from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 
 
 # Fixtures
-@pytest.fixture(name="attn_1l_model")
+@pytest.fixture(name="attn_1l_model", scope="module")
 def fixture_model() -> HookedTransformer:
     """Test fixture that returns a small pre-trained transformer."""
     return HookedTransformer.from_pretrained(model_name="attn-only-1l")
