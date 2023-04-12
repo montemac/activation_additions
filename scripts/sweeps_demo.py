@@ -17,7 +17,7 @@ try:
 except AttributeError:
     pass
 
-# We turn automatic differentiation off, to save GPU memory, as this notebook focuses on model inference not model training.
+# Disable gradients to save memory during inference
 _ = torch.set_grad_enabled(False)
 
 # %%
