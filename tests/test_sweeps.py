@@ -22,7 +22,7 @@ except AttributeError:
     pass
 
 # Filename for pre-pickled assets
-SWEEP_OVER_PROMPTS_CACHE_FN = "sweep_over_prompts_cache.pkl"
+SWEEP_OVER_PROMPTS_CACHE_FN = "tests/sweep_over_prompts_cache.pkl"
 
 
 @pytest.fixture(name="model")
