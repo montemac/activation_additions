@@ -9,6 +9,7 @@ index and one column per output provided by the metric. """
 
 from typing import List, Dict, Callable, Optional
 from collections.abc import Iterable
+import re
 
 import pandas as pd
 from transformers import pipeline
@@ -17,16 +18,19 @@ from transformers import pipeline
 def add_metric_cols(
     data: pd.DataFrame,
     metrics_dict: Dict[str, Callable[[Iterable[str]], pd.DataFrame]],
-    completion_col: str = "completion",
+    cols_to_use: List[str] = ["prompts", "completions"],
 ):
-    """Apply a dict of named metrics to a series of completions
-    specified by by a particular DataFrame column, adding the metric
-    outputs as additional columns and returning the resulting DataFrame."""
+    """Apply a dict of named metrics to a series of strings
+    specified by by a particular set of DataFrame columns (which will be
+    concatenated), adding the metric outputs as additional columns and
+    returning the resulting DataFrame.
+    """
     for metric_name, metric_func in metrics_dict.items():
-        metric_df = metric_func(data[completion_col].to_list()).add_prefix(
+        data["metric_inputs"] = data[cols_to_use].agg("".join, axis=1)
+        metric_df = metric_func(data["metric_inputs"].to_list()).add_prefix(
             f"{metric_name}_"
         )
-        data = data.join(metric_df, on=completion_col)
+        data = data.join(metric_df, on="metric_inputs")
     return data
 
 
@@ -50,5 +54,37 @@ def get_sentiment_metric(
                 positive_labels
             )
         return metric_results
+
+    return metric_func
+
+
+def get_word_count_metric(
+    words: List[str], case_sensitive: bool = False
+) -> Callable[[Iterable[str]], pd.DataFrame]:
+    """Create a metric using a list of words. The metric function
+    returns a count of the total number of occurences of all the words
+    in the list. Each string is first pre-processed to
+    replace all non-alphanumeric characters with spaces before
+    tokenization into words. Comparisons are case-insensitive by
+    default, this this can be overriden by passing case_sensitive=True."""
+
+    if not case_sensitive:
+        words = [word.lower() for word in words]
+
+    def metric_func(strs: Iterable[str]) -> pd.DataFrame:
+        if not case_sensitive:
+            strs_cmp = [ss.lower() for ss in strs]
+        else:
+            strs_cmp = strs
+        pattern = re.compile(r"\W")
+        counts = []
+        for str_this in strs_cmp:
+            # Remove non-alphanumeric characters
+            str_this = re.sub(pattern, " ", str_this)
+            # Tokenize
+            toks = str_this.split()
+            # Get total count for this input string
+            counts.append(sum((toks.count(word) for word in words)))
+        return pd.Series(counts, index=strs, name="count").to_frame()
 
     return metric_func
