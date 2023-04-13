@@ -102,6 +102,7 @@ def rate_completions_openai(
     data_frame: pd.DataFrame,
     criterion: Optional[str] = None,
     prompt_prefix: Optional[str] = None,
+    model: str = "text-davinci-003",
 ) -> None:
     """
     Rate completions using the OpenAI API.
@@ -113,10 +114,14 @@ def rate_completions_openai(
                 `is_modified`: Whether the completion was generated
                 using a modified forward pass.
 
-        `criterion`: The criterion to use for rating the completions.
+        `criterion`: The criterion to use for rating the completions:
+        "To what extent does this text `{criterion}`?". If `None`, the
+        `prompt_prefix` argument must be specified.
 
         `prompt_prefix`: The prefix to use for the prompt. If `None`, the
                 default prompt is created from the `criterion` argument.
+
+        `model`: The OpenAI model to use for rating the completions.
 
     Modifies:
         The `data_frame` to have the following columns added:
@@ -143,7 +148,7 @@ def rate_completions_openai(
 
     # Send a single batched inference request
     response: pd.DataFrame = openai.Completion.create(
-        model="text-davinci-002",
+        model=model,
         prompt=[
             create_prompt(row["completions"])
             for _, row in data_frame.iterrows()
@@ -151,7 +156,7 @@ def rate_completions_openai(
         temperature=1,
         top_p=0.3,
         max_tokens=MAX_TOKENS,
-    )
+    )  # type: ignore
 
     # Extract the rating from message contents
     for choice in response["choices"]:

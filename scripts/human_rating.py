@@ -53,10 +53,10 @@ rate_completions_openai(data_frame=wedding_df, criterion="mentions weddings")
 
 shrek_prompts = [*get_x_vector_preset(prompt1="I talk about Shrek constantly", 
                               prompt2="I do not talk about Shrek constantly", 
-                              coeff=3, act_name=14),
+                              coeff=-3, act_name=14),
                               *get_x_vector_preset(prompt1="I bring up Shrek in every situation",
                               prompt2="I do not bring up Shrek in every situation",
-                              coeff=10, act_name=22),] 
+                              coeff=-5, act_name=22),] 
 
 shrek_prompt: str = "I hate talking about weddings. Instead, let's talk about a totally different topic, like the impact of NGDP on the price of gold."
 
