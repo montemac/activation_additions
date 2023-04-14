@@ -22,6 +22,5 @@ ENV PATH="/home/$USERNAME/.local/bin:${PATH}"
 # Install project dependencies
 WORKDIR /home/$USERNAME/algebraic_value_editing
 COPY --chown=$USERNAME:$USER_GID . .
-RUN pip install --no-cache-dir -e .
-RUN pip install pytest
+RUN pip install --no-cache-dir -e '.[dev]'
 
