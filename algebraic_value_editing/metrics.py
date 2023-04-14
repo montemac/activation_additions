@@ -13,6 +13,7 @@ import re
 
 import pandas as pd
 from transformers import pipeline
+import openai
 
 
 def add_metric_cols(
@@ -86,5 +87,41 @@ def get_word_count_metric(
             # Get total count for this input string
             counts.append(sum((toks.count(word) for word in words)))
         return pd.Series(counts, index=strs, name="count").to_frame()
+
+    return metric_func
+
+
+
+def get_openai_metric(
+    model_name: str, # e.g. text-davinci-003
+    criterion: str, # e.g. "happy" gives prompt "How happy is this text?" as a prompt
+):
+    # extract the ratings
+    def _intify(s):
+        try:
+            return int(s)
+        except:
+            return None
+
+    def metric_func(strs: Iterable[str]) -> pd.DataFrame:
+        prompts = [f"How {criterion} is this text? Give reasoning in 1-3 sentences. Text:\n{s}\nReasoning:\n" for s in strs]
+        response = openai.Completion.create(
+            model=model_name,
+            prompt=prompts,
+            temperature=0.0,
+        )
+        reasoning = [choice['text'] for choice in response.choices]
+        contexts = [prompt + reasoning for prompt, reasoning in zip(prompts, reasoning)]
+        response = openai.Completion.create(
+            model=model_name,
+            prompt=[f"{ctx}\n\n{criterion.title()} rating (1-10):" for ctx in contexts],
+            temperature=0.0,
+        )
+
+        ratings = [_intify(r["text"].strip()) for r in response["choices"]]
+
+        # Return dataframe with ratings and reasoning
+        return pd.DataFrame({"rating": ratings, "reasoning": reasoning}, index=strs)
+
 
     return metric_func

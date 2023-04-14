@@ -66,6 +66,27 @@ def test_get_word_count_metric():
     pd.testing.assert_frame_equal(results, target)
 
 
+def test_openai_metric():
+    """Test for get_openai_metric(). Creates an OpenAI metric, applies
+    it to some strings, and checks the results against pre-defined
+    constants."""
+    import openai
+    if openai.api_key is None:
+        pytest.skip("OpenAI API key not found.")
+
+    metric = metrics.get_openai_metric("text-davinci-003", "happy")
+    prompts = ["I love chocolate!", "I hate chocolate!"]
+    results = metric(prompts)
+    target = pd.DataFrame(
+        {"rating": [10, 1], "reasoning": [
+            'This text is very happy because it expresses a strong positive emotion towards something.',
+            'This text is not very happy because it expresses a negative sentiment towards chocolate.'
+        ]},
+        index=prompts,
+    )
+    pd.testing.assert_frame_equal(results, target)
+
+
 def test_add_metric_cols(model):
     """Test for add_metric_cols().  Creates two metrics, applies them to
     several strings with the function under tests, then tests that the
@@ -102,3 +123,5 @@ def test_add_metric_cols(model):
         }
     )
     pd.testing.assert_frame_equal(results_df, target)
+
+# %%
