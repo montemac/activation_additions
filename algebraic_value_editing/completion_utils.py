@@ -2,10 +2,10 @@
 and a list of RichPrompts. """
 
 from functools import wraps
+from contextlib import nullcontext
+from typing import List, Optional, Dict, Callable, Union
 
-from typing import List, Optional, Dict, Callable
 from jaxtyping import Int, Float
-
 import torch as t
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ import einops
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from algebraic_value_editing.prompt_utils import RichPrompt
-from algebraic_value_editing import hook_utils
+from algebraic_value_editing import hook_utils, logging
 
 
 def preserve_rng_state(func):
@@ -46,6 +46,7 @@ def gen_using_hooks(
     hook_fns: Dict[str, Callable],
     tokens_to_generate: int = 40,
     seed: Optional[int] = None,
+    log: Union[bool, Dict] = False,
     **sampling_kwargs,
 ) -> pd.DataFrame:
     """Run `model` using the given `hook_fns`.
@@ -61,6 +62,10 @@ def gen_using_hooks(
         `tokens_to_generate`: The number of additional tokens to generate.
 
         `seed`: A random seed to use for generation.
+
+        `log`: To enable logging of this call to wandb, pass either
+        True, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the wandb init call.  False to disable logging.
 
         `sampling_kwargs`: Keyword arguments to pass to the model's
         `generate` function.
@@ -119,12 +124,41 @@ def gen_using_hooks(
     # Mark the completions as modified or not
     results["is_modified"] = hook_fns != {}
 
+    # Log if enabled
+    # Set up logging, if desired
+    if log is not False:
+        if log is True:
+            log_args = {}
+        else:
+            log_args = log
+        # Logging is enabled, set up the config for this call
+        config = {
+            "model_cfg": model.cfg,
+            "prompt_batch": prompt_batch,
+            "tokens_to_generate": tokens_to_generate,
+            "seed": seed,
+            "sampling_kwargs": sampling_kwargs,
+        }
+        # Log results
+        logging.get_or_init_run_and_log_artifact(
+            job_type="gen_using_hooks",
+            config=config,
+            objects_to_log={
+                "results": logging.dataframe_to_table(results),
+                # "tokenized_prompts": tokenized_prompts,
+            },
+            artifact_name="gen_using_hooks",
+            artifact_type="gen_using_hooks",
+            run_args=log_args,
+        )
+
     return results
 
 
 def gen_using_rich_prompts(
     model: HookedTransformer,
     rich_prompts: List[RichPrompt],
+    log: Union[bool, Dict] = False,
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts.
@@ -133,6 +167,10 @@ def gen_using_rich_prompts(
         `model`: The model to use for completion.
 
         `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
+
+        `log`: To enable logging of this call to wandb, pass either
+        True, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the wandb init call.  False to disable logging.
 
         `kwargs`: Keyword arguments to pass to `gen_using_hooks`.
 
@@ -147,7 +185,30 @@ def gen_using_rich_prompts(
     hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
         model=model, rich_prompts=rich_prompts
     )
-    return gen_using_hooks(model=model, hook_fns=hook_fns, **kwargs)
+    # Set up logging if requested
+    if log is not False:
+        if log is True:
+            log_args = {}
+        else:
+            log_args = log
+        # Logging is enabled, set up the config for this call
+        config = {
+            "model_cfg": model.cfg,
+            "rich_prompts": rich_prompts,
+        }
+        # Get the wandb run
+        _, manager = logging.get_or_init_run(
+            job_type="gen_using_rich_prompts",
+            config=config,
+            tags=log_args.get("tags", None),
+            group=log_args.get("group", None),
+            notes=log_args.get("notes", None),
+        )
+    # Wrap in a context manager for exception-safety, and call the gen function
+    with manager:
+        return gen_using_hooks(
+            model=model, hook_fns=hook_fns, log=log, **kwargs
+        )
 
 
 def gen_normal_and_modified(
@@ -155,6 +216,7 @@ def gen_normal_and_modified(
     rich_prompts: Optional[List[RichPrompt]] = None,
     include_normal: bool = True,
     include_modified: bool = True,
+    log: Union[bool, Dict] = False,
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts, and without.
@@ -169,6 +231,10 @@ def gen_normal_and_modified(
 
         `include_modified`: Whether to include completions generated
         using the rich prompts.
+
+        `log`: To enable logging of this call to wandb, pass either
+        True, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the wandb init call.  False to disable logging.
 
     returns:
         A `DataFrame` with the completions and losses. The `DataFrame`
@@ -186,29 +252,54 @@ def gen_normal_and_modified(
         )
 
     data_frames: List[pd.DataFrame] = []
-    if include_modified:
-        if rich_prompts is None:
-            raise ValueError(
-                "rich_prompts must be specified if include_modified is True"
+
+    # Set up logging if requested
+    if log is not False:
+        if log is True:
+            log_args = {}
+        else:
+            log_args = log
+        # Logging is enabled, set up the config for this call
+        config = {
+            "model_cfg": model.cfg,
+            "rich_prompts": rich_prompts,
+        }
+        # Get the wandb run
+        _, manager = logging.get_or_init_run(
+            job_type="gen_normal_and_modified",
+            config=config,
+            tags=log_args.get("tags", None),
+            group=log_args.get("group", None),
+            notes=log_args.get("notes", None),
+        )
+    # Wrap in a context manager for exception-safety, and call the gen functions
+    with manager:
+        if include_modified:
+            if rich_prompts is None:
+                raise ValueError(
+                    "rich_prompts must be specified if include_modified is True"
+                )
+
+            # Create the hook functions
+            hook_fns: Dict[
+                str, Callable
+            ] = hook_utils.hook_fns_from_rich_prompts(
+                model=model, rich_prompts=rich_prompts
             )
+            tmp_df: pd.DataFrame = gen_using_hooks(
+                model=model, hook_fns=hook_fns, log=log, **kwargs
+            )
+            data_frames.append(tmp_df)
 
-        # Create the hook functions
-        hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
-            model=model, rich_prompts=rich_prompts
-        )
-        tmp_df: pd.DataFrame = gen_using_hooks(
-            model=model, hook_fns=hook_fns, **kwargs
-        )
-        data_frames.append(tmp_df)
+        if include_normal:
+            tmp_df: pd.DataFrame = gen_using_hooks(
+                model=model, hook_fns={}, log=log, **kwargs
+            )
+            data_frames.append(tmp_df)
 
-    if include_normal:
-        tmp_df: pd.DataFrame = gen_using_hooks(
-            model=model, hook_fns={}, **kwargs
-        )
-        data_frames.append(tmp_df)
-
-    # Combine the completions, ensuring that the indices are unique
-    return pd.concat(data_frames, ignore_index=True)
+        # Combine the completions, ensuring that the indices are unique
+        results = pd.concat(data_frames, ignore_index=True)
+        return results
 
 
 # Display utils #
@@ -274,6 +365,7 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
 def print_n_comparisons(
     prompt: str,
     num_comparisons: int = 5,
+    log: Union[bool, Dict] = False,
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
@@ -297,6 +389,7 @@ def print_n_comparisons(
     # according to whether we want to include them
     results: pd.DataFrame = gen_normal_and_modified(
         prompt_batch=prompt_batch,
+        log=log,
         **kwargs,
     )
 
