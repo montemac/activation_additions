@@ -6,6 +6,7 @@ between two prompts. """
 
 # %%
 from funcy import partial
+import torch
 import pandas as pd
 from transformer_lens.HookedTransformer import HookedTransformer
 
@@ -15,17 +16,21 @@ from algebraic_value_editing.prompt_utils import get_x_vector
 
 
 # %%
-device: str = "cuda"
+_ = torch.set_grad_enabled(False)
+device: str = "cuda" if torch.cuda.is_available() else "cpu"
 gpt2_xl: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="gpt2-xl",
     device="cpu",
-).to(device) # This reduces GPU memory usage, for some reason
+) # This reduces GPU memory usage, for some reason
+gpt2_xl.to(device)
+
+# %%
 
 default_kwargs = {'temperature': 1, 'freq_penalty': 1, 'top_p': .3, 'model': gpt2_xl}
 
 get_x_vector_preset = partial(get_x_vector, pad_method="tokens_right", 
                               model=gpt2_xl, 
-                              custom_pad_id=gpt2_xl.to_single_token(" "))
+                              custom_pad_id=int(gpt2_xl.to_single_token(" ")))
 
 # %%
 
