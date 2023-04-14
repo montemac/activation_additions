@@ -96,6 +96,13 @@ def get_openai_metric(
     model_name: str, # e.g. text-davinci-003
     criterion: str, # e.g. "happy" gives prompt "How happy is this text?" as a prompt
 ):
+    """Create a metric using an OpenAI model. and chain-of-thought. The model is called twice, first to get a reasoning for the rating, then to get the rating itself (from 1-10). The metric function returns a dataframe with two columns: "rating" and "reasoning"
+
+    Considerations:
+    - Cost: Chain of thought is only effective for the most capable model (text-davinci-003) which is quite expensive; 0.02$ per 1k tokens, so on the order of 0.01$ per str passed to metric_func.
+    - Bias: RLHF models are very biased towards giving moderate ratings like 7. In future we may want to consider normalizing the ratings to be more centered around 5. (And doing this for humans as well.)
+    """
+
     # extract the ratings
     def _intify(s):
         try:
