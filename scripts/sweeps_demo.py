@@ -2,6 +2,8 @@
 
 # %%
 # Imports, etc.
+import pickle
+
 import numpy as np
 import torch
 
@@ -13,6 +15,7 @@ from algebraic_value_editing import (
     sweeps,
     metrics,
     prompt_utils,
+    completion_utils,
 )
 
 try:
@@ -31,6 +34,34 @@ _ = torch.set_grad_enabled(False)
 MODEL = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
 ).to("cuda:0")
+
+
+# %%
+# Generate some example completions, for reproduction reference from
+# Alex's notebook.
+weddings_prompts = [
+    *prompt_utils.get_x_vector(
+        prompt1="I always talk about weddings",
+        prompt2="I never talk about weddings",
+        coeff=4,
+        act_name=6,
+        pad_method="tokens_right",
+        model=MODEL,
+        custom_pad_id=MODEL.to_single_token(" "),
+    )
+]
+
+completion_utils.print_n_comparisons(
+    model=MODEL,
+    prompt="Frozen starts off with a scene about",
+    tokens_to_generate=50,
+    rich_prompts=weddings_prompts,
+    num_comparisons=7,
+    seed=0,
+    temperature=1,
+    freq_penalty=1,
+    top_p=0.3,
+)
 
 
 # %%
@@ -55,7 +86,7 @@ rich_prompts_df = sweeps.make_rich_prompts(
 # Populate a list of prompts to complete
 prompts = [
     "I went up to my friend and said",
-    "Batman Begins starts off with a scene about",
+    "Frozen starts off with a scene about",
 ]
 
 # %%
@@ -78,19 +109,26 @@ metrics_dict = {
 
 
 # %%
-# Run the sweep of completions
-normal_df, patched_df = sweeps.sweep_over_prompts(
-    MODEL,
-    prompts,
-    rich_prompts_df["rich_prompts"],
-    num_normal_completions=100,
-    num_patched_completions=100,
-    seed=0,
-    metrics_dict=metrics_dict,
-    temperature=1,
-    freq_penalty=1,
-    top_p=0.3,
-)
+# Run the sweep of completions, or load from cache
+CACHE_FN = "sweeps_demo_cache.pkl"
+try:
+    with open(CACHE_FN, "rb") as file:
+        normal_df, patched_df, rich_prompts_df = pickle.load(file)
+except FileNotFoundError:
+    normal_df, patched_df = sweeps.sweep_over_prompts(
+        MODEL,
+        prompts,
+        rich_prompts_df["rich_prompts"],
+        num_normal_completions=100,
+        num_patched_completions=100,
+        seed=0,
+        metrics_dict=metrics_dict,
+        temperature=1,
+        freq_penalty=1,
+        top_p=0.3,
+    )
+    with open(CACHE_FN, "wb") as file:
+        pickle.dump((normal_df, patched_df, rich_prompts_df), file)
 
 # %%
 # Visualize
@@ -126,29 +164,3 @@ plot_col(
     reduced_joined_filt_df, "wedding_words_count", "Average wedding word count"
 )
 plot_col(reduced_joined_filt_df, "loss", "Average loss")
-
-# %%
-# For reproduction reference from Alex's notebook
-# default_kwargs = {"temperature": 1, "freq_penalty": 1, "top_p": 0.3}
-
-# weddings_prompts_4 = [
-#     *prompt_utils.get_x_vector(
-#         prompt1="I talk about weddings constantly",
-#         prompt2="I do not talk about weddings constantly",
-#         coeff=4,
-#         act_name=20,
-#         pad_method="tokens_right",
-#         model=MODEL,
-#         custom_pad_id=MODEL.to_single_token(" "),
-#     )
-# ]
-
-# completion_utils.print_n_comparisons(
-#     model=MODEL,
-#     prompt="I went up to my friend and said",
-#     tokens_to_generate=100,
-#     rich_prompts=weddings_prompts_4,
-#     num_comparisons=15,
-#     **default_kwargs,
-#     seed=0,
-# )
