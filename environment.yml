@@ -1,5 +1,0 @@
-name: AVEC
-channels:
-  - defaults
-  - conda-forge
-prefix: /home/turn/miniconda3/envs/AVEC
