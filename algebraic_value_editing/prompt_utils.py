@@ -122,7 +122,7 @@ def get_x_vector(
             padded_toks_1 = pad_partial(tokens1)
 
         prompt1, prompt2 = [
-            model.to_string(toks[1:])
+            model.to_string(toks[1:])  # type: ignore
             for toks in [padded_toks_1, padded_toks_2]
         ]
 
