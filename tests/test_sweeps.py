@@ -102,15 +102,8 @@ def test_sweep_over_prompts(model):
     with open(SWEEP_OVER_PROMPTS_CACHE_FN, "rb") as file:
         normal_target, patched_target = pickle.load(file)
 
-    # Allows for extra columns to be stored by future gen_using_hooks calls
-    target_cols: List[str] = [
-        "completion_index",
-        "prompts",
-        "completions",
-        "loss",
-    ]
-    pd.testing.assert_frame_equal(normal_df[target_cols], normal_target)
-    pd.testing.assert_frame_equal(patched_df[target_cols], patched_target)
+    pd.testing.assert_frame_equal(normal_df, normal_target)
+    pd.testing.assert_frame_equal(patched_df, patched_target)
 
 
 # Assets
