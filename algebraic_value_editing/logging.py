@@ -10,7 +10,6 @@ import wandb
 import pandas as pd
 
 PROJECT = "algebraic_value_editing"
-ENTITY = "montemac"
 
 # Hack to disable a warning when wandb forks a process for sync'ing (I
 # think)
@@ -44,7 +43,6 @@ def get_or_init_run(
         # Force any needed args
         overwrite_arg_with_warning(init_args, "reinit", True)
         overwrite_arg_with_warning(init_args, "project", PROJECT)
-        overwrite_arg_with_warning(init_args, "entity", ENTITY)
         overwrite_arg_with_warning(init_args, "save_code", True)
         overwrite_arg_with_warning(init_args, "allow_val_change", True)
         # Initialize a run
