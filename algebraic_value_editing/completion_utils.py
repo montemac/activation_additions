@@ -40,6 +40,7 @@ def preserve_rng_state(func):
 
 # Ensure that even if we set the seed, we don't change the RNG state globally
 @preserve_rng_state
+@logging.loggable
 def gen_using_hooks(
     model: HookedTransformer,
     prompt_batch: List[str],
@@ -124,37 +125,10 @@ def gen_using_hooks(
     # Mark the completions as modified or not
     results["is_modified"] = hook_fns != {}
 
-    # Log if enabled
-    # Set up logging, if desired
-    if log is not False:
-        if log is True:
-            log_args = {}
-        else:
-            log_args = log
-        # Logging is enabled, set up the config for this call
-        config = {
-            "model_cfg": model.cfg,
-            "prompt_batch": prompt_batch,
-            "tokens_to_generate": tokens_to_generate,
-            "seed": seed,
-            "sampling_kwargs": sampling_kwargs,
-        }
-        # Log results
-        logging.get_or_init_run_and_log_artifact(
-            job_type="gen_using_hooks",
-            config=config,
-            objects_to_log={
-                "results": logging.dataframe_to_table(results),
-                # "tokenized_prompts": tokenized_prompts,
-            },
-            artifact_name="gen_using_hooks",
-            artifact_type="gen_using_hooks",
-            run_args=log_args,
-        )
-
     return results
 
 
+@logging.loggable
 def gen_using_rich_prompts(
     model: HookedTransformer,
     rich_prompts: List[RichPrompt],
@@ -185,32 +159,11 @@ def gen_using_rich_prompts(
     hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
         model=model, rich_prompts=rich_prompts
     )
-    # Set up logging if requested
-    if log is not False:
-        if log is True:
-            log_args = {}
-        else:
-            log_args = log
-        # Logging is enabled, set up the config for this call
-        config = {
-            "model_cfg": model.cfg,
-            "rich_prompts": rich_prompts,
-        }
-        # Get the wandb run
-        _, manager = logging.get_or_init_run(
-            job_type="gen_using_rich_prompts",
-            config=config,
-            tags=log_args.get("tags", None),
-            group=log_args.get("group", None),
-            notes=log_args.get("notes", None),
-        )
-    # Wrap in a context manager for exception-safety, and call the gen function
-    with manager:
-        return gen_using_hooks(
-            model=model, hook_fns=hook_fns, log=log, **kwargs
-        )
+
+    return gen_using_hooks(model=model, hook_fns=hook_fns, log=log, **kwargs)
 
 
+@logging.loggable
 def gen_normal_and_modified(
     model: HookedTransformer,
     rich_prompts: Optional[List[RichPrompt]] = None,
@@ -253,53 +206,30 @@ def gen_normal_and_modified(
 
     data_frames: List[pd.DataFrame] = []
 
-    # Set up logging if requested
-    if log is not False:
-        if log is True:
-            log_args = {}
-        else:
-            log_args = log
-        # Logging is enabled, set up the config for this call
-        config = {
-            "model_cfg": model.cfg,
-            "rich_prompts": rich_prompts,
-        }
-        # Get the wandb run
-        _, manager = logging.get_or_init_run(
-            job_type="gen_normal_and_modified",
-            config=config,
-            tags=log_args.get("tags", None),
-            group=log_args.get("group", None),
-            notes=log_args.get("notes", None),
+    if include_modified:
+        if rich_prompts is None:
+            raise ValueError(
+                "rich_prompts must be specified if include_modified is True"
+            )
+
+        # Create the hook functions
+        hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
+            model=model, rich_prompts=rich_prompts
         )
-    # Wrap in a context manager for exception-safety, and call the gen functions
-    with manager:
-        if include_modified:
-            if rich_prompts is None:
-                raise ValueError(
-                    "rich_prompts must be specified if include_modified is True"
-                )
+        tmp_df: pd.DataFrame = gen_using_hooks(
+            model=model, hook_fns=hook_fns, log=log, **kwargs
+        )
+        data_frames.append(tmp_df)
 
-            # Create the hook functions
-            hook_fns: Dict[
-                str, Callable
-            ] = hook_utils.hook_fns_from_rich_prompts(
-                model=model, rich_prompts=rich_prompts
-            )
-            tmp_df: pd.DataFrame = gen_using_hooks(
-                model=model, hook_fns=hook_fns, log=log, **kwargs
-            )
-            data_frames.append(tmp_df)
+    if include_normal:
+        tmp_df: pd.DataFrame = gen_using_hooks(
+            model=model, hook_fns={}, log=log, **kwargs
+        )
+        data_frames.append(tmp_df)
 
-        if include_normal:
-            tmp_df: pd.DataFrame = gen_using_hooks(
-                model=model, hook_fns={}, log=log, **kwargs
-            )
-            data_frames.append(tmp_df)
-
-        # Combine the completions, ensuring that the indices are unique
-        results = pd.concat(data_frames, ignore_index=True)
-        return results
+    # Combine the completions, ensuring that the indices are unique
+    results = pd.concat(data_frames, ignore_index=True)
+    return results
 
 
 # Display utils #
@@ -362,6 +292,7 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
     print(table)
 
 
+@logging.loggable
 def print_n_comparisons(
     prompt: str,
     num_comparisons: int = 5,

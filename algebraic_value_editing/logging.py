@@ -1,6 +1,6 @@
 """Functions to support logging of data to wandb"""
 
-from typing import Union, Optional, Dict, ContextManager, Tuple, Any
+from typing import Union, Optional, Dict, ContextManager, Tuple, Any, Callable
 from contextlib import nullcontext
 from warnings import warn
 import os
@@ -8,6 +8,9 @@ import datetime
 
 import wandb
 import pandas as pd
+from decorator import decorate
+
+from transformer_lens.HookedTransformer import HookedTransformer
 
 PROJECT = "algebraic_value_editing"
 
@@ -121,6 +124,86 @@ def get_or_init_run_and_log_artifact(
             artifact_description,
             artifact_metadata,
         )
+
+
+def convert_object_to_wandb_config(obj: Any) -> Any:
+    """Convert object to form better suited for storing in wandb config
+    objects. Conversion will depend on object type."""
+    if isinstance(obj, HookedTransformer):
+        # Store the configuration of a HookedTransformer
+        return obj.cfg
+    # Return the unmodified object by default
+    return obj
+
+
+def convert_dict_items_to_wandb_config(
+    objects_dict: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Take a dictionary of items of any type, and apply some
+    conversions to forms better suited for storing in wandb config objects."""
+    return {
+        key: convert_object_to_wandb_config(value)
+        for key, value in objects_dict.items()
+    }
+
+
+# Uses decorator module: https://github.com/micheles/decorator/blob/master/docs/documentation.md
+def _loggable(func: Callable, **kwargs):
+    """Caller function for loggable decorator, see public decorator
+    function for docs."""
+    # Get log argument from function call, default to false if not present
+    log = kwargs.get("log", False)
+    # Process the log argument, extract logging-related arguments if provided
+    if log is not False:
+        if log is True:
+            log_args = {}
+        else:
+            log_args = log
+        # Set up the config for this logging call: just store the
+        # keyword args, converted as needed for storage on wandb
+        config = convert_dict_items_to_wandb_config(kwargs)
+        # Get the wandb run
+        run, manager = get_or_init_run(
+            job_type=func.__name__,
+            config=config,
+            tags=log_args.get("tags", None),
+            group=log_args.get("group", None),
+            notes=log_args.get("notes", None),
+        )
+        # Use provided context manager to wrap the underlying function call
+        with manager:
+            # Call the wrapped function
+            func_return = func(**kwargs)
+            # Log returned objects, splitting up tuple if needed
+            if isinstance(func_return, tuple):
+                objects_to_log = {
+                    f"return_{index}": obj
+                    for index, obj in enumerate(func_return)
+                }
+            else:
+                objects_to_log = {"return": func_return}
+            log_artifact(
+                run,
+                objects_to_log,
+                artifact_name=func.__name__,
+                artifact_type=func.__name__ + "_return",
+            )
+            # Return the wrapped function return value
+            return func_return
+
+
+def loggable(func):
+    """Decorator that adds optional logging of the return value of this
+    function to wandb.  The decorated function must include a keyword
+    argument named `log` with a type signature `Union[bool, dict[str,
+    str]]` for logging to be used.
+
+    Note that the decorated function will only accept keyword arguments
+    so that they can be stored in the logging config object with proper names.
+    """
+    return decorate(
+        func, _loggable, kwsyntax=True
+    )  # kwsyntax=True required to pass named positional args in kwargs
 
 
 # def store_as_artifact(
