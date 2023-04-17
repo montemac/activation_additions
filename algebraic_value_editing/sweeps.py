@@ -8,7 +8,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import metrics
+from algebraic_value_editing import metrics, logging
 from algebraic_value_editing.prompt_utils import RichPrompt
 from algebraic_value_editing.completion_utils import (
     gen_using_hooks,
@@ -16,10 +16,12 @@ from algebraic_value_editing.completion_utils import (
 )
 
 
+@logging.loggable
 def make_rich_prompts(
     phrases: List[List[Tuple[str, float]]],
     act_names: Union[List[str], np.ndarray],
     coeffs: Union[List[float], np.ndarray],
+    log: Union[bool, Dict] = False,
 ) -> pd.DataFrame:
     """Make a single series of RichPrompt lists by combining all permutations
     of lists of phrases with initial coeffs, activation names (i.e. layers), and
@@ -55,6 +57,7 @@ def make_rich_prompts(
     return pd.DataFrame(rows)
 
 
+@logging.loggable
 def sweep_over_prompts(
     model: HookedTransformer,
     prompts: Iterable[str],
@@ -66,6 +69,7 @@ def sweep_over_prompts(
     metrics_dict: Optional[
         Dict[str, Callable[[Iterable[str]], pd.DataFrame]]
     ] = None,
+    log: Union[bool, Dict] = False,
     **sampling_kwargs,
 ) -> pd.DataFrame:
     """Apply each provided RichPrompt to each prompt num_completions
@@ -92,6 +96,10 @@ def sweep_over_prompts(
 
         seed: A random seed to use for generation.
 
+        `log`: To enable logging of this call to wandb, pass either
+        True, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the wandb init call.  False to disable logging.
+
         sampling_kwargs: Keyword arguments to pass to the model's
         generate function.
 
@@ -104,26 +112,30 @@ def sweep_over_prompts(
     normal_list = []
     patched_list = []
     for prompt in tqdm(prompts):
-        # Generate the normal completions for this prompt
+        # Generate the normal completions for this prompt, with logging
+        # forced off since we'll be logging to final DataFrames
         normal_df: pd.DataFrame = gen_using_hooks(
             model=model,
             prompt_batch=[prompt] * num_normal_completions,
             hook_fns={},
             tokens_to_generate=tokens_to_generate,
             seed=seed,
+            log=False,
             **sampling_kwargs,
         )
         # Append for later concatenation
         normal_list.append(normal_df)
         # Iterate over RichPrompts
         for index, rich_prompts_this in enumerate(tqdm(rich_prompts)):
-            # Generate the patched completions
+            # Generate the patched completions, with logging
+            # forced off since we'll be logging to final DataFrames
             patched_df: pd.DataFrame = gen_using_rich_prompts(
                 model=model,
                 rich_prompts=rich_prompts_this,
                 prompt_batch=[prompt] * num_patched_completions,
                 tokens_to_generate=tokens_to_generate,
                 seed=seed,
+                log=False,
                 **sampling_kwargs,
             )
             patched_df["rich_prompt_index"] = index

@@ -132,7 +132,6 @@ def gen_using_hooks(
 def gen_using_rich_prompts(
     model: HookedTransformer,
     rich_prompts: List[RichPrompt],
-    log: Union[bool, Dict] = False,
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts.
@@ -141,10 +140,6 @@ def gen_using_rich_prompts(
         `model`: The model to use for completion.
 
         `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
-
-        `log`: To enable logging of this call to wandb, pass either
-        True, or a dict contining any of ('tags', 'group', 'notes') to
-        pass these keys to the wandb init call.  False to disable logging.
 
         `kwargs`: Keyword arguments to pass to `gen_using_hooks`.
 
@@ -160,7 +155,7 @@ def gen_using_rich_prompts(
         model=model, rich_prompts=rich_prompts
     )
 
-    return gen_using_hooks(model=model, hook_fns=hook_fns, log=log, **kwargs)
+    return gen_using_hooks(model=model, hook_fns=hook_fns, **kwargs)
 
 
 @logging.loggable
@@ -169,7 +164,6 @@ def gen_normal_and_modified(
     rich_prompts: Optional[List[RichPrompt]] = None,
     include_normal: bool = True,
     include_modified: bool = True,
-    log: Union[bool, Dict] = False,
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts, and without.
@@ -184,10 +178,6 @@ def gen_normal_and_modified(
 
         `include_modified`: Whether to include completions generated
         using the rich prompts.
-
-        `log`: To enable logging of this call to wandb, pass either
-        True, or a dict contining any of ('tags', 'group', 'notes') to
-        pass these keys to the wandb init call.  False to disable logging.
 
     returns:
         A `DataFrame` with the completions and losses. The `DataFrame`
@@ -217,13 +207,13 @@ def gen_normal_and_modified(
             model=model, rich_prompts=rich_prompts
         )
         tmp_df: pd.DataFrame = gen_using_hooks(
-            model=model, hook_fns=hook_fns, log=log, **kwargs
+            model=model, hook_fns=hook_fns, **kwargs
         )
         data_frames.append(tmp_df)
 
     if include_normal:
         tmp_df: pd.DataFrame = gen_using_hooks(
-            model=model, hook_fns={}, log=log, **kwargs
+            model=model, hook_fns={}, **kwargs
         )
         data_frames.append(tmp_df)
 
@@ -296,7 +286,6 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
 def print_n_comparisons(
     prompt: str,
     num_comparisons: int = 5,
-    log: Union[bool, Dict] = False,
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
@@ -320,7 +309,6 @@ def print_n_comparisons(
     # according to whether we want to include them
     results: pd.DataFrame = gen_normal_and_modified(
         prompt_batch=prompt_batch,
-        log=log,
         **kwargs,
     )
 
