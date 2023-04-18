@@ -138,3 +138,5 @@ dmypy.json
 *prof
 *old_ave*
 wandb
+results
+*playground*

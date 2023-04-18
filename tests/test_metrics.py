@@ -9,10 +9,10 @@ from transformer_lens import HookedTransformer
 from algebraic_value_editing import metrics, completion_utils
 
 try:
-    from IPython import get_ipython
+    from IPython.core.getipython import get_ipython
 
-    get_ipython().run_line_magic("reload_ext", "autoreload")
-    get_ipython().run_line_magic("autoreload", "2")
+    get_ipython().run_line_magic("reload_ext", "autoreload")  # type: ignore
+    get_ipython().run_line_magic("autoreload", "2")  # type: ignore
 except AttributeError:
     pass
 
