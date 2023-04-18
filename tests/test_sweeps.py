@@ -3,12 +3,14 @@
 # %%
 import pickle
 from typing import Tuple
+import os
 
 import pytest
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+from typing import List
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import sweeps
@@ -16,15 +18,18 @@ from algebraic_value_editing import prompt_utils
 from algebraic_value_editing.prompt_utils import RichPrompt
 
 try:
-    from IPython import get_ipython
+    from IPython.core.getipython import get_ipython
 
-    get_ipython().run_line_magic("reload_ext", "autoreload")
-    get_ipython().run_line_magic("autoreload", "2")
+    get_ipython().run_line_magic("reload_ext", "autoreload")  # type: ignore
+    get_ipython().run_line_magic("autoreload", "2")  # type: ignore
 except AttributeError:
     pass
 
 # Filename for pre-pickled assets
-SWEEP_OVER_PROMPTS_CACHE_FN = "tests/sweep_over_prompts_cache.pkl"
+SWEEP_OVER_PROMPTS_CACHE_FN: str = "tests/sweep_over_prompts_cache.pkl"
+
+# GPU sometimes produces different completions than CPU
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
 @pytest.fixture(name="model")
@@ -43,7 +48,7 @@ def test_make_rich_prompts():
     of np.ndgrid.  The return value is compared against a pre-prepared
     reference output."""
     # Call the function under test
-    rich_prompts_df = sweeps.make_rich_prompts(
+    rich_prompts_df: pd.DataFrame = sweeps.make_rich_prompts(
         [[("Good", 1.0), ("Bad", -1.0)], [("Amazing", 2.0)]],
         [prompt_utils.get_block_name(block_num=num) for num in [6, 7, 8]],
         np.array([1.0, 5, 10.0, 20.0]),
@@ -57,7 +62,7 @@ def do_sweep(
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Convenience function to perform a small example sweep and return
     the resulting DataFrames"""
-    act_name = prompt_utils.get_block_name(block_num=0)
+    act_name: str = prompt_utils.get_block_name(block_num=0)
     rich_prompts_df = sweeps.make_rich_prompts(
         [[("Love", 1.0), ("Fear", -1.0)]],
         [act_name],

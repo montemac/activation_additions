@@ -68,7 +68,7 @@ def sweep_over_prompts(
         Dict[str, Callable[[Iterable[str]], pd.DataFrame]]
     ] = None,
     **sampling_kwargs,
-) -> pd.DataFrame:
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Apply each provided RichPrompt to each prompt num_completions
     times, returning the results in a dataframe.  The iterable of
     RichPrompts may be created directly for simple cases, or created by

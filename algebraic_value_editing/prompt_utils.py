@@ -123,8 +123,17 @@ def get_x_vector(
             "tokens_right",
         ], "pad_method must be 'tokens_right'"
         assert model is not None, "model must be specified if pad_method is"
+        assert model.tokenizer is not None, "model must have a tokenizer"
 
         # If no custom token is specified, use the model's pad token
+        if (
+            not hasattr(model.tokenizer, "pad_token_id")
+            or model.tokenizer.pad_token_id is None
+        ):
+            raise ValueError(
+                "Tokenizer does not have a pad_token_id. "
+                "Please specify a custom pad token."
+            )
         pad_token_id: int = custom_pad_id or model.tokenizer.pad_token_id
 
         # Tokenize the prompts

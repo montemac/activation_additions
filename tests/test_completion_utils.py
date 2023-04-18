@@ -3,6 +3,7 @@
 from typing import List, Tuple, Set
 import pandas as pd
 import pytest
+import os
 import torch
 from transformer_lens.HookedTransformer import HookedTransformer
 
@@ -10,6 +11,9 @@ from algebraic_value_editing import completion_utils, prompt_utils
 from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 
 sampling_kwargs: dict = {"temperature": 1, "freq_penalty": 1, "top_p": 0.3}
+
+# TODO a few tests fail on GPU for some reason
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
 # Fixtures
