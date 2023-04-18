@@ -25,7 +25,6 @@ def rate_completions(
                 using a modified forward pass.
 
         `criterion`: The criterion to use for rating the completions.
-    TODO create unit tests
     """
     # Helper function. could use <code> but it's not as pretty.
     def htmlify(text):
