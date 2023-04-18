@@ -21,6 +21,10 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 # Disable printing
 os.environ["WANDB_SILENT"] = "true"
 
+# TODO: this is a hack, change this to add an optional return value from
+# loggable functions to return the run ID
+last_run_info = {"id": None, "name": None, "path": None}
+
 
 def get_or_init_run(
     **init_args,
@@ -33,6 +37,7 @@ def get_or_init_run(
     returned by this call, then the context manager will be empty, and
     it should be assumed that the original creator of the run will be
     managing it's safe finishing."""
+    global last_run_info
     if wandb.run is None:
 
         def overwrite_arg_with_warning(args, key, new_value):
@@ -50,6 +55,7 @@ def get_or_init_run(
         overwrite_arg_with_warning(init_args, "allow_val_change", True)
         # Initialize a run
         run = wandb.init(**init_args)
+        last_run_info = {"id": run.id, "name": run.name, "path": run.path}
         manager = run
     else:
         run = wandb.run
@@ -77,7 +83,8 @@ def log_artifact(
     artifact_description: Optional[str] = None,
     artifact_metadata: Optional[dict] = None,
 ):
-    """Log objects to a new artifact in the provided run"""
+    """Log objects to a new artifact in the provided run, converting
+    them if needed."""
     artifact = wandb.Artifact(
         name=f"{run.name}_"
         + (artifact_name if artifact_name is not None else "")
@@ -87,6 +94,9 @@ def log_artifact(
         metadata=artifact_metadata,
     )
     for name, obj in objects_to_log.items():
+        # Convert objects if needed based on type
+        if isinstance(obj, pd.DataFrame):
+            obj = wandb.Table(dataframe=obj)
         artifact.add(obj, name)
     run.log_artifact(artifact)
 
@@ -153,8 +163,12 @@ def _loggable(func: Callable, **kwargs):
     function for docs."""
     # Get log argument from function call, default to false if not present
     log = kwargs.get("log", False)
-    # Process the log argument, extract logging-related arguments if provided
-    if log is not False:
+    # Check if we should log
+    if log is False:
+        return func(**kwargs)
+    else:
+        # Process the log argument, extract logging-related arguments if
+        # provided
         if log is True:
             log_args = {}
         else:
