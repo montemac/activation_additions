@@ -169,11 +169,12 @@ def plot_sweep_results(
     col_facet_col="prompts",
     col_facet_row=None,
     baseline_data=None,
+    px_func=px.line,
 ):
     """Plot the reduced results of a sweep, with controllable axes,
     colors, etc.  Pass a reduced normal-completions DataFrame into
     `baseline_data` to add horizontal lines for metric baselines."""
-    fig = px.line(
+    fig = px_func(
         data,
         title=title,
         color=col_color,
@@ -182,13 +183,14 @@ def plot_sweep_results(
         facet_col=col_facet_col,
         facet_row=col_facet_row,
     )
-    if baseline_data is not None and col_to_plot in baseline_data:
-        for index, prompt in enumerate(baseline_data.index):
-            fig.add_hline(
-                y=baseline_data.loc[prompt][col_to_plot],
-                row=1,
-                col=index + 1,
-                annotation_text="normal",
-                annotation_position="bottom left",
-            )
+    # TODO: add this back in, but allow any axis combination
+    # if baseline_data is not None and col_to_plot in baseline_data:
+    #     for index, prompt in enumerate(baseline_data.index):
+    #         fig.add_hline(
+    #             y=baseline_data.loc[prompt][col_to_plot],
+    #             row=1,
+    #             col=index + 1,
+    #             annotation_text="normal",
+    #             annotation_position="bottom left",
+    #         )
     return fig
