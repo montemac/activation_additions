@@ -7,8 +7,7 @@ import pandas as pd
 import html
 from ipywidgets import widgets
 from IPython.display import display
-
-# %%
+import markdown
 
 def rate_completions(
     data_frame: pd.DataFrame,
@@ -28,20 +27,24 @@ def rate_completions(
         `criterion`: The criterion to use for rating the completions.
     TODO create unit tests
     """
+    # Helper function. could use <code> but it's not as pretty.
+    def htmlify(text):
+        return html.escape(text).replace('\n', '<br>')
+
     # Show the generations to the user in a random order
     data_idx = 0
 
     # Show preamble
     prompt: str = data_frame["prompts"].tolist()[0]
     preamble = widgets.HTML(value=f"""<p>
-        The model was run with prompt: "<b>{html.escape(prompt)}</b>"<br>
+        The model was run with prompt: "<b>{htmlify(prompt)}</b>"<br>
         Please rate the completions below. based on how <b>{criterion}</b> they are. You are rating completion {data_idx+1}/{len(data_frame)}.
     </p>""")
 
     # Use ipython to display text of the first completion
     completion_box = widgets.HTML()
     def set_completion_text(text):
-        completion_box.value = f"<p>{html.escape(text)}</p>"
+        completion_box.value = f"<p>{htmlify(text)}</p>"
     set_completion_text(data_frame.iloc[data_idx]["completions"])
 
     # Create the rating buttons
@@ -90,8 +93,8 @@ if __name__ == '__main__':
         {
             "prompts": ["Yesterday, my dog died. Today, I got denied for a raise. I'm feeling"] * 2,
             "completions": [
-                "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling sad.",
-                "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling happy.",
+                "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling sad.\nVery sad.",
+                "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling happy.\n\nReally happy~!",
             ],
             "is_modified": [False, True],
         }
