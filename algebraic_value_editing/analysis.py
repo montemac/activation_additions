@@ -1,12 +1,14 @@
 """ Tools for analyzing the results of algebraic value editing. """
 
+# %%
+
 import numpy as np
 import pandas as pd
+import html
 from ipywidgets import widgets
 from IPython.display import display
 
-from algebraic_value_editing import completion_utils
-
+# %%
 
 def rate_completions(
     data_frame: pd.DataFrame,
@@ -26,54 +28,86 @@ def rate_completions(
         `criterion`: The criterion to use for rating the completions.
     TODO create unit tests
     """
-    # Prepare the user
-    print(
-        "The model was run with the bolded text as the prompt. Please rate the"
-        " completions below.\n\n"
-    )
+    # Show the generations to the user in a random order
+    data_idx = 0
+
+    # Show preamble
     prompt: str = data_frame["prompts"].tolist()[0]
-    print(f"Prompt: {completion_utils.bold_text(prompt)}\n")
+    preamble = widgets.HTML(value=f"""<p>
+        The model was run with prompt: "<b>{html.escape(prompt)}</b>"<br>
+        Please rate the completions below. based on how <b>{criterion}</b> they are. You are rating completion {data_idx+1}/{len(data_frame)}.
+    </p>""")
 
-    criterion_fstr: str = f"To what extent is this completion {criterion}?"
-    criterion_fmt: str = completion_utils.bold_text(criterion_fstr)
-    print(criterion_fmt)
+    # Use ipython to display text of the first completion
+    completion_box = widgets.HTML()
+    def set_completion_text(text):
+        completion_box.value = f"<p>{html.escape(text)}</p>"
+    set_completion_text(data_frame.iloc[data_idx]["completions"])
 
-    completion_box: widgets.Textarea = widgets.Textarea(
-        value="Enter text here",
-        layout=widgets.Layout(width="400px", height="200px"),
-        disabled=True,
+    # Create the rating buttons
+    rating_buttons = widgets.ToggleButtons(
+        options=["1", "2", "3", "4", "5"],
+        button_style="",
+        tooltips=["1", "2", "3", "4", "5"],
+        value=None,
     )
 
-    # Stop the disabled text box from being grayed out
-    completion_box.add_class("custom-textarea")
-    custom_css = """
-    <style>
-        .custom-textarea textarea:disabled {
-            color: black;
-            opacity: 1;
+    # On rating button click, update the data frame and show the next completion
+    def on_rating_button_clicked(b):
+        nonlocal data_idx # so we can increment
+
+        data_frame.loc[data_idx, "rating"] = int(b["new"])
+        set_completion_text(data_frame.iloc[data_idx]["completions"])
+
+        # Reset the rating buttons without retriggering observe
+        rating_buttons.unobserve(on_rating_button_clicked, names="value")
+        rating_buttons.value = None
+        rating_buttons.observe(on_rating_button_clicked, names="value")
+
+        # Increment if we aren't done
+        if data_idx < len(data_frame)-1:
+            data_idx += 1
+        else:
+            for w in displayed: w.close()
+
+    
+    rating_buttons.observe(on_rating_button_clicked, names="value")
+
+    # Display all the widgets. saved for the end to make the structure more apparent
+    displayed = [preamble, completion_box, rating_buttons]
+    display(*displayed)
+
+    # Return the widget tree for easier testing. returning the passed in dataframe is pointless.
+    return displayed
+
+
+
+# For interactive development of the widgets and testing (nice to have in one file)
+if __name__ == '__main__':
+    from IPython.display import clear_output
+
+    mixed_df = pd.DataFrame(
+        {
+            "prompts": ["Yesterday, my dog died. Today, I got denied for a raise. I'm feeling"] * 2,
+            "completions": [
+                "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling sad.",
+                "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling happy.",
+            ],
+            "is_modified": [False, True],
         }
-    </style>
-    """
+    )
 
-    display(widgets.HTML(custom_css))
-    display(completion_box)
+    displayed_widgets = rate_completions(data_frame=mixed_df, criterion="happy")
 
-    # Prompt the user to rate the completions, selected in random order
-    for i in np.random.permutation(len(data_frame)):
-        row: pd.Series = data_frame.iloc[i]
 
-        # Print the criterion
-        completion_box.value = row["completions"]
+    # Create box to display the updating dataframe
+    box = widgets.Output()
+    def display_df(_):
+        with box:
+            clear_output()
+            display(mixed_df)
+    displayed_widgets[2].observe(display_df, names="value")
+    display_df(None)
+    display(box)
 
-        # Get a rating which is an integer between 1 and 5
-        rating: int = 0
-        # Keep prompting until we get a valid rating
-        while not 1 <= rating <= 5:
-            rating = int(input("Please enter a rating (1, 2, 3, 4, 5): "))
-
-        # Save the rating
-        data_frame.loc[i, "rating"] = rating
-
-    # Print the average ratings for each condition (modified vs. normal)
-    print("Average ratings:")
-    print(data_frame.groupby("is_modified")["rating"].mean())
+# %%
