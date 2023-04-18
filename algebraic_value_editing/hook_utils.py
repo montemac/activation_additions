@@ -57,12 +57,15 @@ def get_activation_dict(
 
 
 def hook_fn_from_activations(
-    activations: Float[torch.Tensor, "batch pos d_model"]
+    activations: Float[torch.Tensor, "batch pos d_model"],
+    xvec_position: str,
 ) -> Callable:
     """Takes an activation `Tensor` and returns a hook function that adds the
     cached activations for that prompt to the existing activations at
     the hook point.
     """
+    # TODO: raise an error here if attribute xvec_position: is not front or back
+    # try (if xvec_position == 'front' OR 'back') raise....
 
     def prompt_hook(
         resid_pre: Float[torch.Tensor, "batch pos d_model"],
@@ -85,6 +88,13 @@ def hook_fn_from_activations(
 
         # NOTE this is going to fail when context window starts rolling
         # over
+        if xvec_position == 'back':
+            resid_pre[...,-prompt_activ_len:, :] = (
+                activations + resid_pre[..., -prompt_activ_len:, :]
+            )  # Only add to first bit of the stream
+            return resid_pre
+
+        #default case if xvec_position == 'front'
         resid_pre[..., :prompt_activ_len, :] = (
             activations + resid_pre[..., :prompt_activ_len, :]
         )  # Only add to first bit of the stream
@@ -94,7 +104,8 @@ def hook_fn_from_activations(
 
 
 def hook_fns_from_act_dict(
-    activation_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]]
+    activation_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]],
+    xvec_position: str,
 ) -> Dict[str, Callable]:
     """Takes a dictionary from injection positions to lists of prompt
     activations and returns a dictionary from injection positions to
@@ -108,7 +119,7 @@ def hook_fns_from_act_dict(
     for act_name, act_list in activation_dict.items():
         # Compose the hook functions for each prompt
         act_fns: List[Callable] = [
-            hook_fn_from_activations(activations) for activations in act_list
+            hook_fn_from_activations(activations, xvec_position) for activations in act_list
         ]
         hook_fns[act_name] = fn.compose(*act_fns)
 
@@ -116,7 +127,8 @@ def hook_fns_from_act_dict(
 
 
 def hook_fns_from_rich_prompts(
-    model: HookedTransformer, rich_prompts: List[RichPrompt]
+    model: HookedTransformer, rich_prompts: List[RichPrompt],
+    xvec_position: str,
 ) -> Dict[str, Callable]:
     """Takes a list of `RichPrompt`s and makes a single activation-modifying forward hook.
 
@@ -136,6 +148,6 @@ def hook_fns_from_rich_prompts(
     ] = get_activation_dict(model, rich_prompts)
 
     # Make the hook functions
-    hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(activation_dict)
+    hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(activation_dict, xvec_position)
 
     return hook_fns
