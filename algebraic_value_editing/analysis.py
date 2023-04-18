@@ -31,7 +31,9 @@ def rate_completions(
         return html.escape(text).replace('\n', '<br>')
 
     # Show the generations to the user in a random order
-    data_idx = 0
+    perm = np.random.permutation(len(data_frame))
+    perm_idx = 0
+    data_idx = perm[perm_idx]
 
     # Show preamble
     prompt: str = data_frame["prompts"].tolist()[0]
@@ -56,10 +58,9 @@ def rate_completions(
 
     # On rating button click, update the data frame and show the next completion
     def on_rating_button_clicked(b):
-        nonlocal data_idx # so we can increment
+        nonlocal data_idx, perm_idx # so we can increment
 
         data_frame.loc[data_idx, "rating"] = int(b["new"])
-        set_completion_text(data_frame.iloc[data_idx]["completions"])
 
         # Reset the rating buttons without retriggering observe
         rating_buttons.unobserve(on_rating_button_clicked, names="value")
@@ -67,8 +68,10 @@ def rate_completions(
         rating_buttons.observe(on_rating_button_clicked, names="value")
 
         # Increment if we aren't done
-        if data_idx < len(data_frame)-1:
-            data_idx += 1
+        if perm_idx < len(data_frame)-1:
+            perm_idx += 1
+            data_idx = perm[perm_idx]
+            set_completion_text(data_frame.iloc[data_idx]["completions"])
         else:
             for w in displayed: w.close()
 
