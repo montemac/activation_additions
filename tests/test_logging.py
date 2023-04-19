@@ -7,15 +7,14 @@ import pandas as pd
 import pandas.testing
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import logging, completion_utils, prompt_utils
+from algebraic_value_editing import (
+    logging,
+    completion_utils,
+    prompt_utils,
+    utils,
+)
 
-try:
-    from IPython import get_ipython
-
-    get_ipython().run_line_magic("reload_ext", "autoreload")
-    get_ipython().run_line_magic("autoreload", "2")
-except AttributeError:
-    pass
+utils.enable_ipython_reload()
 
 
 @pytest.fixture(name="model")

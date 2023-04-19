@@ -1,16 +1,15 @@
 """Functions to support logging of data to wandb"""
 
-from typing import Optional, Union, Dict, ContextManager, Tuple, Any, Callable
+from typing import Optional, Dict, Tuple, Any, Callable
 from contextlib import nullcontext
 from warnings import warn
 import os
 import datetime
 
-import wandb
 import pandas as pd
 from decorator import decorate
-
 from transformer_lens.HookedTransformer import HookedTransformer
+import wandb
 
 PROJECT = "algebraic_value_editing"
 
@@ -23,7 +22,7 @@ os.environ["WANDB_SILENT"] = "true"
 
 # TODO: this is a hack, change this to add an optional return value from
 # loggable functions to return the run ID
-last_run_info = {"id": None, "name": None, "path": None}
+last_run_info = {"id": None, "name": None, "path": None, "url": None}
 
 
 # TODO: fix returns types here, it's a bit complex
@@ -57,7 +56,12 @@ def get_or_init_run(
         # Initialize a run
         run = wandb.init(**init_args)
         if run is not None:
-            last_run_info = {"id": run.id, "name": run.name, "path": run.path}
+            last_run_info = {
+                "id": run.id,
+                "name": run.name,
+                "path": run.path,
+                "url": run.url,
+            }
         manager = run
     else:
         run = wandb.run
@@ -91,10 +95,16 @@ def log_artifact(
         metadata=artifact_metadata,
     )
     for name, obj in objects_to_log.items():
-        # Convert objects if needed based on type
-        if isinstance(obj, pd.DataFrame):
-            obj = wandb.Table(dataframe=obj)
-        artifact.add(obj, name)
+        if obj is not None:  # Don't log None return values
+            # Convert objects if needed based on type
+            if isinstance(obj, pd.DataFrame):
+                obj = wandb.Table(dataframe=obj)
+            # Log, catching errors if objects don't have valid type
+            try:
+                artifact.add(obj, name)
+            except ValueError:
+                warn(f"Object {name} is of unsupported type {type(obj)}")
+                artifact.add(wandb.Html(f"unsupported type {type(obj)}"), name)
     run.log_artifact(artifact)
 
 

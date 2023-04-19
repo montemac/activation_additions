@@ -12,17 +12,10 @@ import plotly.graph_objects as go
 
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import sweeps
-from algebraic_value_editing import prompt_utils
+from algebraic_value_editing import sweeps, prompt_utils, utils
 from algebraic_value_editing.prompt_utils import RichPrompt
 
-try:
-    from IPython.core.getipython import get_ipython
-
-    get_ipython().run_line_magic("reload_ext", "autoreload")  # type: ignore
-    get_ipython().run_line_magic("autoreload", "2")  # type: ignore
-except AttributeError:
-    pass
+utils.enable_ipython_reload()
 
 # Filename for pre-pickled assets
 SWEEP_OVER_PROMPTS_CACHE_FN: str = "tests/sweep_over_prompts_cache.pkl"
