@@ -31,7 +31,6 @@ def test_gen_using_rich_prompts(attn_2l_model: HookedTransformer):
     results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
         prompt_batch=["I think you're "],
         model=attn_2l_model,
-        xvec_position='front',
         rich_prompts=rich_prompts,
         seed=0,
     )
@@ -80,7 +79,6 @@ def test_large_coeff_leads_to_garbage(attn_2l_model: HookedTransformer):
     results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
         prompt_batch=["I think you're "],
         model=attn_2l_model,
-        xvec_position='front',
         rich_prompts=rich_prompts,
         seed=0,
     )
