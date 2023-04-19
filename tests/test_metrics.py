@@ -87,6 +87,18 @@ def test_openai_metric():
     pd.testing.assert_frame_equal(results, target)
 
 
+def test_openai_metric_bulk():
+    """Test for get_openai_metric(). Creates an OpenAI metric, applies it to >20 strings,
+    and makes sure it doesn't error (20 is the limit for one OAI request)"""
+
+    import openai
+    if openai.api_key is None:
+        pytest.skip("OpenAI API key not found.")
+
+    metric = metrics.get_openai_metric("text-davinci-003", "happy")
+    metric([''] * 21) # The test is that this doesn't error!
+
+
 def test_add_metric_cols(model):
     """Test for add_metric_cols().  Creates two metrics, applies them to
     several strings with the function under tests, then tests that the
