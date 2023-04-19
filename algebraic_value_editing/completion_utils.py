@@ -159,6 +159,7 @@ def gen_normal_and_modified(
     rich_prompts: Optional[List[RichPrompt]] = None,
     include_normal: bool = True,
     include_modified: bool = True,
+    xvec_position: str = 'front',
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts, and without.
@@ -198,7 +199,7 @@ def gen_normal_and_modified(
 
         # Create the hook functions
         hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
-            model=model, rich_prompts=rich_prompts,
+            model=model, rich_prompts=rich_prompts, xvec_position=xvec_position,
         )
         tmp_df: pd.DataFrame = gen_using_hooks(
             model=model, hook_fns=hook_fns, **kwargs
