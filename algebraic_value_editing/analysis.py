@@ -7,7 +7,6 @@ import pandas as pd
 import html
 from ipywidgets import widgets
 from IPython.display import display
-import markdown
 
 def rate_completions(
     data_frame: pd.DataFrame,
@@ -37,10 +36,13 @@ def rate_completions(
 
     # Show preamble
     prompt: str = data_frame["prompts"].tolist()[0]
-    preamble = widgets.HTML(value=f"""<p>
+    preamble = widgets.HTML()
+    def update_preamble():
+        preamble.value = f"""<p>
         The model was run with prompt: "<b>{htmlify(prompt)}</b>"<br>
-        Please rate the completions below. based on how <b>{criterion}</b> they are. You are rating completion {data_idx+1}/{len(data_frame)}.
-    </p>""")
+        Please rate the completions below. based on how <b>{criterion}</b> they are. You are rating completion {perm_idx+1}/{len(data_frame)}.
+    </p>"""
+    update_preamble()
 
     # Use ipython to display text of the first completion
     completion_box = widgets.HTML()
@@ -72,6 +74,7 @@ def rate_completions(
             perm_idx += 1
             data_idx = perm[perm_idx]
             set_completion_text(data_frame.iloc[data_idx]["completions"])
+            update_preamble()
         else:
             for w in displayed: w.close()
 
