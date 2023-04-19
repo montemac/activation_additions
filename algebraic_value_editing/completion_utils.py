@@ -2,7 +2,6 @@
 and a list of RichPrompts. """
 
 from functools import wraps
-from contextlib import nullcontext
 from typing import List, Optional, Dict, Callable, Union
 
 from jaxtyping import Int, Float
@@ -47,7 +46,7 @@ def gen_using_hooks(
     hook_fns: Dict[str, Callable],
     tokens_to_generate: int = 40,
     seed: Optional[int] = None,
-    log: Union[bool, Dict] = False,
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **sampling_kwargs,
 ) -> pd.DataFrame:
     """Run `model` using the given `hook_fns`.
@@ -132,7 +131,7 @@ def gen_using_hooks(
 def gen_using_rich_prompts(
     model: HookedTransformer,
     rich_prompts: List[RichPrompt],
-    log: Union[bool, Dict] = False,
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts.
@@ -169,7 +168,7 @@ def gen_normal_and_modified(
     rich_prompts: Optional[List[RichPrompt]] = None,
     include_normal: bool = True,
     include_modified: bool = True,
-    log: Union[bool, Dict] = False,
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts, and without.
@@ -296,7 +295,7 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
 def print_n_comparisons(
     prompt: str,
     num_comparisons: int = 5,
-    log: Union[bool, Dict] = False,
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook

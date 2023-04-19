@@ -22,7 +22,7 @@ def make_rich_prompts(
     phrases: List[List[Tuple[str, float]]],
     act_names: Union[List[str], np.ndarray],
     coeffs: Union[List[float], np.ndarray],
-    log: Union[bool, Dict] = False,
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
 ) -> pd.DataFrame:
     """Make a single series of RichPrompt lists by combining all permutations
     of lists of phrases with initial coeffs, activation names (i.e. layers), and
@@ -70,7 +70,7 @@ def sweep_over_prompts(
     metrics_dict: Optional[
         Dict[str, Callable[[Iterable[str]], pd.DataFrame]]
     ] = None,
-    log: Union[bool, Dict] = False,
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **sampling_kwargs,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Apply each provided RichPrompt to each prompt num_completions

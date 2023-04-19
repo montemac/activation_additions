@@ -1,6 +1,6 @@
 """Functions to support logging of data to wandb"""
 
-from typing import Union, Optional, Dict, ContextManager, Tuple, Any, Callable
+from typing import Optional, Union, Dict, ContextManager, Tuple, Any, Callable
 from contextlib import nullcontext
 from warnings import warn
 import os
@@ -26,9 +26,10 @@ os.environ["WANDB_SILENT"] = "true"
 last_run_info = {"id": None, "name": None, "path": None}
 
 
+# TODO: fix returns types here, it's a bit complex
 def get_or_init_run(
     **init_args,
-) -> Tuple[wandb.wandb_sdk.wandb_run.Run, ContextManager]:
+) -> Tuple[Any, Any]:  # type: ignore
     """Function to obtain a usable wandb Run object, initializing it if
     needed.  A context manager is also returned: if the run was
     initialized in this call, the context manager will be the run, so
@@ -37,7 +38,7 @@ def get_or_init_run(
     returned by this call, then the context manager will be empty, and
     it should be assumed that the original creator of the run will be
     managing it's safe finishing."""
-    global last_run_info
+    global last_run_info  # pylint: disable=global-statement
     if wandb.run is None:
 
         def overwrite_arg_with_warning(args, key, new_value):
@@ -55,7 +56,8 @@ def get_or_init_run(
         overwrite_arg_with_warning(init_args, "allow_val_change", True)
         # Initialize a run
         run = wandb.init(**init_args)
-        last_run_info = {"id": run.id, "name": run.name, "path": run.path}
+        if run is not None:
+            last_run_info = {"id": run.id, "name": run.name, "path": run.path}
         manager = run
     else:
         run = wandb.run
@@ -70,13 +72,8 @@ def get_or_init_run(
     return run, manager
 
 
-def dataframe_to_table(dataframe: pd.DataFrame):
-    """Convenience function to convert a DataFrame to a wandb Table."""
-    return wandb.Table(dataframe=dataframe)
-
-
 def log_artifact(
-    run: wandb.wandb_sdk.wandb_run.Run,
+    run: wandb.wandb_sdk.wandb_run.Run,  # type: ignore
     objects_to_log: Dict[str, Any],
     artifact_name: Optional[str] = None,
     artifact_type: str = "unspecified",
@@ -158,14 +155,14 @@ def convert_dict_items_to_wandb_config(
 
 
 # Uses decorator module: https://github.com/micheles/decorator/blob/master/docs/documentation.md
-def _loggable(func: Callable, **kwargs):
+def _loggable(func: Callable, **kwargs) -> Any:
     """Caller function for loggable decorator, see public decorator
     function for docs."""
     # Get log argument from function call, default to false if not present
     log = kwargs.get("log", False)
     # Check if we should log
     if log is False:
-        return func(**kwargs)
+        func_return = func(**kwargs)
     else:
         # Process the log argument, extract logging-related arguments if
         # provided
@@ -202,8 +199,8 @@ def _loggable(func: Callable, **kwargs):
                 artifact_name=func.__name__,
                 artifact_type=func.__name__ + "_return",
             )
-            # Return the wrapped function return value
-            return func_return
+    # Return the wrapped function return value
+    return func_return
 
 
 def loggable(func):
@@ -216,22 +213,31 @@ def loggable(func):
     so that they can be stored in the logging config object with proper names.
     """
     return decorate(
-        func, _loggable, kwsyntax=True
+        func, _loggable, kwsyntax=True  # type: ignore
     )  # kwsyntax=True required to pass named positional args in kwargs
 
 
-# def store_as_artifact(
-#     run: wandb.wandb_sdk.wandb_run.Run,
-#     name: str,
-#     type: str,
-#     objects: Dict[str, Any],
-#     description: Optional[str] = None,
-#     metadata: Optional[dict] = None,
-# ):
-#     """Convenience function to store a set of named objects into a new
-#     wandb artifact and log it to the provided wandb run."""
-#     artifact = wandb.Artifact(
-#         name=name, type=type, description=description, metadata=metadata
-#     )
-#     artifact.add_dir("mnist/")
-#     wandb.log_artifact(artifact)
+def get_objects_from_run(run_path: str, flatten: bool = False):
+    """Extract all stored objects from all artifacts produced by the run
+    at the provided path. If flatten==False (the default), a nested dict
+    will be returned including artifact and objects names; If
+    flatten==True, a single list of objects will be returned, the
+    concatenation of all objects from all artifacts."""
+    api = wandb.Api()
+    run = api.run(run_path)
+    objects = {}
+    for art in run.logged_artifacts():
+        objects_this = {}
+        for file in art.files():
+            obj = art.get(file.name)
+            # Convert objects if needed based on type
+            if isinstance(obj, wandb.data_types.Table):  # type: ignore
+                obj = pd.DataFrame(data=obj.data, columns=obj.columns)
+            objects_this[file.name] = obj
+        objects[art.name] = objects_this
+    if flatten:
+        objects_list = []
+        for _, art_objects in objects.items():
+            objects_list.extend(art_objects.values())
+        objects = objects_list
+    return objects

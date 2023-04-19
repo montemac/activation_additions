@@ -1,7 +1,10 @@
+""" Test suite for logging.py """
 # %%
 import pytest
 
-import wandb
+import numpy as np
+import pandas as pd
+import pandas.testing
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import logging, completion_utils, prompt_utils
@@ -24,11 +27,11 @@ def fixture_model() -> HookedTransformer:
     )
 
 
-def test_sweep_with_logging(model):
+def test_logging(model):
     """Tests a sweep over prompts with logging enabled.  Verifies that
     the correct data is uploaded to a new wandb run."""
     # Perform a completion test
-    completion_utils.gen_using_rich_prompts(
+    results = completion_utils.gen_using_rich_prompts(
         model=model,
         rich_prompts=[
             prompt_utils.RichPrompt(
@@ -42,11 +45,16 @@ def test_sweep_with_logging(model):
                 coeff=-1.0,
             ),
         ],
-        prompt_batch="This is a test",
+        prompt_batch=["This is a test", "Let's talk about"],
         log={"tags": ["test"], "notes": "testing"},
     )
-    # Download the artifact data
-    api = wandb.Api()
-    run = api.run(logging.last_run_info["path"])
-    print([art for art in run.logged_artifacts()])
-    # download_path = "tests/"
+    # Download the artifact data and convert to a DataFrame
+    results_logged = logging.get_objects_from_run(
+        logging.last_run_info["path"], flatten=True
+    )[0]
+    # Change the dtype of the loss column; seems that wandb doesn't
+    # track dtypes in uploaded tables, which likely doesn't matter but
+    # is annoying for perfect round-trip reproduction.
+    results_logged["loss"] = results_logged["loss"].astype(np.float32)
+    # Compare with the reference DataFrame
+    pd.testing.assert_frame_equal(results, results_logged)

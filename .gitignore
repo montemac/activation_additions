@@ -140,3 +140,4 @@ dmypy.json
 wandb
 results
 *playground*
+artifacts

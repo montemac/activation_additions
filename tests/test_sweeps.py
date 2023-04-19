@@ -41,6 +41,7 @@ def fixture_model() -> HookedTransformer:
 
 
 def load_cached_sweep_over_prompts():
+    """Load pre-saved sweep results."""
     with open(SWEEP_OVER_PROMPTS_CACHE_FN, "rb") as file:
         return pickle.load(file)
 
@@ -53,9 +54,11 @@ def test_make_rich_prompts():
     reference output."""
     # Call the function under test
     rich_prompts_df: pd.DataFrame = sweeps.make_rich_prompts(
-        [[("Good", 1.0), ("Bad", -1.0)], [("Amazing", 2.0)]],
-        [prompt_utils.get_block_name(block_num=num) for num in [6, 7, 8]],
-        np.array([1.0, 5, 10.0, 20.0]),
+        phrases=[[("Good", 1.0), ("Bad", -1.0)], [("Amazing", 2.0)]],
+        act_names=[
+            prompt_utils.get_block_name(block_num=num) for num in [6, 7, 8]
+        ],
+        coeffs=np.array([1.0, 5, 10.0, 20.0]),
     )
     # Compre to pre-defined target
     pd.testing.assert_frame_equal(rich_prompts_df, MAKE_RICH_PROMPTS_TARGET)
