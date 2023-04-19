@@ -6,6 +6,7 @@ from jaxtyping import Float, Int
 import funcy as fn
 import torch
 
+from transformer_lens import ActivationCache
 from transformer_lens.HookedTransformer import HookedTransformer
 from transformer_lens.hook_points import HookPoint
 from algebraic_value_editing.prompt_utils import RichPrompt
@@ -26,8 +27,9 @@ def get_prompt_activations(
     else:
         tokens = model.to_tokens(rich_prompt.prompt)
 
-    # Run forward pass
-    cache: Dict[str, torch.Tensor] = model.run_with_cache(
+    # Run the forward pass
+    # ActivationCache is basically Dict[str, torch.Tensor]
+    cache: ActivationCache = model.run_with_cache(
         tokens,
         names_filter=lambda act_name: act_name == rich_prompt.act_name,
     )[1]
@@ -76,25 +78,31 @@ def hook_fn_from_activations(
         resid_pre (shape [batch, seq, hidden_dim]), then applies only to
         the available residual streams.
         """
-        prompt_activ_len: int = activations.shape[1]
 
         # Check if prompt_activ_len > sequence length for this batch
-        if prompt_activ_len > resid_pre.shape[-2]:
+        if resid_pre.shape[1] == 1:
             # This suggests that we're computing only the new keys and
             # values for the latest residual stream, not the full
             # sequence
-            return resid_pre  # NOTE does this work for all cases?
+            return resid_pre
+            # TODO figure out way to make long vectors apply to short prompts,
+            #  by e.g. iteratively tracking in a class?
+
+        # Add activations to the residual stream
+        injection_len: int = min(activations.shape[1], resid_pre.shape[1])
 
         # NOTE this is going to fail when context window starts rolling
         # over
+
         if xvec_position == 'back':
-            resid_pre[...,-prompt_activ_len:, :] = (
-                activations + resid_pre[..., -prompt_activ_len:, :]
+            resid_pre[...,-injection_len:, :] = (
+                activations + resid_pre[..., -injection_len:, :]
             )  # Only add to first bit of the stream
         else: #default case if xvec_position == 'front'
-            resid_pre[..., :prompt_activ_len, :] = (
-                activations + resid_pre[..., :prompt_activ_len, :]
+            resid_pre[..., :injection_len, :] = (
+                activations + resid_pre[..., :injection_len, :]
             )  # Only add to first bit of the stream
+
         return resid_pre
     return prompt_hook
 

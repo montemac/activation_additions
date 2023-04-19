@@ -132,35 +132,31 @@ except FileNotFoundError:
 
 # %%
 # Visualize
-reduced_df = patched_df.groupby(["prompts", "rich_prompt_index"]).mean(
-    numeric_only=True
+
+# Reduce data
+reduced_normal_df, reduced_patched_df = sweeps.reduce_sweep_results(
+    normal_df, patched_df, rich_prompts_df
 )
-reduced_joined_df = reduced_df.join(
-    rich_prompts_df, on="rich_prompt_index"
-).reset_index()
 
-
-def plot_col(data, col_to_plot, title):
-    """Plot a column, with colors/facets/x set."""
-    px.line(
-        data,
-        title=title,
-        x="coeff",
-        y=col_to_plot,
-        color="act_name",
-        facet_col="prompts",
-    ).show()
-
-
-plot_col(
-    reduced_joined_df, "wedding_words_count", "Average wedding word count"
-)
-plot_col(reduced_joined_df, "loss", "Average loss")
-
-reduced_joined_filt_df = reduced_joined_df[
-    (reduced_joined_df["coeff"] >= -4) & (reduced_joined_df["coeff"] <= 4)
+# Exlude the extreme coeffs, likely not that interesting
+reduced_patched_filt_df = reduced_patched_df[
+    (reduced_patched_df["coeff"] >= -4) & (reduced_patched_df["coeff"] <= 4)
 ]
-plot_col(
-    reduced_joined_filt_df, "wedding_words_count", "Average wedding word count"
-)
-plot_col(reduced_joined_filt_df, "loss", "Average loss")
+
+# Plot
+sweeps.plot_sweep_results(
+    reduced_patched_filt_df,
+    "wedding_words_count",
+    "Average wedding word count",
+    col_x="act_name",
+    col_color="coeff",
+    baseline_data=reduced_normal_df,
+).show()
+sweeps.plot_sweep_results(
+    reduced_patched_filt_df,
+    "loss",
+    "Average loss",
+    col_x="act_name",
+    col_color="coeff",
+    baseline_data=reduced_normal_df,
+).show()
