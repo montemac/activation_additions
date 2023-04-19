@@ -64,8 +64,7 @@ def hook_fn_from_activations(
     cached activations for that prompt to the existing activations at
     the hook point.
     """
-    # TODO: raise an error here if attribute xvec_position: is not front or back
-    # try (if xvec_position == 'front' OR 'back') raise....
+    assert xvec_position in ['front','back'], 'invalid xvec_position'
 
     def prompt_hook(
         resid_pre: Float[torch.Tensor, "batch pos d_model"],
@@ -92,14 +91,11 @@ def hook_fn_from_activations(
             resid_pre[...,-prompt_activ_len:, :] = (
                 activations + resid_pre[..., -prompt_activ_len:, :]
             )  # Only add to first bit of the stream
-            return resid_pre
-
-        #default case if xvec_position == 'front'
-        resid_pre[..., :prompt_activ_len, :] = (
-            activations + resid_pre[..., :prompt_activ_len, :]
-        )  # Only add to first bit of the stream
+        else: #default case if xvec_position == 'front'
+            resid_pre[..., :prompt_activ_len, :] = (
+                activations + resid_pre[..., :prompt_activ_len, :]
+            )  # Only add to first bit of the stream
         return resid_pre
-
     return prompt_hook
 
 
@@ -128,7 +124,7 @@ def hook_fns_from_act_dict(
 
 def hook_fns_from_rich_prompts(
     model: HookedTransformer, rich_prompts: List[RichPrompt],
-    xvec_position: str,
+    xvec_position: str = 'front',
 ) -> Dict[str, Callable]:
     """Takes a list of `RichPrompt`s and makes a single activation-modifying forward hook.
 

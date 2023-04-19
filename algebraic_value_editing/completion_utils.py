@@ -125,7 +125,7 @@ def gen_using_hooks(
 def gen_using_rich_prompts(
     model: HookedTransformer,
     rich_prompts: List[RichPrompt],
-    xvec_position: str,
+    xvec_position: str = 'front',
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts.
@@ -159,7 +159,6 @@ def gen_normal_and_modified(
     rich_prompts: Optional[List[RichPrompt]] = None,
     include_normal: bool = True,
     include_modified: bool = True,
-    xvec_position: str = 'front',
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts, and without.
@@ -174,9 +173,6 @@ def gen_normal_and_modified(
 
         `include_modified`: Whether to include completions generated
         using the rich prompts.
-
-        `xvec_position`: The position at which to add the xvec into 
-        the residual stream. Can be 'front' or 'back'.
 
     returns:
         A `DataFrame` with the completions and losses. The `DataFrame`
@@ -202,7 +198,7 @@ def gen_normal_and_modified(
 
         # Create the hook functions
         hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
-            model=model, rich_prompts=rich_prompts, xvec_position=xvec_position,
+            model=model, rich_prompts=rich_prompts,
         )
         tmp_df: pd.DataFrame = gen_using_hooks(
             model=model, hook_fns=hook_fns, **kwargs
@@ -282,7 +278,6 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
 def print_n_comparisons(
     prompt: str,
     num_comparisons: int = 5,
-    xvec_position: str = 'front',
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
@@ -295,8 +290,6 @@ def print_n_comparisons(
 
         `num_comparisons`: The number of comparisons to make.
 
-        `xvec_position`: The position at which to add the xvec into the residual stream. Can be 'front' or 'back'.
-
         `kwargs`: Keyword arguments to pass to
         `gen_using_rich_prompts`.
     """
@@ -308,7 +301,6 @@ def print_n_comparisons(
     # according to whether we want to include them
     results: pd.DataFrame = gen_normal_and_modified(
         prompt_batch=prompt_batch,
-        xvec_position=xvec_position,
         **kwargs,
     )
 

@@ -326,7 +326,6 @@ def test_simple_generation(attn_2l_model: HookedTransformer):
     completion_utils.print_n_comparisons(
         prompt="Here's how I feel about you.",
         num_comparisons=1,
-        xvec_position='front',
         model=attn_2l_model,
         rich_prompts=rich_prompts,
     )
@@ -342,7 +341,6 @@ def test_n_comparisons_seed_selection(attn_2l_model: HookedTransformer):
     completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
-        xvec_position='front',
         model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
@@ -360,7 +358,6 @@ def test_multiple_prompts(attn_2l_model: HookedTransformer):
     completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
-        xvec_position='front',
         model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
@@ -377,7 +374,6 @@ def test_empty_prompt(attn_2l_model: HookedTransformer):
     completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
-        xvec_position='front',
         model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
@@ -394,7 +390,6 @@ def test_no_normal(attn_2l_model: HookedTransformer):
     completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
-        xvec_position='front',
         model=attn_2l_model,
         rich_prompts=rich_prompts,
         seed=0,
@@ -407,7 +402,6 @@ def test_no_modified(attn_2l_model: HookedTransformer):
     completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
-        xvec_position='front',
         model=attn_2l_model,
         seed=0,
         include_modified=False,
