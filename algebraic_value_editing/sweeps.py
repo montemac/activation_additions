@@ -1,4 +1,4 @@
-""" Functions for performing automated sweeps of agebraic value editing
+""" Functions for performing automated sweeps of algebraic value editing
 over layers, coeffs, etc. """
 
 from typing import Iterable, Optional, List, Tuple, Union, Dict, Callable
@@ -6,6 +6,7 @@ from typing import Iterable, Optional, List, Tuple, Union, Dict, Callable
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from tqdm.auto import tqdm
 from transformer_lens import HookedTransformer
 
@@ -181,11 +182,12 @@ def plot_sweep_results(
     col_facet_col="prompts",
     col_facet_row=None,
     baseline_data=None,
-):
+    px_func=px.line,
+) -> go.Figure:
     """Plot the reduced results of a sweep, with controllable axes,
     colors, etc.  Pass a reduced normal-completions DataFrame into
     `baseline_data` to add horizontal lines for metric baselines."""
-    fig = px.line(
+    fig: go.Figure = px_func(
         data,
         title=title,
         color=col_color,
@@ -194,13 +196,13 @@ def plot_sweep_results(
         facet_col=col_facet_col,
         facet_row=col_facet_row,
     )
-    if baseline_data is not None and col_to_plot in baseline_data:
-        for index, prompt in enumerate(baseline_data.index):
-            fig.add_hline(
-                y=baseline_data.loc[prompt][col_to_plot],
-                row=1,
-                col=index + 1,
-                annotation_text="normal",
-                annotation_position="bottom left",
-            )
+    # if baseline_data is not None and col_to_plot in baseline_data:
+    #     for index, prompt in enumerate(baseline_data.index):
+    #         fig.add_hline(
+    #             y=baseline_data.loc[prompt][col_to_plot],
+    #             row=1,  # type: ignore
+    #             col=index + 1,  # type: ignore because int is valid for row/col
+    #             annotation_text="normal",
+    #             annotation_position="bottom left",
+    #         )
     return fig
