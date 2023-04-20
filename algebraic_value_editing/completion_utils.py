@@ -43,7 +43,7 @@ def preserve_rng_state(func):
 def gen_using_hooks(
     model: HookedTransformer,
     prompt_batch: List[str],
-    hook_fns: Dict[str, Callable],
+    hook_fns: Dict[str, List[Callable]],
     tokens_to_generate: int = 40,
     seed: Optional[int] = None,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
@@ -57,7 +57,7 @@ def gen_using_hooks(
 
         `prompt_batch`: The prompt batch to use for completion.
 
-        `hook_fns`: A dictionary mapping activation names to hook.
+        `hook_fns`: A dictionary mapping activation names to hooks.
 
         `tokens_to_generate`: The number of additional tokens to generate.
 
@@ -83,8 +83,9 @@ def gen_using_hooks(
         t.manual_seed(seed)
 
     # Modify the forward pass
-    for act_name, hook_fn in hook_fns.items():
-        model.add_hook(act_name, hook_fn)
+    for act_name, hook_fns in hook_fns.items():
+        for hook_fn in hook_fns:
+            model.add_hook(act_name, hook_fn)
 
     tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(
         prompt_batch
@@ -160,7 +161,7 @@ def gen_using_rich_prompts(
                 `loss`: The average loss per token of the completions.
     """
     # Create the hook functions
-    hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
+    hook_fns: Dict[str, List[Callable]] = hook_utils.hook_fns_from_rich_prompts(
         model=model,
         rich_prompts=rich_prompts,
         xvec_position=xvec_position,
@@ -219,7 +220,7 @@ def gen_normal_and_modified(
             )
 
         # Create the hook functions
-        hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
+        hook_fns: Dict[str, List[Callable]] = hook_utils.hook_fns_from_rich_prompts(
             model=model,
             rich_prompts=rich_prompts,
         )

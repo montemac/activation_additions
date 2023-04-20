@@ -3,7 +3,6 @@
 from typing import List, Callable, Optional, Dict
 from collections import defaultdict
 from jaxtyping import Float, Int
-import funcy as fn
 import torch
 
 from transformer_lens import ActivationCache
@@ -110,14 +109,14 @@ def hook_fn_from_activations(
 def hook_fns_from_act_dict(
     activation_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]],
     xvec_position: str,
-) -> Dict[str, Callable]:
+) -> Dict[str, List[Callable]]:
     """Takes a dictionary from injection positions to lists of prompt
     activations and returns a dictionary from injection positions to
     hook functions that add the prompt activations to the existing
     activations at the injection position.
     """
     # Make the dictionary
-    hook_fns: Dict[str, Callable] = {}
+    hook_fns: Dict[str, List[Callable]] = {}
 
     # Add hook functions for each activation name
     for act_name, act_list in activation_dict.items():
@@ -125,7 +124,7 @@ def hook_fns_from_act_dict(
         act_fns: List[Callable] = [
             hook_fn_from_activations(activations, xvec_position) for activations in act_list
         ]
-        hook_fns[act_name] = fn.compose(*act_fns)
+        hook_fns[act_name] = act_fns
 
     return hook_fns
 
@@ -133,7 +132,7 @@ def hook_fns_from_act_dict(
 def hook_fns_from_rich_prompts(
     model: HookedTransformer, rich_prompts: List[RichPrompt],
     xvec_position: str = 'front',
-) -> Dict[str, Callable]:
+) -> Dict[str, List[Callable]]:
     """Takes a list of `RichPrompt`s and makes a single activation-modifying forward hook.
 
     args:
@@ -152,6 +151,6 @@ def hook_fns_from_rich_prompts(
     ] = get_activation_dict(model, rich_prompts)
 
     # Make the hook functions
-    hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(activation_dict, xvec_position)
+    hook_fns: Dict[str, List[Callable]] = hook_fns_from_act_dict(activation_dict, xvec_position)
 
     return hook_fns
