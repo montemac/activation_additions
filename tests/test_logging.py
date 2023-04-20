@@ -1,10 +1,9 @@
 """ Test suite for logging.py """
-# %%
+
 import pytest
 
 import numpy as np
 import pandas as pd
-import pandas.testing
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import (
@@ -26,6 +25,8 @@ def fixture_model() -> HookedTransformer:
     )
 
 
+# In order for these tests to work, you must have a wandb account and
+# have set up your wandb API key.  See https://docs.wandb.ai/quickstart
 def test_logging(model):
     """Tests a sweep over prompts with logging enabled.  Verifies that
     the correct data is uploaded to a new wandb run."""
