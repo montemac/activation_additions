@@ -122,14 +122,17 @@ def get_openai_metric(
                 model=model_name,
                 prompt=prompts,
                 temperature=0.0,
+                max_tokens=100,
             )
             chunk_reasoning = [choice['text'] for choice in response.choices]
             contexts = [prompt + reasoning for prompt, reasoning in zip(prompts, chunk_reasoning)]
             response = openai.Completion.create(
                 model=model_name,
-                prompt=[f"{ctx}\n\n{criterion.title()} rating (1-10):" for ctx in contexts],
+                prompt=[f"{ctx}\n\n{criterion.title()} rating (1-5):" for ctx in contexts],
                 temperature=0.0,
+                max_tokens=1,
             )
+
 
             chunk_ratings = [_intify(r["text"].strip()) for r in response["choices"]]
             ratings.extend(chunk_ratings)
