@@ -96,6 +96,7 @@ def get_openai_metric(
     model_name: str, # e.g. text-davinci-003
     criterion: str, # e.g. "happy" gives prompt "How happy is this text?" as a prompt
     chunk_size: int = 19, # max chunk size passed to openai (limit is 19 for text-davinci-003)
+    max_reasoning_tokens: int = 100, # max tokens to use for reasoning
 ):
     """Create a metric using an OpenAI model. and chain-of-thought. The model is called twice, first to get a reasoning for the rating, then to get the rating itself (from 1-10). The metric function returns a dataframe with two columns: "rating" and "reasoning"
 
@@ -122,7 +123,7 @@ def get_openai_metric(
                 model=model_name,
                 prompt=prompts,
                 temperature=0.0,
-                max_tokens=100,
+                max_tokens=max_reasoning_tokens,
             )
             chunk_reasoning = [choice['text'] for choice in response.choices]
             contexts = [prompt + reasoning for prompt, reasoning in zip(prompts, chunk_reasoning)]
