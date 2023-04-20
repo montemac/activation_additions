@@ -74,7 +74,7 @@ def test_openai_metric():
     results = metric(prompts)
     target = pd.DataFrame(
         {
-            "rating": [10, 1],
+            "rating": [5, 1],
             "reasoning": [
                 "This text is very happy because it expresses a strong positive emotion towards something.",
                 "This text is not very happy because it expresses a negative sentiment towards chocolate.",
