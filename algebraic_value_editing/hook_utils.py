@@ -5,6 +5,7 @@ from collections import defaultdict
 from jaxtyping import Float, Int
 import funcy as fn
 import torch
+import logging
 
 from transformer_lens import ActivationCache
 from transformer_lens.HookedTransformer import HookedTransformer
@@ -61,10 +62,11 @@ def get_activation_dict(
 def hook_fn_from_activations(
     activations: Float[torch.Tensor, "batch pos d_model"]
 ) -> Callable:
-    """Takes an activation `Tensor` and returns a hook function that adds the
+    """Takes an activation tensor and returns a hook function that adds the
     cached activations for that prompt to the existing activations at
     the hook point.
     """
+    activations_seq_len: int = activations.shape[1]
 
     def prompt_hook(
         resid_pre: Float[torch.Tensor, "batch pos d_model"],
@@ -76,9 +78,10 @@ def hook_fn_from_activations(
         resid_pre (shape [batch, seq, hidden_dim]), then applies only to
         the available residual streams.
         """
+        prompt_seq_len: int = resid_pre.shape[1]
 
         # Check if prompt_activ_len > sequence length for this batch
-        if resid_pre.shape[1] == 1:
+        if prompt_seq_len == 1:
             # This suggests that we're computing only the new keys and
             # values for the latest residual stream, not the full
             # sequence
@@ -87,10 +90,17 @@ def hook_fn_from_activations(
             #  by e.g. iteratively tracking in a class?
 
         # Add activations to the residual stream
-        injection_len: int = min(activations.shape[1], resid_pre.shape[1])
+        if prompt_seq_len < activations_seq_len:
+            logging.warn(
+                f"The RichPrompt sequence length ({activations_seq_len}) is"
+                f" longer than the prompt sequence length ({prompt_seq_len})."
+                " Adding the first {prompt_seq_len} activation sequence"
+                " positions to the forward pass."
+            )
+        injection_len: int = min(prompt_seq_len, activations_seq_len)
 
-        # NOTE this is going to fail when context window starts rolling
-        # over
+        # NOTE if caching old QKV results, this hook does nothing when
+        # the context window starts rolling over
         resid_pre[:, :injection_len, :] = (
             activations[:, :injection_len, :] + resid_pre[:, :injection_len, :]
         )  # Only add to first bit of the stream
@@ -103,9 +113,12 @@ def hook_fns_from_act_dict(
     activation_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]]
 ) -> Dict[str, Callable]:
     """Takes a dictionary from injection positions to lists of prompt
-    activations and returns a dictionary from injection positions to
+    activations. Returns a dictionary from injection positions to
     hook functions that add the prompt activations to the existing
     activations at the injection position.
+
+    For each entry in `activation_dict`, the hook functions are composed
+    in order, where the first hook function in the list is applied first.
     """
     # Make the dictionary
     hook_fns: Dict[str, Callable] = {}
@@ -116,7 +129,7 @@ def hook_fns_from_act_dict(
         act_fns: List[Callable] = [
             hook_fn_from_activations(activations) for activations in act_list
         ]
-        hook_fns[act_name] = fn.compose(*act_fns)
+        hook_fns[act_name] = fn.compose(*act_fns[::-1])
 
     return hook_fns
 
