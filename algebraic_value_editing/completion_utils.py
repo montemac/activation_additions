@@ -132,7 +132,7 @@ def gen_using_rich_prompts(
     model: HookedTransformer,
     rich_prompts: List[RichPrompt],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
-    xvec_position: str = "front",
+    addition_location: str = "front",
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts.
@@ -142,12 +142,12 @@ def gen_using_rich_prompts(
 
         `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
 
-        `log`: To enable logging of this call to wandb, pass either
-        True, or a dict contining any of ('tags', 'group', 'notes') to
-        pass these keys to the wandb init call.  False to disable
+        `log`: To enable logging of this call to `wandb`, pass either
+        `True`, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the `wandb.init` call. `False` to disable
         logging.
 
-        `xvec_position`: The position at which to add the xvec into
+        `addition_location`: The position at which to add the activations into
         the residual stream. Can be 'front' or 'back'.
 
         `kwargs`: Keyword arguments to pass to `gen_using_hooks`.
@@ -163,7 +163,7 @@ def gen_using_rich_prompts(
     hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
         model=model,
         rich_prompts=rich_prompts,
-        xvec_position=xvec_position,
+        addition_location=addition_location,
     )
 
     return gen_using_hooks(model=model, hook_fns=hook_fns, log=False, **kwargs)

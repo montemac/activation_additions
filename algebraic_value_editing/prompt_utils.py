@@ -48,8 +48,6 @@ class RichPrompt:
             that block number.
             `prompt`: The prompt to use to compute the activations.
             `tokens`: The tokens to use to compute the activations.
-            `model`: The model which tokenizes the prompt, or which
-            converts the tokens to text.
         """
         assert (prompt is not None) ^ (
             tokens is not None
