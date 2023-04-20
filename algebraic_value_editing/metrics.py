@@ -95,6 +95,7 @@ def get_word_count_metric(
 def get_openai_metric(
     model_name: str, # e.g. text-davinci-003
     criterion: str, # e.g. "happy" gives prompt "How happy is this text?" as a prompt
+    chunk_size: int = 19, # max chunk size passed to openai (limit is 19 for text-davinci-003)
 ):
     """Create a metric using an OpenAI model. and chain-of-thought. The model is called twice, first to get a reasoning for the rating, then to get the rating itself (from 1-10). The metric function returns a dataframe with two columns: "rating" and "reasoning"
 
@@ -103,29 +104,36 @@ def get_openai_metric(
     - Bias: RLHF models are very biased towards giving moderate ratings like 7. In future we may want to consider normalizing the ratings to be more centered around 5. (And doing this for humans as well.)
     """
 
-    # extract the ratings
+    def chunks(lst: List[str], n: int):
+        """Yield successive n-sized chunks from lst."""
+        for i in range(0, len(lst), n):
+            yield lst[i : i + n]
+
     def _intify(s):
-        try:
-            return int(s)
-        except:
-            return None
+        return int(s) if s.isdigit() else None
 
     def metric_func(strs: Iterable[str]) -> pd.DataFrame:
-        prompts = [f"How {criterion} is this text? Give reasoning in 1-3 sentences. Text:\n{s}\nReasoning:\n" for s in strs]
-        response = openai.Completion.create(
-            model=model_name,
-            prompt=prompts,
-            temperature=0.0,
-        )
-        reasoning = [choice['text'] for choice in response.choices]
-        contexts = [prompt + reasoning for prompt, reasoning in zip(prompts, reasoning)]
-        response = openai.Completion.create(
-            model=model_name,
-            prompt=[f"{ctx}\n\n{criterion.title()} rating (1-10):" for ctx in contexts],
-            temperature=0.0,
-        )
+        ratings = []
+        reasoning = []
 
-        ratings = [_intify(r["text"].strip()) for r in response["choices"]]
+        for chunk in chunks(list(strs), chunk_size):
+            prompts = [f"How {criterion} is this text? Give reasoning in 1-3 sentences. Text:\n{s}\nReasoning:\n" for s in chunk]
+            response = openai.Completion.create(
+                model=model_name,
+                prompt=prompts,
+                temperature=0.0,
+            )
+            chunk_reasoning = [choice['text'] for choice in response.choices]
+            contexts = [prompt + reasoning for prompt, reasoning in zip(prompts, chunk_reasoning)]
+            response = openai.Completion.create(
+                model=model_name,
+                prompt=[f"{ctx}\n\n{criterion.title()} rating (1-10):" for ctx in contexts],
+                temperature=0.0,
+            )
+
+            chunk_ratings = [_intify(r["text"].strip()) for r in response["choices"]]
+            ratings.extend(chunk_ratings)
+            reasoning.extend(chunk_reasoning)
 
         # Return dataframe with ratings and reasoning
         return pd.DataFrame({"rating": ratings, "reasoning": reasoning}, index=strs)

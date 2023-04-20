@@ -6,15 +6,9 @@ import pandas as pd
 
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import metrics, completion_utils
+from algebraic_value_editing import metrics, completion_utils, utils
 
-try:
-    from IPython.core.getipython import get_ipython
-
-    get_ipython().run_line_magic("reload_ext", "autoreload")  # type: ignore
-    get_ipython().run_line_magic("autoreload", "2")  # type: ignore
-except AttributeError:
-    pass
+utils.enable_ipython_reload()
 
 
 @pytest.fixture(name="model")
@@ -71,6 +65,7 @@ def test_openai_metric():
     it to some strings, and checks the results against pre-defined
     constants."""
     import openai
+
     if openai.api_key is None:
         pytest.skip("OpenAI API key not found.")
 
@@ -78,13 +73,28 @@ def test_openai_metric():
     prompts = ["I love chocolate!", "I hate chocolate!"]
     results = metric(prompts)
     target = pd.DataFrame(
-        {"rating": [10, 1], "reasoning": [
-            'This text is very happy because it expresses a strong positive emotion towards something.',
-            'This text is not very happy because it expresses a negative sentiment towards chocolate.'
-        ]},
+        {
+            "rating": [10, 1],
+            "reasoning": [
+                "This text is very happy because it expresses a strong positive emotion towards something.",
+                "This text is not very happy because it expresses a negative sentiment towards chocolate.",
+            ],
+        },
         index=prompts,
     )
     pd.testing.assert_frame_equal(results, target)
+
+
+def test_openai_metric_bulk():
+    """Test for get_openai_metric(). Creates an OpenAI metric, applies it to >20 strings,
+    and makes sure it doesn't error (20 is the limit for one OAI request)"""
+
+    import openai
+    if openai.api_key is None:
+        pytest.skip("OpenAI API key not found.")
+
+    metric = metrics.get_openai_metric("text-davinci-003", "happy")
+    metric([''] * 21) # The test is that this doesn't error!
 
 
 def test_add_metric_cols(model):
@@ -123,5 +133,6 @@ def test_add_metric_cols(model):
         }
     )
     pd.testing.assert_frame_equal(results_df, target)
+
 
 # %%

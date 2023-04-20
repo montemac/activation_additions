@@ -7,8 +7,6 @@ import pickle
 import numpy as np
 import torch
 
-import plotly.express as px
-
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import (
@@ -16,15 +14,10 @@ from algebraic_value_editing import (
     metrics,
     prompt_utils,
     completion_utils,
+    utils,
 )
 
-try:
-    from IPython import get_ipython
-
-    get_ipython().run_line_magic("reload_ext", "autoreload")
-    get_ipython().run_line_magic("autoreload", "2")
-except AttributeError:
-    pass
+utils.enable_ipython_reload()
 
 # Disable gradients to save memory during inference
 _ = torch.set_grad_enabled(False)

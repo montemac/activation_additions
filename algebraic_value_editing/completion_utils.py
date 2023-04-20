@@ -2,10 +2,9 @@
 and a list of RichPrompts. """
 
 from functools import wraps
+from typing import List, Optional, Dict, Callable, Union
 
-from typing import List, Optional, Dict, Callable
 from jaxtyping import Int, Float
-
 import torch as t
 import numpy as np
 import pandas as pd
@@ -15,7 +14,7 @@ import einops
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from algebraic_value_editing.prompt_utils import RichPrompt
-from algebraic_value_editing import hook_utils
+from algebraic_value_editing import hook_utils, logging
 
 
 def preserve_rng_state(func):
@@ -40,12 +39,14 @@ def preserve_rng_state(func):
 
 # Ensure that even if we set the seed, we don't change the RNG state globally
 @preserve_rng_state
+@logging.loggable
 def gen_using_hooks(
     model: HookedTransformer,
     prompt_batch: List[str],
     hook_fns: Dict[str, Callable],
     tokens_to_generate: int = 40,
     seed: Optional[int] = None,
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **sampling_kwargs,
 ) -> pd.DataFrame:
     """Run `model` using the given `hook_fns`.
@@ -61,6 +62,10 @@ def gen_using_hooks(
         `tokens_to_generate`: The number of additional tokens to generate.
 
         `seed`: A random seed to use for generation.
+
+        `log`: To enable logging of this call to wandb, pass either
+        True, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the wandb init call.  False to disable logging.
 
         `sampling_kwargs`: Keyword arguments to pass to the model's
         `generate` function.
@@ -122,9 +127,12 @@ def gen_using_hooks(
     return results
 
 
+@logging.loggable
 def gen_using_rich_prompts(
     model: HookedTransformer,
     rich_prompts: List[RichPrompt],
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
+    xvec_position: str = "front",
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts.
@@ -133,6 +141,14 @@ def gen_using_rich_prompts(
         `model`: The model to use for completion.
 
         `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
+
+        `log`: To enable logging of this call to wandb, pass either
+        True, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the wandb init call.  False to disable
+        logging.
+
+        `xvec_position`: The position at which to add the xvec into
+        the residual stream. Can be 'front' or 'back'.
 
         `kwargs`: Keyword arguments to pass to `gen_using_hooks`.
 
@@ -145,16 +161,21 @@ def gen_using_rich_prompts(
     """
     # Create the hook functions
     hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
-        model=model, rich_prompts=rich_prompts
+        model=model,
+        rich_prompts=rich_prompts,
+        xvec_position=xvec_position,
     )
-    return gen_using_hooks(model=model, hook_fns=hook_fns, **kwargs)
+
+    return gen_using_hooks(model=model, hook_fns=hook_fns, log=False, **kwargs)
 
 
+@logging.loggable
 def gen_normal_and_modified(
     model: HookedTransformer,
     rich_prompts: Optional[List[RichPrompt]] = None,
     include_normal: bool = True,
     include_modified: bool = True,
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts, and without.
@@ -169,6 +190,10 @@ def gen_normal_and_modified(
 
         `include_modified`: Whether to include completions generated
         using the rich prompts.
+
+        `log`: To enable logging of this call to wandb, pass either
+        True, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the wandb init call.  False to disable logging.
 
     returns:
         A `DataFrame` with the completions and losses. The `DataFrame`
@@ -186,6 +211,7 @@ def gen_normal_and_modified(
         )
 
     data_frames: List[pd.DataFrame] = []
+
     if include_modified:
         if rich_prompts is None:
             raise ValueError(
@@ -194,21 +220,23 @@ def gen_normal_and_modified(
 
         # Create the hook functions
         hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
-            model=model, rich_prompts=rich_prompts
+            model=model,
+            rich_prompts=rich_prompts,
         )
         tmp_df: pd.DataFrame = gen_using_hooks(
-            model=model, hook_fns=hook_fns, **kwargs
+            model=model, hook_fns=hook_fns, log=False, **kwargs
         )
         data_frames.append(tmp_df)
 
     if include_normal:
         tmp_df: pd.DataFrame = gen_using_hooks(
-            model=model, hook_fns={}, **kwargs
+            model=model, hook_fns={}, log=False, **kwargs
         )
         data_frames.append(tmp_df)
 
     # Combine the completions, ensuring that the indices are unique
-    return pd.concat(data_frames, ignore_index=True)
+    results = pd.concat(data_frames, ignore_index=True)
+    return results
 
 
 # Display utils #
@@ -271,9 +299,11 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
     print(table)
 
 
+@logging.loggable
 def print_n_comparisons(
     prompt: str,
     num_comparisons: int = 5,
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
@@ -286,6 +316,10 @@ def print_n_comparisons(
 
         `num_comparisons`: The number of comparisons to make.
 
+        `log`: To enable logging of this call to wandb, pass either
+        True, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the wandb init call.  False to disable logging.
+
         `kwargs`: Keyword arguments to pass to
         `gen_using_rich_prompts`.
     """
@@ -297,6 +331,7 @@ def print_n_comparisons(
     # according to whether we want to include them
     results: pd.DataFrame = gen_normal_and_modified(
         prompt_batch=prompt_batch,
+        log=log,
         **kwargs,
     )
 

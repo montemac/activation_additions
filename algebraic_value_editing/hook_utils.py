@@ -5,7 +5,6 @@ from collections import defaultdict
 from jaxtyping import Float, Int
 import funcy as fn
 import torch
-import logging
 
 from transformer_lens import ActivationCache
 from transformer_lens.HookedTransformer import HookedTransformer
@@ -60,12 +59,18 @@ def get_activation_dict(
 
 
 def hook_fn_from_activations(
-    activations: Float[torch.Tensor, "batch pos d_model"]
+    activations: Float[torch.Tensor, "batch pos d_model"],
+    addition_location: str = "front",
 ) -> Callable:
     """Takes an activation tensor and returns a hook function that adds the
     cached activations for that prompt to the existing activations at
     the hook point.
     """
+    if addition_location not in ["front", "back"]:
+        raise ValueError(
+            "Invalid addition_location. Must be 'front' or 'back'."
+        )
+
     activations_seq_len: int = activations.shape[1]
 
     def prompt_hook(
@@ -75,8 +80,8 @@ def hook_fn_from_activations(
         """Add cached_activations to the output.
 
         If cached_activations covers more residual streams than
-        resid_pre (shape [batch, seq, hidden_dim]), then applies only to
-        the available residual streams.
+        resid_pre (shape [batch, seq, hidden_dim]), then raises an
+        error.
         """
         prompt_seq_len: int = resid_pre.shape[1]
 
@@ -89,28 +94,30 @@ def hook_fn_from_activations(
             # TODO figure out way to make long vectors apply to short prompts,
             #  by e.g. iteratively tracking in a class?
 
-        # Add activations to the residual stream
-        if prompt_seq_len < activations_seq_len:
-            logging.warn(
-                f"The RichPrompt sequence length ({activations_seq_len}) is"
-                f" longer than the prompt sequence length ({prompt_seq_len})."
-                " Adding the first {prompt_seq_len} activation sequence"
-                " positions to the forward pass."
-            )
-        injection_len: int = min(prompt_seq_len, activations_seq_len)
+        assert (
+            prompt_seq_len >= activations_seq_len
+        ), "The prompt is shorter than the activation sequence to be added."
 
         # NOTE if caching old QKV results, this hook does nothing when
         # the context window starts rolling over
-        resid_pre[:, :injection_len, :] = (
-            activations[:, :injection_len, :] + resid_pre[:, :injection_len, :]
-        )  # Only add to first bit of the stream
+
+        # Add activations to the appropriate positions in the stream
+        if addition_location == "back":
+            resid_pre[:, -activations_seq_len:, :] = (
+                activations[:,] + resid_pre[:, -activations_seq_len:, :]
+            )  # Add to the last positions in the stream
+        else:  # default case if xvec_position == 'front'
+            resid_pre[:, :activations_seq_len, :] = (
+                activations + resid_pre[:, :activations_seq_len, :]
+            )  # Add to the first positions in the stream
         return resid_pre
 
     return prompt_hook
 
 
 def hook_fns_from_act_dict(
-    activation_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]]
+    activation_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]],
+    **kwargs,
 ) -> Dict[str, Callable]:
     """Takes a dictionary from injection positions to lists of prompt
     activations. Returns a dictionary from injection positions to
@@ -127,7 +134,8 @@ def hook_fns_from_act_dict(
     for act_name, act_list in activation_dict.items():
         # Compose the hook functions for each prompt
         act_fns: List[Callable] = [
-            hook_fn_from_activations(activations) for activations in act_list
+            hook_fn_from_activations(activations, **kwargs)
+            for activations in act_list
         ]
         hook_fns[act_name] = fn.compose(*act_fns[::-1])
 
@@ -135,7 +143,7 @@ def hook_fns_from_act_dict(
 
 
 def hook_fns_from_rich_prompts(
-    model: HookedTransformer, rich_prompts: List[RichPrompt]
+    model: HookedTransformer, rich_prompts: List[RichPrompt], **kwargs
 ) -> Dict[str, Callable]:
     """Takes a list of `RichPrompt`s and makes a single activation-modifying forward hook.
 
@@ -155,6 +163,8 @@ def hook_fns_from_rich_prompts(
     ] = get_activation_dict(model, rich_prompts)
 
     # Make the hook functions
-    hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(activation_dict)
+    hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(
+        activation_dict, **kwargs
+    )
 
     return hook_fns
