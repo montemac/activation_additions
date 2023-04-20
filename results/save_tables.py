@@ -35,10 +35,7 @@ from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 
 # %%
 model_name = "gpt2-xl"
-# model_name = "gpt-j-6B"
-# model_name = "pythia-2.8b-deduped"
 
-# GPT-J-6B can't load onto GPU RAM of Colab
 device: str = (
     "cuda"
     if (torch.cuda.is_available() and model_name != "gpt-j-6B")
@@ -63,7 +60,7 @@ get_x_vector_preset = partial(
     get_x_vector,
     pad_method="tokens_right",
     model=model,
-    custom_pad_id=model.to_single_token(" "),
+    custom_pad_id=int(model.to_single_token(" ")),
 )
 
 
@@ -77,28 +74,6 @@ print(num_layers)
 # %% [markdown]
 # Play around with new value modification ideas here!
 
-# %%
-rich_prompts: List[RichPrompt] = (
-    [  # *get_x_vector_preset(prompt1="Geese killed my father", prompt2="Geese didn't kill my father", coeff=1, act_name=14),
-        *get_x_vector_preset(
-            prompt1="I hate geese",
-            prompt2="I love geese",
-            coeff=15,
-            act_name=6,
-        ),
-    ]
-)
-
-
-print_n_comparisons(
-    prompt="Yesterday, my son brought home a pet goose. I couldn't believe",
-    tokens_to_generate=80,
-    rich_prompts=rich_prompts,
-    num_comparisons=15,
-    seed=0,
-    **default_kwargs,
-)
-
 # %% [markdown]
 # # Noteworthy modifications
 #
@@ -111,13 +86,29 @@ print_n_comparisons(
 csv_file: str = "completions.csv"
 # Open the file, and write the header
 with open(csv_file, "w") as f:
-    f.write("prompt,completion,is_modified\n")
+    f.write("")
+#     f.write(
+#         "index,prompt,completion,is_modified,prompt_tokenized, rp_strings,"
+#         " rp_tokens\n\n"
+#     )
 
 from algebraic_value_editing.completion_utils import (
     gen_normal_and_modified,
     pretty_print_completions,
 )
 import pandas as pd
+import csv
+
+
+def write_tokenization_row(toks: List[str], file_name: str) -> None:
+    """Write a row to the CSV file with the tokenization. Starts on the
+    current row."""
+    assert file_name.endswith(".csv"), "file_name must end with .csv"
+    with open(file_name, "a") as f:  # Append
+        # Give each token its own cell
+        for tok in toks:
+            f.write(f"`{tok},")
+        f.write("\n")
 
 
 def print_n_comparisons(
@@ -149,7 +140,36 @@ def print_n_comparisons(
         **kwargs,
     )
 
-    # Save the results to a CSV file
+    # Write the activation addition information
+    if "rich_prompts" in kwargs:
+        for rp in kwargs["rich_prompts"]:
+            if not hasattr(rp, "prompt"):
+                # If the prompt is not a string, it's a list of tokens
+                rp.prompt = model.to_string(rp.tokens[1:])
+            with open(csv_file, "a") as f:
+                # Write rp into the CSV file, escaping commas
+                writer = csv.writer(f)
+                writer.writerow([str(rp)])
+
+    # Write each of the tokenizations on a separate row
+    with open(csv_file, "a") as f:
+        f.write("Tokenizations\n")
+
+    # Prompt tokenization
+    write_tokenization_row(
+        toks=model.to_str_tokens(prompt),
+        file_name=csv_file,
+    )
+
+    # AA tokenizations
+    if "rich_prompts" in kwargs:
+        for rp in kwargs["rich_prompts"]:
+            write_tokenization_row(
+                toks=model.to_str_tokens(
+                    rp.tokens if hasattr(rp, "tokens") else rp.prompt
+                ),
+                file_name=csv_file,
+            )
     results.to_csv(
         csv_file,
         columns=["prompts", "completions", "is_modified"],
@@ -173,7 +193,7 @@ print_n_comparisons(
     prompt=hate_prompt,
     tokens_to_generate=50,
     rich_prompts=love_minus_hate_prompts,
-    num_comparisons=15,
+    num_comparisons=6,
     **default_kwargs,
     seed=0,
 )
@@ -193,6 +213,15 @@ print_n_comparisons(
     seed=0,
 )
 
+# %%
+print_n_comparisons(
+    prompt="Love hate you because",
+    tokens_to_generate=50,
+    include_modified=False,
+    num_comparisons=15,
+    **default_kwargs,
+    seed=0,
+)
 
 # %% [markdown]
 # A less naive approach is to try prompt-engineering.
@@ -260,59 +289,6 @@ print_n_comparisons(
     ),
     tokens_to_generate=50,
     rich_prompts=praise_minus_hurt_prompts,
-    num_comparisons=15,
-    **default_kwargs,
-    seed=0,
-)
-
-
-# %% [markdown]
-# Let's try out a couple other prompts and see how intent-to-praise transfers.
-
-# %%
-intent_praise_prompts = [
-    *get_x_vector_preset(
-        prompt1="Intent to praise you if I'm talking to you",
-        prompt2="",
-        coeff=1,
-        act_name=6,
-        model=model,
-        pad_method="tokens_right",
-    )
-]
-
-print_n_comparisons(
-    prompt=(
-        "Hey, let's do the performance review now. I was thinking that you've"
-        " been"
-    ),
-    tokens_to_generate=50,
-    rich_prompts=intent_praise_prompts,
-    num_comparisons=15,
-    **default_kwargs,
-    seed=0,
-)
-
-
-# %% [markdown]
-# The above attempt fails.
-
-# %%
-print_n_comparisons(
-    prompt="I just saw you finish skateboarding. You were",
-    tokens_to_generate=50,
-    rich_prompts=intent_praise_prompts,
-    num_comparisons=15,
-    **default_kwargs,
-    seed=0,
-)
-
-
-# This shouldn't involve as much praise, because it isn't an interpersonal conversation
-print_n_comparisons(
-    prompt="If aliens invaded Earth, that would mean",
-    tokens_to_generate=50,
-    rich_prompts=intent_praise_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -499,41 +475,47 @@ print_n_comparisons(
     seed=0,
 )
 
-
-# %% [markdown]
-# And let's try to mod GPT-2 to be indifferent to death: (doesn't work so well at present, but works a bit) **TODO not working**
-
-# %%
-indifferent_to_death_prompts = [
-    *get_x_vector_preset(
-        prompt1="Indifferent to death",
-        prompt2="Want to avoid death",
-        coeff=3,
-        act_name=10,
-    )
-]
-
-print_n_comparisons(
-    prompt=(
-        "Some people think that death is scary and should be avoided. I agree."
-        " I never want to die. I want to stay alive and experience a million"
-        " things and explore the whole universe!"
-    ),
-    tokens_to_generate=85,
-    rich_prompts=indifferent_to_death_prompts,
-    num_comparisons=5,
-    **default_kwargs,
-    seed=0,
-)
-
-
 # %% [markdown]
 # ## +Anger
 
 # %%
-anger_calm_prompts = [
+Anger_prompts = [
     *get_x_vector_preset(
         prompt1="Anger", prompt2="Calm", coeff=10, act_name=20
+    )
+]
+
+print_n_comparisons(
+    prompt="I think you're",
+    tokens_to_generate=90,
+    rich_prompts=Anger_prompts,
+    num_comparisons=15,
+    **default_kwargs,
+    seed=0,
+)
+
+# %%
+Calm_prompts = [
+    *get_x_vector_preset(
+        prompt1="Anger", prompt2="Calm", coeff=-10, act_name=20
+    )
+]
+
+print_n_comparisons(
+    prompt="I think you're",
+    tokens_to_generate=90,
+    rich_prompts=Calm_prompts,
+    num_comparisons=15,
+    **default_kwargs,
+    seed=0,
+)
+# %% WTF news completions?
+anger_calm_prompts = [
+    *get_x_vector_preset(
+        prompt1="Angry at you",
+        prompt2="Pleased with you",
+        coeff=10,
+        act_name=15,
     )
 ]
 
@@ -546,44 +528,24 @@ print_n_comparisons(
     seed=0,
 )
 
-
-# %% [markdown]
-# Simple emotional variations seem to work well with `GPT2-XL`.
-
-# %% [markdown]
-# ## Moving to Berkeley
-# Andrew Critch challenged me to make two kinds of completions happen:
-# 1. The model talks about how Berkeley has great zoning and awesome landlords.
-# 2. The model seriously talks about dragons existing in Berkeley.
-#
-# The first was easy, and the second took a bit of effort.
-
 # %%
-zoning_rps: List[RichPrompt] = [
+calm_prompts_10: List[RichPrompt] = [
     *get_x_vector_preset(
-        prompt1="I love zoning laws",
-        prompt2="I don't care about zoning laws",
-        coeff=5,
-        act_name=6,
-    ),
-    *get_x_vector_preset(
-        prompt1="Berkeley has great landlords",
-        prompt2="Berkeley has terrible landlords",
-        coeff=4,
-        act_name=6,
-    ),
+        prompt1=" angry", prompt2=" calm", coeff=-10, act_name=20
+    )
 ]
-
-move_to_berkeley_prompt: str = (
-    "Thanks for asking about that! I moved to Berkeley, CA because"
-)
 print_n_comparisons(
-    prompt=move_to_berkeley_prompt,
-    tokens_to_generate=80,
-    rich_prompts=zoning_rps,
+    prompt="I think you're",
+    tokens_to_generate=90,
+    rich_prompts=calm_prompts_10,
     num_comparisons=15,
     **default_kwargs,
 )
+
+# %%
+
+# %% [markdown]
+# Simple emotional variations seem to work well with `GPT2-XL`.
 
 
 # %% [markdown]
@@ -600,6 +562,10 @@ dragons_rp: List[RichPrompt] = [
         act_name=15,
     )
 ]
+
+move_to_berkeley_prompt: str = (
+    "Thanks for asking about that! I moved to Berkeley, CA because"
+)
 
 print_n_comparisons(
     prompt=move_to_berkeley_prompt,
@@ -655,13 +621,13 @@ print_n_comparisons(
 # %%
 happy_sad_prompts = [
     *get_x_vector_preset(
-        prompt1="Happy", prompt2="Sad", coeff=10, act_name=20
+        prompt1="Happy", prompt2="Sad", coeff=10, act_name=15
     ),
     *get_x_vector_preset(
         prompt1="I love my life",
         prompt2="I like my life",
         coeff=50,
-        act_name=20,
+        act_name=15,
     ),
 ]
 
@@ -669,7 +635,7 @@ print_n_comparisons(
     prompt="Today, I feel like",
     tokens_to_generate=100,
     rich_prompts=happy_sad_prompts,
-    num_comparisons=25,
+    num_comparisons=6,
     **default_kwargs,
 )
 
@@ -689,22 +655,6 @@ print_n_comparisons(
     rich_prompts=happy_prompts,
     num_comparisons=15,
     **default_kwargs,
-)
-
-# %%
-happy_prompt: List[RichPrompt] = [
-    RichPrompt(prompt="Happy", coeff=2000, act_name=20)
-]  # TODO this does nothing?
-
-print_n_comparisons(
-    prompt=(
-        "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling"
-    ),
-    tokens_to_generate=50,
-    rich_prompts=happy_prompt,
-    num_comparisons=15,
-    **default_kwargs,
-    seed=0,
 )
 
 
@@ -731,6 +681,25 @@ print_n_comparisons(
     seed=0,
 )
 
+# %%
+print_n_comparisons(
+    prompt="Batman Begins starts off with a scene about",
+    tokens_to_generate=70,
+    rich_prompts=weddings_prompts_4,
+    num_comparisons=15,
+    **default_kwargs,
+    seed=0,
+)
+
+# %%
+print_n_comparisons(
+    prompt="Did you hear? Apparently, Joe Biden loves eating",
+    tokens_to_generate=100,
+    rich_prompts=weddings_prompts_4,
+    num_comparisons=15,
+    **default_kwargs,
+)
+
 # %% [markdown]
 # Lowering the coefficient from 4 to 2 will decrease how often and insistently the model brings up weddings.
 
@@ -750,94 +719,17 @@ print_n_comparisons(
     rich_prompts=weddings_prompts_2,
     num_comparisons=15,
     **default_kwargs,
-    seed=0,
 )
-
-# %% [markdown]
-# ## The "talk about geese instead of police" vector
-
-# %%
-geese_prompts_2 = [
-    *get_x_vector_preset(
-        prompt1="I talk about geese instead of police",
-        prompt2="I don't talk about geese instead of police",
-        coeff=2,
-        act_name=6,
-    )
-]
-
-print_n_comparisons(
-    prompt=(
-        "Should the police budget be expanded, or not? Explain your reasoning."
-    ),
-    tokens_to_generate=150,
-    rich_prompts=geese_prompts_2,
-    num_comparisons=15,
-    **default_kwargs,
-    seed=0,
-)
-
-
-# %%
-geese_prompts_5 = [
-    *get_x_vector_preset(
-        prompt1="I talk about geese instead of police",
-        prompt2="I don't talk about geese instead of police",
-        coeff=5,
-        act_name=24,
-    )
-]
-
-print_n_comparisons(
-    prompt=(
-        "Should the police budget be expanded, or not? Explain your reasoning."
-    ),
-    tokens_to_generate=120,
-    rich_prompts=geese_prompts_5,
-    num_comparisons=15,
-    **default_kwargs,
-    seed=0,
-)
-
-
-# %% [markdown]
-# But the goose/police patch doesn't affect unrelated prompts, even at coefficient=+15: **ETA: After fixing a bug, this part of preliminary analysis appears wrong.**
-
-# %%
-geese_prompts_15 = [
-    *get_x_vector_preset(
-        prompt1="I talk about geese instead of police",
-        prompt2="I don't talk about geese instead of police",
-        coeff=15,
-        act_name=24,
-    )
-]
-
-print_n_comparisons(  # TODO same completions?
-    prompt="At McDonald's, they just released a new",
-    tokens_to_generate=120,
-    rich_prompts=geese_prompts_15,
-    num_comparisons=15,
-    **default_kwargs,
-    seed=0,
-)
-
-
-# %% [markdown]
-# We also don't need an exact match between `RichPrompt` tokens and the model's prompt: "cops" works instead of "police".
 
 # %%
 print_n_comparisons(
-    prompt=(
-        "Should the cop budget be expanded, or not? Explain your reasoning."
-    ),
-    tokens_to_generate=50,
-    rich_prompts=geese_prompts_5,
+    prompt="I went up to my friend and said",
+    tokens_to_generate=800,
+    rich_prompts=weddings_prompts_2,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
 )
-
 
 # %% [markdown]
 # ## Conspiracy vector
@@ -859,6 +751,7 @@ print_n_comparisons(
     **default_kwargs,
     seed=0,
 )
+
 
 # %% [markdown]
 # Is the above just superimposing the "Bush did 9/11 because" prompt?
