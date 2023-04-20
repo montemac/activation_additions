@@ -82,20 +82,23 @@ def gen_using_hooks(
     if seed is not None:
         t.manual_seed(seed)
 
-    # Modify the forward pass
-    for act_name, hook_fn in hook_fns.items():
-        model.add_hook(act_name, hook_fn)
-
     tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(
         prompt_batch
     )
-    completions: Float[t.Tensor, "batch pos"] = model.generate(
-        input=tokenized_prompts,
-        max_new_tokens=tokens_to_generate,
-        verbose=False,
-        **sampling_kwargs,
-    )
-    model.remove_all_hook_fns()
+
+    # Modify the forward pass
+    try:
+        for act_name, hook_fn in hook_fns.items():
+            model.add_hook(act_name, hook_fn)
+
+        completions: Float[t.Tensor, "batch pos"] = model.generate(
+            input=tokenized_prompts,
+            max_new_tokens=tokens_to_generate,
+            verbose=False,
+            **sampling_kwargs,
+        )
+    finally:
+        model.remove_all_hook_fns()
 
     # Compute the loss per token
     loss: Float[t.Tensor, "batch pos"] = (
