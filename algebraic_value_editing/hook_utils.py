@@ -1,7 +1,7 @@
 """ Utilities for hooking into a model and modifying activations. """
 import logging
 
-from typing import List, Callable, Optional, Dict
+from typing import List, Callable, Optional, Dict, Tuple
 from collections import defaultdict
 from jaxtyping import Float, Int
 import funcy as fn
@@ -104,12 +104,18 @@ def hook_fn_from_activations(
             )
 
         injection_len: int = min(prompt_seq_len, activations_seq_len)
+        indexing_operation: Tuple[slice, slice, slice] = (
+            slice(None),  # Apply to all batches
+            slice(0, injection_len),  # Only add to first residual streams
+            slice(None),  # Apply to all dimensions
+            # slice(0, activations.shape[2] // 2), # Apply to first half of the dimensions
+        )
 
         # NOTE if caching old QKV results, this hook does nothing when
         # the context window starts rolling over
-        resid_pre[:, :injection_len, :] = (
-            activations[:, :injection_len, :] + resid_pre[:, :injection_len, :]
-        )  # Only add to first bit of the stream
+        resid_pre[indexing_operation] = (
+            activations[indexing_operation] + resid_pre[indexing_operation]
+        )
         return resid_pre
 
     return prompt_hook
