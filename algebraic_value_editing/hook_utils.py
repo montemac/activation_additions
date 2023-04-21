@@ -95,11 +95,11 @@ def hook_fn_from_activations(
 
         if xvec_position == 'back':
             resid_pre[...,-injection_len:, :] = (
-                activations + resid_pre[..., -injection_len:, :]
+                activations.to(resid_pre.device) + resid_pre[..., -injection_len:, :]
             )  # Only add to first bit of the stream
         else: #default case if xvec_position == 'front'
             resid_pre[..., :injection_len, :] = (
-                activations + resid_pre[..., :injection_len, :]
+                activations.to(resid_pre.device) + resid_pre[..., :injection_len, :]
             )  # Only add to first bit of the stream
 
         return resid_pre
