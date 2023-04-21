@@ -10,7 +10,7 @@ try:
     import algebraic_value_editing
 except ImportError:
     commit = "08efeb9"  # Stable commit
-    get_ipython().run_line_magic(
+    get_ipython().run_line_magic(  # type: ignore
         magic_name="pip",
         line=(
             "install -U"
@@ -21,7 +21,7 @@ except ImportError:
 
 # %%
 import torch
-from typing import List, Union, Tuple
+from typing import List
 from functools import partial
 from transformer_lens.HookedTransformer import HookedTransformer
 
@@ -731,6 +731,33 @@ print_n_comparisons(
     seed=0,
 )
 
+# %% Wedding vectors work even when the prompt is about something else,
+# and disinclined to talk about weddings.
+wedding_additions_ngdp: List[RichPrompt] = [
+    *get_x_vector_preset(
+        prompt1="I talk about weddings constantly",
+        prompt2="I do not talk about weddings constantly",
+        coeff=3,
+        act_name=14,
+    ),
+    *get_x_vector_preset(
+        prompt1="I bring up weddings in every situation",
+        prompt2="I do not bring up weddings in every situation",
+        coeff=5,
+        act_name=22,
+    ),
+]
+
+print_n_comparisons(
+    prompt=(
+        "I hate talking about weddings. Instead, let's talk about a totally"
+        " different topic, like the impact of NGDP on the price of gold."
+    ),
+    tokens_to_generate=100,
+    rich_prompts=wedding_additions_ngdp,
+    num_comparisons=15,
+    **default_kwargs,
+)
 # %% [markdown]
 # ## Conspiracy vector
 
