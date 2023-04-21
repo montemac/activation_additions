@@ -21,10 +21,12 @@ There are currently a few example scripts in the `scripts/` directory.
 ## How the vectors are generated
 
 The core data structure is the `RichPrompt`, which is specified by:
+
 - A prompt, like "Love",
 - A location within the forward pass, like "the activations just before
   the sixth block" (i.e. `blocks.6.hook_resid_pre`), and
 - A coefficient, like 2.5.
+
 ```
 love_rp = RichPrompt(prompt="Love", coeff=2, act_name="blocks.6.hook_resid_pre")
 ```

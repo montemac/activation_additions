@@ -1,11 +1,11 @@
 """ Utilities for hooking into a model and modifying activations. """
+import logging
 
 from typing import List, Callable, Optional, Dict
 from collections import defaultdict
 from jaxtyping import Float, Int
 import funcy as fn
 import torch
-import logging
 
 from transformer_lens import ActivationCache
 from transformer_lens.HookedTransformer import HookedTransformer
@@ -91,12 +91,18 @@ def hook_fn_from_activations(
 
         # Add activations to the residual stream
         if prompt_seq_len < activations_seq_len:
-            logging.warn(
-                f"The RichPrompt sequence length ({activations_seq_len}) is"
-                f" longer than the prompt sequence length ({prompt_seq_len})."
-                " Adding the first {prompt_seq_len} activation sequence"
-                " positions to the forward pass."
+            logging.warning(
+                (
+                    "The RichPrompt sequence length (%s) is"
+                    " longer than the prompt sequence length (%s)."
+                    " Adding the first %s activation sequence"
+                    " positions to the forward pass."
+                ),
+                activations_seq_len,
+                prompt_seq_len,
+                prompt_seq_len,
             )
+
         injection_len: int = min(prompt_seq_len, activations_seq_len)
 
         # NOTE if caching old QKV results, this hook does nothing when
