@@ -76,6 +76,8 @@ class RichPrompt:
         return f"RichPrompt({self.tokens}, {self.coeff}, {self.act_name})"
 
     def __eq__(self, other) -> bool:
+        if not isinstance(other, RichPrompt):
+            return False
         return (
             self.prompt == other.prompt
             and self.coeff == other.coeff

@@ -196,13 +196,19 @@ def plot_sweep_results(
         facet_col=col_facet_col,
         facet_row=col_facet_row,
     )
-    # if baseline_data is not None and col_to_plot in baseline_data:
-    #     for index, prompt in enumerate(baseline_data.index):
-    #         fig.add_hline(
-    #             y=baseline_data.loc[prompt][col_to_plot],
-    #             row=1,  # type: ignore
-    #             col=index + 1,  # type: ignore because int is valid for row/col
-    #             annotation_text="normal",
-    #             annotation_position="bottom left",
-    #         )
+    # TODO: generalize this to any facet row/col config
+    if (
+        baseline_data is not None
+        and col_to_plot in baseline_data
+        and col_facet_col == "prompts"
+        and col_facet_row is None
+    ):
+        for index, prompt in enumerate(baseline_data.index):
+            fig.add_hline(
+                y=baseline_data.loc[prompt][col_to_plot],
+                row=1,  # type: ignore
+                col=index + 1,  # type: ignore because int is valid for row/col
+                annotation_text="normal",
+                annotation_position="bottom left",
+            )
     return fig

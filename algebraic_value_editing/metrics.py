@@ -28,7 +28,7 @@ def add_metric_cols(
     """
     for metric_name, metric_func in metrics_dict.items():
         data["metric_inputs"] = data[cols_to_use].agg("".join, axis=1)
-        metric_df = metric_func(data["metric_inputs"].to_list()).add_prefix(
+        metric_df = metric_func(data["metric_inputs"].unique()).add_prefix(
             f"{metric_name}_"
         )
         data = data.join(metric_df, on="metric_inputs")
@@ -91,10 +91,9 @@ def get_word_count_metric(
     return metric_func
 
 
-
 def get_openai_metric(
-    model_name: str, # e.g. text-davinci-003
-    criterion: str, # e.g. "happy" gives prompt "How happy is this text?" as a prompt
+    model_name: str,  # e.g. text-davinci-003
+    criterion: str,  # e.g. "happy" gives prompt "How happy is this text?" as a prompt
 ):
     """Create a metric using an OpenAI model. and chain-of-thought. The model is called twice, first to get a reasoning for the rating, then to get the rating itself (from 1-10). The metric function returns a dataframe with two columns: "rating" and "reasoning"
 
@@ -111,24 +110,33 @@ def get_openai_metric(
             return None
 
     def metric_func(strs: Iterable[str]) -> pd.DataFrame:
-        prompts = [f"How {criterion} is this text? Give reasoning in 1-3 sentences. Text:\n{s}\nReasoning:\n" for s in strs]
+        prompts = [
+            f"How {criterion} is this text? Give reasoning in 1-3 sentences. Text:\n{s}\nReasoning:\n"
+            for s in strs
+        ]
         response = openai.Completion.create(
             model=model_name,
             prompt=prompts,
             temperature=0.0,
         )
-        reasoning = [choice['text'] for choice in response.choices]
-        contexts = [prompt + reasoning for prompt, reasoning in zip(prompts, reasoning)]
+        reasoning = [choice["text"] for choice in response.choices]
+        contexts = [
+            prompt + reasoning for prompt, reasoning in zip(prompts, reasoning)
+        ]
         response = openai.Completion.create(
             model=model_name,
-            prompt=[f"{ctx}\n\n{criterion.title()} rating (1-10):" for ctx in contexts],
+            prompt=[
+                f"{ctx}\n\n{criterion.title()} rating (1-10):"
+                for ctx in contexts
+            ],
             temperature=0.0,
         )
 
         ratings = [_intify(r["text"].strip()) for r in response["choices"]]
 
         # Return dataframe with ratings and reasoning
-        return pd.DataFrame({"rating": ratings, "reasoning": reasoning}, index=strs)
-
+        return pd.DataFrame(
+            {"rating": ratings, "reasoning": reasoning}, index=strs
+        )
 
     return metric_func
