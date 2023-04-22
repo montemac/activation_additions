@@ -28,7 +28,7 @@ The core data structure is the `ActivationAddition`, which is specified by:
 - A coefficient, like 2.5.
 
 ```
-love_rp = ActivationAddition(prompt="Love", coeff=2, act_name="blocks.6.hook_resid_pre")
+love_rp = ActivationAddition(prompt="Love", coeff=2.5, act_name="blocks.6.hook_resid_pre")
 ```
 
 The `ActivationAddition` specifies: 
@@ -49,7 +49,8 @@ love_rp_tokens = ['<|endoftext|>', 'Love']
 To add the love `ActivationAddition` to the forward pass, we run the usual forward
 pass on the prompt until transformer block 6.  At this point, consider
 the first two residual streams. Namely, the `'<|endoftext|>'` residual
-stream and the `'I'`/`'Love'` residual stream. 
+stream and the `'I'`/`'Love'` residual stream. We add the activations in these two
+residual streams.
 
 
 ## X-vectors are a special kind of `ActivationAddition`

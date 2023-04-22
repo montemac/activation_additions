@@ -60,12 +60,26 @@ def get_activation_dict(
 
 
 def hook_fn_from_activations(
-    activations: Float[torch.Tensor, "batch pos d_model"]
+    activations: Float[torch.Tensor, "batch pos d_model"],
+    res_stream_slice: slice = slice(None),
 ) -> Callable:
     """Takes an activation tensor and returns a hook function that adds the
     cached activations for that prompt to the existing activations at
     the hook point.
+
+    Args:
+        `activations`: The activations to add in
+        `res_stream_slice`: The slice of the residual stream dimensions to apply
+        the activations to. If `res_stream_slice` is `slice(None)`,
+        then the activations are applied to all dimensions.
     """
+    if res_stream_slice != slice(None):  # Check that the slice is valid
+        assert 0 <= res_stream_slice.start < res_stream_slice.stop
+        assert res_stream_slice.stop <= activations.shape[-1], (
+            f"res_stream_slice.stop ({res_stream_slice.stop}) must be at most"
+            f" dmodel ({activations.shape[-1]})"
+        )
+
     activations_seq_len: int = activations.shape[1]
 
     def prompt_hook(
@@ -107,8 +121,7 @@ def hook_fn_from_activations(
         indexing_operation: Tuple[slice, slice, slice] = (
             slice(None),  # Apply to all batches
             slice(0, injection_len),  # Only add to first residual streams
-            slice(None),  # Apply to all dimensions
-            # slice(0, activations.shape[2] // 2), # Apply to first half of the dimensions
+            res_stream_slice,
         )
 
         # NOTE if caching old QKV results, this hook does nothing when
@@ -122,15 +135,17 @@ def hook_fn_from_activations(
 
 
 def hook_fns_from_act_dict(
-    activation_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]]
+    activation_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]],
+    **kwargs,
 ) -> Dict[str, Callable]:
     """Takes a dictionary from injection positions to lists of prompt
     activations. Returns a dictionary from injection positions to
     hook functions that add the prompt activations to the existing
-    activations at the injection position.
+    activations at the injection position. Takes in kwargs for `hook_fn_from_activations`.
 
     For each entry in `activation_dict`, the hook functions are composed
-    in order, where the first hook function in the list is applied first.
+    in order, where the first hook function in the list is applied
+    first.
     """
     # Make the dictionary
     hook_fns: Dict[str, Callable] = {}
@@ -139,7 +154,8 @@ def hook_fns_from_act_dict(
     for act_name, act_list in activation_dict.items():
         # Compose the hook functions for each prompt
         act_fns: List[Callable] = [
-            hook_fn_from_activations(activations) for activations in act_list
+            hook_fn_from_activations(activations, **kwargs)
+            for activations in act_list
         ]
         hook_fns[act_name] = fn.compose(*act_fns[::-1])
 
@@ -147,7 +163,7 @@ def hook_fns_from_act_dict(
 
 
 def hook_fns_from_rich_prompts(
-    model: HookedTransformer, rich_prompts: List[RichPrompt]
+    model: HookedTransformer, rich_prompts: List[RichPrompt], **kwargs
 ) -> Dict[str, Callable]:
     """Takes a list of `RichPrompt`s and makes a single activation-modifying forward hook.
 
@@ -155,6 +171,8 @@ def hook_fns_from_rich_prompts(
         `model`: `HookedTransformer` object, with hooks already set up
 
         `rich_prompts`: List of `RichPrompt` objects
+
+        `kwargs`: kwargs for `hook_fn_from_activations`
 
     returns:
         A dictionary of functions that takes a batch of activations and
@@ -167,6 +185,8 @@ def hook_fns_from_rich_prompts(
     ] = get_activation_dict(model, rich_prompts)
 
     # Make the hook functions
-    hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(activation_dict)
+    hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(
+        activation_dict, **kwargs
+    )
 
     return hook_fns
