@@ -122,6 +122,7 @@ def gen_using_hooks(
     return results
 
 
+# TODO remove this, seems pointless
 def gen_using_rich_prompts(
     model: HookedTransformer,
     rich_prompts: List[RichPrompt],
