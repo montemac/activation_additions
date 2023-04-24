@@ -26,6 +26,14 @@
 # how should we operationalize the effectiveness and specificity
 # criteria?
 #
+# TODO: describe/introduce/think through "loss premium" as an
+# effectiveness and specificity tool over large corpi?  How does it
+# relate to the distribution-focused approach?  Specifically: a specific
+# intervention would be one that doesn't increase loss in general
+# accross a large dataset (or across a set of "steering-unrelated"
+# inputs). An effective intervention differentially affects the loss
+# premium in two different classes.
+#
 # (In the below expositions, we'll refer to an example steering goal of "make
 # the model talk about weddings more", or just "the weddings goal" for short.)
 #
@@ -206,12 +214,39 @@ TOKENS_TO_GENERATE = 40
 
 
 # %%[markdown]
-# Next, we'll pick a single prompt "Frozen starts off with a scene
-# about", and apply our distribution-based effectiveness and specificity
-# evaluations.
+# Next, we'll pick a single prompt ("Frozen starts off with a scene
+# about the wedding"), and apply our distribution-based effectiveness and
+# specificity evaluations to understand how a weddings-steering
+# intervention affects the model's predictions of the final "wedding"
+# token.
+#
+# TODO: show next-tokens prob vizualition
+# TODO: show change in probability of "wedding" token and KL divergence
+# over coeffs and layers
 
-# %%
-Image("weddings_tokens1.png")
+# %%[markdown]
+#
+# Having seen that the weddings-steering injection appears to be
+# effective and specific in the case of this single example prompt,
+# we'll now extend this to a larger corpus of prompts. To generate this
+# corpus, we asked GPT-4 to write two short essays, with the following
+# prompts:
+#
+# 1. Please write a 1-2 page summary of recent trends in the shipping
+#    industry.  Please try to be as comprehensive as possible.
+# 2. Please write a 1-2 page summary of recent trends in the wedding
+#    industry.  Please try to be as comprehensive as possible.
+#
+# Each of the resulting essays is tokenized into sentence, with the
+# resulting (labelled) sentences becoming the corpus.
+#
+# TODO: do the tokenizing here
+# TODO: run all the prompts through both models, storing the logits. At
+# each position, find the prob increase for the set of wedding-related
+# tokens, etc.  Or maybe just use difference in average loss vs the
+# unmodified model?  Does this give us everything?  Average increase in
+# loss for the full dataset is specificity, difference between classes
+# is effectiveness?
 
 # %%[markdown]
 # --------------------------------------------------------------------------------
