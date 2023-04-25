@@ -22,6 +22,8 @@ from algebraic_value_editing import (
     prompt_utils,
     utils,
     completion_utils,
+    metrics,
+    sweeps,
 )
 
 utils.enable_ipython_reload()
@@ -71,52 +73,26 @@ yelp_sample = pd.concat(
     ]
 ).reset_index()
 
+# Get a loss metric based on the model.  Note that this will always just
+# use the model so hooks, etc. will change the behavior of this metric!
+metrics_dict = {"loss": metrics.get_loss_metric(MODEL, agg_mode="mean")}
 
-# Run through the model to get average losses for each text
-
-
-def get_loss_for_texts(model, texts):
-    loss_mean_list = []
-    loss_token_list = []
-    for text_idx, text in enumerate(tqdm(texts)):
-        tokens = model.to_tokens(text)
-        loss = (
-            MODEL.forward(tokens, return_type="loss", loss_per_token=True)
-            .detach()
-            .cpu()
-            .numpy()
-        ).squeeze()
-        loss_mean_list.append(loss.mean())
-        for pos, (loss_this, token) in enumerate(
-            zip(loss, tokens[0, 1:].detach().cpu().numpy())
-        ):
-            loss_token_list.append(
-                {
-                    "text_index": text_idx,
-                    "pos": pos + 1,
-                    "loss": loss_this,
-                    "token": token,
-                }
-            )
-    return pd.Series(loss_mean_list, index=texts.index), pd.DataFrame(
-        loss_token_list
-    )
-
-
-# Get the normal loss
-yelp_sample["loss_norm"], token_loss_normal = get_loss_for_texts(
-    MODEL, yelp_sample["text"]
+# Get the normal loss and add it to the DataFrame
+yelp_sample = metrics.add_metric_cols(
+    yelp_sample,
+    metrics_dict,
+    cols_to_use="text",
+    show_progress=True,
+    prefix_cols=False,
 )
 
 
 # %%
 # Make the hook functions and get the modified loss, maybe with a sweep
 COEFFS = np.linspace(-5, 5, 21)
-# COEFFS = [-10, 10]
-loss_mod_list = []
-token_loss_mod_list = []
-for coeff in tqdm(COEFFS):
-    rich_prompts = list(
+
+rich_prompts = [
+    list(
         prompt_utils.get_x_vector(
             prompt1=" worst",
             prompt2="",
@@ -127,69 +103,33 @@ for coeff in tqdm(COEFFS):
             custom_pad_id=MODEL.to_single_token(" "),
         ),
     )
-    hook_fns = hook_utils.hook_fns_from_rich_prompts(
-        model=MODEL,
-        rich_prompts=rich_prompts,
-        # xvec_position="last_all",
-    )
+    for coeff in COEFFS
+]
 
-    # Get the modified loss
-    MODEL.remove_all_hook_fns()
-    for act_name, hook_fn in hook_fns.items():
-        MODEL.add_hook(act_name, hook_fn)
-    loss_mod_this, token_loss_mod_this = get_loss_for_texts(
-        MODEL, yelp_sample["text"]
-    )
-    MODEL.remove_all_hook_fns()
-
-    loss_mod_list.append(loss_mod_this)
-    token_loss_mod_list.append(token_loss_mod_this)
-
-    # px.line(yelp_sample["loss_mod"][0] - yelp_sample["loss_norm"][0]).show()
-    # (yelp_sample["loss_mod"][0] - yelp_sample["loss_norm"][0])
-
-# yelp_sample["loss_mod_minus_norm"] = (
-#     yelp_sample["loss_mod"] - yelp_sample["loss_norm"]
-# )
-
-# px.line(yelp_sample["loss_mod_minus_norm"]).show()
-# yelp_sample[["sentiment", "loss_mod_minus_norm"]].groupby(
-#     "sentiment"
-# ).mean()
+patched_df = sweeps.sweep_over_metrics(
+    model=MODEL,
+    texts=yelp_sample["text"],
+    rich_prompts=rich_prompts,
+    metrics_dict=metrics_dict,
+    prefix_cols=False,
+)
 
 # %%
 # Process the results
-loss_diff_df = (
-    (
-        pd.concat(
-            [
-                (loss_mod_ser - yelp_sample["loss_norm"])
-                .rename("loss_diff")
-                .to_frame()
-                .assign(coeff=coeff)
-                for loss_mod_ser, coeff in zip(loss_mod_list, COEFFS)
-            ]
-        )
-        .reset_index(names="text_index")
-        .join(yelp_sample["sentiment"], on="text_index")
-    )
-    .groupby(["coeff", "sentiment"])
-    .mean()
-).reset_index()
 
-token_strs = MODEL.to_string(token_loss_normal["token"].values[:, np.newaxis])
-token_loss_diff_df = (
-    pd.concat(
-        [
-            (token_loss_mod_this - token_loss_normal)
-            .assign(coeff=coeff, token_str=token_strs)
-            .rename({"loss": "loss_diff"}, axis="columns")
-            for token_loss_mod_this, coeff in zip(token_loss_mod_list, COEFFS)
-        ]
-    )
-    .join(yelp_sample["sentiment"], on="text_index")
+# Join in some data from the original DataFrame, and the coeffs
+results_df = patched_df.join(
+    yelp_sample[["loss", "sentiment"]],
+    on="text_index",
+    lsuffix="_mod",
+    rsuffix="_norm",
+)
+results_df["coeff"] = COEFFS[results_df["rich_prompt_index"]]
+results_df["loss_diff"] = results_df["loss_mod"] - results_df["loss_norm"]
+results_df = (
+    results_df.groupby(["coeff", "sentiment"])
+    .mean(numeric_only=True)
     .reset_index()
-    .set_index(["text_index", "pos", "coeff"])
 )
 
 # TODO: don't include patch region in loss mean?  Space-pad first to
@@ -197,20 +137,15 @@ token_loss_diff_df = (
 
 # Plot average loss vs coeff by sentiment
 px.line(
-    loss_diff_df,
+    results_df,
     x="coeff",
     y="loss_diff",
     color="sentiment",
     title="Increase in loss for Yelp reviews over coeffs by sentiment<br>"
-    + f"{[MODEL.tokenizer.decode(token) for token in rich_prompts[0].tokens]} - "
-    + f"{[MODEL.tokenizer.decode(token) for token in rich_prompts[1].tokens]}",
+    + f"{[MODEL.tokenizer.decode(token) for token in rich_prompts[0][0].tokens]} - "
+    + f"{[MODEL.tokenizer.decode(token) for token in rich_prompts[0][1].tokens]}",
 ).show()
 
-# Histograms of token loss diff by sentiment for all individual token
-# positions, filtering out the injection locations as these are always
-# high loss
-# token_loss_diff_filt_df = token_loss_diff_df[token_loss_diff_df['pos'] > 2]
-# px.line()
 
 # %%
 # Play with completions to explore

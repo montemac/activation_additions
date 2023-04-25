@@ -7,37 +7,87 @@ The returned metric functions all take an Iterable of strings, and
 return a DataFrame of metric outputs, with the provided strings as the
 index and one column per output provided by the metric. """
 
-from typing import List, Dict, Callable, Optional
+from typing import List, Dict, Callable, Optional, Union
 from collections.abc import Iterable
 import re
 
+from tqdm.auto import tqdm
 import pandas as pd
 from transformers import pipeline
 import openai
+from transformer_lens import HookedTransformer
+
+TextMetricFunc = Callable[[Iterable[str], bool], pd.DataFrame]
 
 
 def add_metric_cols(
     data: pd.DataFrame,
-    metrics_dict: Dict[str, Callable[[Iterable[str]], pd.DataFrame]],
-    cols_to_use: List[str] = ["prompts", "completions"],
+    metrics_dict: Dict[str, TextMetricFunc],
+    cols_to_use: Union[str, List[str]] = ["prompts", "completions"],
+    show_progress: bool = False,
+    prefix_cols: bool = True,
 ):
     """Apply a dict of named metrics to a series of strings
     specified by by a particular set of DataFrame columns (which will be
     concatenated), adding the metric outputs as additional columns and
     returning the resulting DataFrame.
     """
+    if not isinstance(cols_to_use, list):
+        cols_to_use = [cols_to_use]
     for metric_name, metric_func in metrics_dict.items():
         data["metric_inputs"] = data[cols_to_use].agg("".join, axis=1)
-        metric_df = metric_func(data["metric_inputs"].unique()).add_prefix(
-            f"{metric_name}_"
+        metric_df = metric_func(
+            data["metric_inputs"].unique(), show_progress=show_progress
         )
+        if prefix_cols:
+            metric_df = metric_df.add_prefix(f"{metric_name}_")
         data = data.join(metric_df, on="metric_inputs")
     return data
 
 
+def get_loss_metric(
+    model: HookedTransformer, agg_mode: Union[str, list[str]] = "mean"
+) -> TextMetricFunc:
+    """Create a model-loss metric using a provided HookedTransformer.
+    The metric function returns the loss of the provided input text on
+    the provided model, aggregated according to `agg_mode`, which must
+    be one of `['mean', 'sum', 'max', 'full']` or a list of such (which will
+    results in one column per agg mode provided)"""
+    if not isinstance(agg_mode, list):
+        agg_mode = [agg_mode]
+    assert all(
+        [mode in ["mean", "sum", "max", "full"] for mode in agg_mode]
+    ), "Invalid agg mode"
+
+    def metric_func(
+        strs: Iterable[str], show_progress: bool = False
+    ) -> pd.DataFrame:
+        loss_list = []
+        for text in tqdm(strs, disable=not show_progress):
+            loss = (
+                model.forward(text, return_type="loss", loss_per_token=True)
+                .detach()
+                .cpu()
+                .numpy()
+            ).squeeze()
+            loss_values = {}
+            if "mean" in agg_mode:
+                loss_values[f"loss_mean"] = loss.mean()
+            if "sum" in agg_mode:
+                loss_values[f"loss_sum"] = loss.sum()
+            if "max" in agg_mode:
+                loss_values[f"loss_max"] = loss.max()
+            if "full" in agg_mode:
+                loss_values[f"loss_full"] = loss
+            loss_list.append(loss_values)
+        return pd.DataFrame(loss_list, index=strs)
+
+    return metric_func
+
+
 def get_sentiment_metric(
     sentiment_model_name: str, positive_labels: Optional[List[str]] = None
-) -> Callable[[Iterable[str]], pd.DataFrame]:
+) -> TextMetricFunc:
     """Create a metric using a pre-trained sentiment model. The metric
     function returns the raw outputs of the sentiment model as columns
     (e.g. label and score), the meaning of which will vary by model;
@@ -45,7 +95,9 @@ def get_sentiment_metric(
     list is provided."""
     sentiment_pipeline = pipeline(model=sentiment_model_name)
 
-    def metric_func(strs: Iterable[str]) -> pd.DataFrame:
+    def metric_func(
+        strs: Iterable[str], show_progress: bool = False
+    ) -> pd.DataFrame:
         strs = list(strs)
         metric_results: pd.DataFrame = pd.DataFrame(
             sentiment_pipeline(strs), index=strs
@@ -61,7 +113,7 @@ def get_sentiment_metric(
 
 def get_word_count_metric(
     words: List[str], case_sensitive: bool = False
-) -> Callable[[Iterable[str]], pd.DataFrame]:
+) -> TextMetricFunc:
     """Create a metric using a list of words. The metric function
     returns a count of the total number of occurences of all the words
     in the list. Each string is first pre-processed to
@@ -72,7 +124,9 @@ def get_word_count_metric(
     if not case_sensitive:
         words = [word.lower() for word in words]
 
-    def metric_func(strs: Iterable[str]) -> pd.DataFrame:
+    def metric_func(
+        strs: Iterable[str], show_progress: bool = False
+    ) -> pd.DataFrame:
         if not case_sensitive:
             strs_cmp = [ss.lower() for ss in strs]
         else:
@@ -94,7 +148,7 @@ def get_word_count_metric(
 def get_openai_metric(
     model_name: str,  # e.g. text-davinci-003
     criterion: str,  # e.g. "happy" gives prompt "How happy is this text?" as a prompt
-):
+) -> TextMetricFunc:
     """Create a metric using an OpenAI model. and chain-of-thought. The model is called twice, first to get a reasoning for the rating, then to get the rating itself (from 1-10). The metric function returns a dataframe with two columns: "rating" and "reasoning"
 
     Considerations:
@@ -109,7 +163,9 @@ def get_openai_metric(
         except:
             return None
 
-    def metric_func(strs: Iterable[str]) -> pd.DataFrame:
+    def metric_func(
+        strs: Iterable[str], show_progress: bool = False
+    ) -> pd.DataFrame:
         prompts = [
             f"How {criterion} is this text? Give reasoning in 1-3 sentences. Text:\n{s}\nReasoning:\n"
             for s in strs
