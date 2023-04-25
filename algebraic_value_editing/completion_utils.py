@@ -122,7 +122,6 @@ def gen_using_hooks(
     return results
 
 
-# TODO remove this, seems pointless
 def gen_using_rich_prompts(
     model: HookedTransformer,
     rich_prompts: List[RichPrompt],
@@ -144,72 +143,10 @@ def gen_using_rich_prompts(
                 `completions`: The generated completions.
                 `loss`: The average loss per token of the completions.
     """
-    # Create the hook functions
     hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
         model=model, rich_prompts=rich_prompts
     )
     return gen_using_hooks(model=model, hook_fns=hook_fns, **kwargs)
-
-
-def gen_normal_and_modified(
-    model: HookedTransformer,
-    rich_prompts: Optional[List[RichPrompt]] = None,
-    include_normal: bool = True,
-    include_modified: bool = True,
-    **kwargs,
-) -> pd.DataFrame:
-    """Generate completions using the given rich prompts, and without.
-
-    args:
-        `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
-
-        `kwargs`: Keyword arguments to pass to `gen_using_rich_prompts`.
-
-        `include_normal`: Whether to include completions generated
-        without the rich prompts.
-
-        `include_modified`: Whether to include completions generated
-        using the rich prompts.
-
-    returns:
-        A `DataFrame` with the completions and losses. The `DataFrame`
-        will have the following columns:
-            - `prompts`: The prompts used to generate the completions.
-            - `completions`: The generated completions.
-            - `is_modified`: Whether the completion was generated using
-                the rich prompts.
-            - `loss`: The average loss per token of the completions.
-    """
-    if not include_normal and not include_modified:
-        raise ValueError(
-            "At least one of `include_normal` and `include_modified` "
-            "must be True."
-        )
-
-    data_frames: List[pd.DataFrame] = []
-    if include_modified:
-        if rich_prompts is None:
-            raise ValueError(
-                "rich_prompts must be specified if include_modified is True"
-            )
-
-        # Create the hook functions
-        hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
-            model=model, rich_prompts=rich_prompts
-        )
-        tmp_df: pd.DataFrame = gen_using_hooks(
-            model=model, hook_fns=hook_fns, **kwargs
-        )
-        data_frames.append(tmp_df)
-
-    if include_normal:
-        tmp_df: pd.DataFrame = gen_using_hooks(
-            model=model, hook_fns={}, **kwargs
-        )
-        data_frames.append(tmp_df)
-
-    # Combine the completions, ensuring that the indices are unique
-    return pd.concat(data_frames, ignore_index=True)
 
 
 # Display utils #
@@ -304,17 +241,17 @@ def print_n_comparisons(
     )
     data_frames: List[pd.DataFrame] = [normal_df]
 
-    # Iterate once if rich_prompts is empty
+    # Generate the completions from the modified model
     if rich_prompts != []:
-        hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
-            model=model, rich_prompts=rich_prompts
-        )
-        mod_df: pd.DataFrame = gen_using_hooks(
-            prompt_batch=prompt_batch, model=model, hook_fns=hook_fns, **kwargs
+        mod_df: pd.DataFrame = gen_using_rich_prompts(
+            prompt_batch=prompt_batch,
+            model=model,
+            rich_prompts=rich_prompts,
+            **kwargs,
         )
         data_frames.append(mod_df)
 
-    # Combine the completions, ensuring that the indices are unique
+    # Combine the completion results, ensuring that the indices are unique
     results: pd.DataFrame = pd.concat(data_frames, ignore_index=True)
 
     pretty_print_completions(results=results)

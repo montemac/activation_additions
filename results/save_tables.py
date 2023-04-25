@@ -96,10 +96,7 @@ with open(csv_file, "w") as f:
 #         " rp_tokens\n\n"
 #     )
 
-from algebraic_value_editing.completion_utils import (
-    gen_normal_and_modified,
-    pretty_print_completions,
-)
+from algebraic_value_editing.completion_utils import pretty_print_completions
 import pandas as pd
 import csv
 
