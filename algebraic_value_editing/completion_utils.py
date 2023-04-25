@@ -165,11 +165,27 @@ def _remove_eos(completion: str) -> str:
     return new_completion
 
 
-def pretty_print_completions(results: pd.DataFrame) -> None:
+def pretty_print_completions(
+    results: pd.DataFrame,
+    normal_title: str = "Normal completions",
+    mod_title: str = "Modified completions",
+    normal_prompt_override: Optional[str] = None,
+    mod_prompt_override: Optional[str] = None,
+) -> None:
     """Pretty-print the given completions.
 
     args:
         `results`: A `DataFrame` with the completions.
+
+        `normal_title`: The title to use for the normal completions.
+
+        `mod_title`: The title to use for the modified completions.
+
+        `normal_prompt_override`: If not `None`, use this prompt for the
+            normal completions.
+
+        `mod_prompt_override`: If not `None`, use this prompt for the
+            modified completions.
     """
     assert all(
         col in results.columns
@@ -190,11 +206,11 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
 
     # Figure out which columns to add
     completion_cols: List[str] = []
-    completion_cols += ["Normal completions"] if n_rows_unmod > 0 else []
-    completion_cols += ["Modified completions"] if n_rows_mod > 0 else []
+    completion_cols += [normal_title] if n_rows_unmod > 0 else []
+    completion_cols += [mod_title] if n_rows_mod > 0 else []
     completion_dict: dict = {}
     for col in completion_cols:
-        is_mod = col == "Modified completions"
+        is_mod = col == mod_title
         completion_dict[col] = results[results["is_modified"] == is_mod][
             "completions"
         ]
@@ -213,12 +229,20 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
 
     # Put into table
     for row in zip(*completion_dict.values()):
-        table.add_row(
-            [
-                f"{bold_text(prompt)}{_remove_eos(completion)}"
-                for completion in row
-            ]
+        # Bold the appropriate prompt
+        normal_str = bold_text(
+            prompt
+            if normal_prompt_override is None
+            else normal_prompt_override
         )
+        mod_str = bold_text(
+            prompt if mod_prompt_override is None else mod_prompt_override
+        )
+
+        normal_str += _remove_eos(row[0])
+        mod_str += _remove_eos(row[1])
+
+        table.add_row([normal_str, mod_str])
     print(table)
 
 
@@ -226,7 +250,7 @@ def print_n_comparisons(
     prompt: str,
     model: HookedTransformer,
     num_comparisons: int = 5,
-    rich_prompts: List[RichPrompt] = [],
+    rich_prompts: Optional[List[RichPrompt]] = None,
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
@@ -255,7 +279,7 @@ def print_n_comparisons(
     data_frames: List[pd.DataFrame] = [normal_df]
 
     # Generate the completions from the modified model
-    if rich_prompts != []:
+    if rich_prompts is not None:
         mod_df: pd.DataFrame = gen_using_rich_prompts(
             prompt_batch=prompt_batch,
             model=model,

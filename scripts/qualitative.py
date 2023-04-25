@@ -25,10 +25,12 @@ except ImportError:
 
 # %%
 import torch
+import pandas as pd 
 from typing import List, Dict, Callable
 from functools import partial
 from transformer_lens.HookedTransformer import HookedTransformer
 
+from algebraic_value_editing import completion_utils 
 from algebraic_value_editing.completion_utils import print_n_comparisons
 from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 
@@ -74,12 +76,14 @@ print(f"GPT2-XL has {num_layers} layers.")
 
 
 # %% [markdown]
-# # Noteworthy modifications
+# # Having fun with qualitative modifications
 #
 # **Warning: GPT-2 often outputs highly offensive completions, especially given an aggressive prompt.**
 
 # %% [markdown]
 # ## "Love" - "Hate"
+# The prompts are bolded. Note: There seems to be a bug with
+# `prettytable` which stops the second column's prompt from being fully bolded.
 
 # %%
 love_minus_hate_prompts: List[RichPrompt] = (
@@ -97,7 +101,7 @@ print_n_comparisons(model=model,
     rich_prompts=love_minus_hate_prompts,
     num_comparisons=num_comparisons,
     **default_kwargs,
-)  # TODO screen <|endoftext|> from happening more than once
+) 
 
 # %% [markdown]
 # Note that the third modified completion contains "Love ____ because I
@@ -109,25 +113,44 @@ print_n_comparisons(model=model,
 # However, even if similar completions are elicited by "replace
 # the first token with `Love`" and "inject the steering vector at layer
 # 6", these techniques would still _not_ be mathematically identical. If
-# these two were the same, that would be very surprising, as it would
+# these two were the same, that would be surprising to us, as it would
 # imply commutivity in the following diagram:
 #
 # **TODO diagram**
+# https://q.uiver.app/?q=WzAsNSxbMCwwLCJcXHRleHR7YGBJIGhhdGUgeW91IGJlY2F1c2VcIn0iXSxbNCwwLCJcXHRleHR7YGBMb3ZlIGhhdGUgeW91IGJlY2F1c2UnJ30iXSxbNCw0LCJcXHRleHR7RGlzdHJpYnV0aW9uIG92ZXIgY29tcGxldGlvbnN9Il0sWzQsNywiXFx0ZXh0e0p1ZGdtZW50fSJdLFswLDQsIlxcdGV4dHtBZGQgYExvdmUnLCBzdWJ0cmFjdCBgSGF0ZScgYWN0aXZhdGlvbnMgfVxcZnJhY3sxfXs4fSBcXFxcXFx0ZXh0eyBvZiB3YXkgdGhyb3VnaCBmb3J3YXJkIHBhc3N9Il0sWzAsNF0sWzQsMl0sWzEsMl0sWzAsMV0sWzIsMywiXFx0ZXh0e0RlY2lzaW9uOiBBcmUgdGhlc2UgY29tcGxldGlvbnMgYXJlIGFib3V0IHdlZGRpbmdzfSIsMl1d 
 
 # %% [markdown]
 # As a baseline, let's replace "I" with "Love":
 
 # %%
-print_n_comparisons(model=model,
-    prompt="Love hate you because",
-    tokens_to_generate=50,
-    num_comparisons=15,
-    **default_kwargs,
+# Generate the completions from the normal model
+num_compare_inject: int = 10
+inject_tokens_to_generate: int = 150
+
+normal_df: pd.DataFrame = completion_utils.gen_using_hooks(
+    prompt_batch=["Love hate you because"] * num_compare_inject, model=model, hook_fns={}, **default_kwargs, tokens_to_generate=inject_tokens_to_generate
 )
 
+# Generate the completions from the modified model on the normal prompt
+mod_df: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+    prompt_batch=["I hate you because"] * num_compare_inject,
+    model=model,
+    rich_prompts=love_minus_hate_prompts,
+    tokens_to_generate=inject_tokens_to_generate,
+    **default_kwargs
+)
+
+# %%
+for df in [normal_df, mod_df]:
+    completion_utils.pretty_print_completions(df, normal_title="Replacing the first token", mod_title="Adding activations for the original prompt", mod_prompt_override="I hate you because")
+
+# %% [markdown] 
+# Add analysis TODO
 
 # %% [markdown]
-# This also works to some extent. However, in
+# This also works to some extent. Consider the mechanistic
+# differences
+# between these techniques, however.# TODO add analysis
 
 # %% [markdown]
 # ## Intent to praise
