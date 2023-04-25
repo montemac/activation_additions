@@ -14,9 +14,10 @@ from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 
 # %%
 model: HookedTransformer = HookedTransformer.from_pretrained(
-    model_name="attn-only-2l",
+    model_name="gpt2-xl",
     device="cpu",
 )
+_ = model.to("cuda")
 
 # %%
 rich_prompts: List[RichPrompt] = [
@@ -24,7 +25,7 @@ rich_prompts: List[RichPrompt] = [
         prompt1="Happy",
         prompt2=" ",
         coeff=2000,
-        act_name=1,
+        act_name=20,
         model=model,
         pad_method="tokens_right",
     ),
