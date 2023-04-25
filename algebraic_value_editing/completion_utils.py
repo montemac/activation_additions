@@ -274,31 +274,47 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
 
 def print_n_comparisons(
     prompt: str,
+    model: HookedTransformer,
     num_comparisons: int = 5,
+    rich_prompts: List[RichPrompt] = [],
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
     functions.
 
-    Takes keyword arguments for `gen_using_rich_prompts`.
-
     args:
         `prompt`: The prompt to use for completion.
 
+        `model`: The model to use for completion.
+
         `num_comparisons`: The number of comparisons to make.
 
+        `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
+
         `kwargs`: Keyword arguments to pass to
-        `gen_using_rich_prompts`.
+        `gen_using_hooks`.
     """
     assert num_comparisons > 0, "num_comparisons must be positive"
 
     prompt_batch: List[str] = [prompt] * num_comparisons
 
-    # Make a dataframe, and run the modified and unmodified models
-    # according to whether we want to include them
-    results: pd.DataFrame = gen_normal_and_modified(
-        prompt_batch=prompt_batch,
-        **kwargs,
+    # Generate the completions from the normal model
+    normal_df: pd.DataFrame = gen_using_hooks(
+        prompt_batch=prompt_batch, model=model, hook_fns={}, **kwargs
     )
+    data_frames: List[pd.DataFrame] = [normal_df]
+
+    # Iterate once if rich_prompts is empty
+    if rich_prompts != []:
+        hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
+            model=model, rich_prompts=rich_prompts
+        )
+        mod_df: pd.DataFrame = gen_using_hooks(
+            prompt_batch=prompt_batch, model=model, hook_fns=hook_fns, **kwargs
+        )
+        data_frames.append(mod_df)
+
+    # Combine the completions, ensuring that the indices are unique
+    results: pd.DataFrame = pd.concat(data_frames, ignore_index=True)
 
     pretty_print_completions(results=results)

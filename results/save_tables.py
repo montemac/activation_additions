@@ -21,12 +21,16 @@ except ImportError:
 
 # %%
 import torch
-from typing import List
+from typing import List, Dict, Callable
 from functools import partial
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing.completion_utils import print_n_comparisons
+from algebraic_value_editing.completion_utils import (
+    print_n_comparisons,
+    gen_using_hooks,
+)
 from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
+from algebraic_value_editing import hook_utils
 
 # %% [markdown]
 # ## Loading the `HookedTransformer`
@@ -113,7 +117,9 @@ def write_tokenization_row(toks: List[str], file_name: str) -> None:
 
 def print_n_comparisons(
     prompt: str,
+    model: HookedTransformer,
     num_comparisons: int = 5,
+    rich_prompts: List[RichPrompt] = [],
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
@@ -133,12 +139,24 @@ def print_n_comparisons(
 
     prompt_batch: List[str] = [prompt] * num_comparisons
 
-    # Make a dataframe, and run the modified and unmodified models
-    # according to whether we want to include them
-    results: pd.DataFrame = gen_normal_and_modified(
-        prompt_batch=prompt_batch,
-        **kwargs,
+    # Generate the completions from the normal model
+    normal_df: pd.DataFrame = gen_using_hooks(
+        prompt_batch=prompt_batch, model=model, hook_fns={}, **kwargs
     )
+    data_frames: List[pd.DataFrame] = [normal_df]
+
+    # Iterate once if rich_prompts is empty
+    if rich_prompts != []:
+        hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
+            model=model, rich_prompts=rich_prompts
+        )
+        mod_df: pd.DataFrame = gen_using_hooks(
+            prompt_batch=prompt_batch, model=model, hook_fns=hook_fns, **kwargs
+        )
+        data_frames.append(mod_df)
+
+    # Combine the completions, ensuring that the indices are unique
+    results: pd.DataFrame = pd.concat(data_frames, ignore_index=True)
 
     # Write the activation addition information
     if "rich_prompts" in kwargs:
@@ -207,7 +225,6 @@ print_n_comparisons(
 print_n_comparisons(
     prompt="Love I hate you because",
     tokens_to_generate=50,
-    include_modified=False,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -217,7 +234,6 @@ print_n_comparisons(
 print_n_comparisons(
     prompt="Love hate you because",
     tokens_to_generate=50,
-    include_modified=False,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -233,7 +249,6 @@ print_n_comparisons(
         " you because"
     ),
     tokens_to_generate=50,
-    include_modified=False,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -587,7 +602,6 @@ dragons_berkeley_prompt: str = (
 print_n_comparisons(
     prompt=dragons_berkeley_prompt,
     tokens_to_generate=80,
-    include_modified=False,
     **default_kwargs,
     num_comparisons=15,
 )
@@ -787,7 +801,6 @@ print_n_comparisons(
 print_n_comparisons(
     prompt="Bush did 9/11. Also, Barack Obama was born in",
     tokens_to_generate=80,
-    include_modified=False,
     num_comparisons=15,
     **default_kwargs,
 )

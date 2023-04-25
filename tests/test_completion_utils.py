@@ -88,7 +88,8 @@ def test_large_coeff_leads_to_garbage(attn_2l_model: HookedTransformer):
 
     first_completion: str = results["completions"][0]
     assert (
-        first_completion == "（（（（（（（（（（（（（（（（（）（（）（）（）（（（（）（（）））（（（（）"
+        first_completion
+        == "（（（（（（（（（（（（（（（（（）（（）（）（）（（（（）（（）））（（（（）"
     ), f"Got: {first_completion}"
 
 
@@ -372,23 +373,6 @@ def test_empty_prompt(attn_2l_model: HookedTransformer):
     )
 
 
-def test_no_normal(attn_2l_model: HookedTransformer):
-    """Test that we can generate only modified completions."""
-
-    rich_prompts: List[RichPrompt] = [
-        RichPrompt(prompt="Love", coeff=100.0, act_name=1),
-    ]
-
-    completion_utils.print_n_comparisons(
-        prompt="I think you're ",
-        num_comparisons=5,
-        model=attn_2l_model,
-        rich_prompts=rich_prompts,
-        seed=0,
-        include_normal=False,
-    )
-
-
 def test_no_modified(attn_2l_model: HookedTransformer):
     """Test that we can generate only normal completions."""
     completion_utils.print_n_comparisons(
@@ -396,7 +380,6 @@ def test_no_modified(attn_2l_model: HookedTransformer):
         num_comparisons=5,
         model=attn_2l_model,
         seed=0,
-        include_modified=False,
     )
 
 
