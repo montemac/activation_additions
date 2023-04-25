@@ -155,6 +155,16 @@ def bold_text(text: str) -> str:
     return f"\033[1m{text}\033[0m"
 
 
+def _remove_eos(completion: str) -> str:
+    """If completion ends with multiple <|endoftext|> strings, return a
+    new string in which all but one are removed."""
+    has_eos: bool = completion.endswith("<|endoftext|>")
+    new_completion: str = completion.rstrip("<|endoftext|>")
+    if has_eos:
+        new_completion += "<|endoftext|>"
+    return new_completion
+
+
 def pretty_print_completions(results: pd.DataFrame) -> None:
     """Pretty-print the given completions.
 
@@ -204,7 +214,10 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
     # Put into table
     for row in zip(*completion_dict.values()):
         table.add_row(
-            [f"{bold_text(prompt)}{completion}" for completion in row]
+            [
+                f"{bold_text(prompt)}{_remove_eos(completion)}"
+                for completion in row
+            ]
         )
     print(table)
 
