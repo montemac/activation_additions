@@ -63,7 +63,7 @@ def get_activation_dict(
 
 
 # Get magnitudes
-def magnitudes_of_addition(
+def steering_vec_magnitudes(
     act_adds: List[RichPrompt], model: HookedTransformer
 ) -> Dict[str, Float[torch.Tensor, "pos"]]:
     """Compute the magnitude of the net steering vector at each sequence
@@ -83,10 +83,25 @@ def magnitudes_of_addition(
     assert all(
         act.shape[0] == 1 for act in activations_lst
     ), "All activations should have batch dim of 1."
+    activations_lst = [act.squeeze(0) for act in activations_lst]
 
-    # Pad the activations and get rid of batch dim
-    padded_activations: Float[torch.Tensor, "list batch pos d_model"] = (
-        pad_sequence(activations_lst, batch_first=True).squeeze()
+    # Find the maximum sequence length (pos dimension) and pad the activations
+    max_seq_len: int = max([a.shape[0] for a in activations_lst])
+
+    # Pad each activation tensor along its seq dimension
+    padded_act_lst: List[Float[torch.Tensor, "pos d_model"]] = [
+        torch.nn.functional.pad(
+            act,
+            pad=(0, 0, 0, max_seq_len - act.shape[0]),
+            mode="constant",
+            value=0,
+        )
+        for act in activations_lst
+    ]
+
+    # Stack them into a single tensor
+    padded_activations: Float[torch.Tensor, "lst pos d_model"] = torch.stack(
+        padded_act_lst, dim=0
     )
 
     summed_activations: Float[torch.Tensor, "batch pos d_model"] = reduce(
@@ -94,29 +109,25 @@ def magnitudes_of_addition(
     )
 
     # Compute the norm of the summed activations
-    return torch.norm(summed_activations, dim=-1)
+    return torch.linalg.norm(summed_activations, dim=-1)
 
 
-def magnitudes_relative_to_prompt(
-    act_adds: List[RichPrompt], model: HookedTransformer, prompt: str
-) -> Dict[str, Float[torch.Tensor, "batch pos"]]:
-    """Compute the magnitude of the steering vector at each sequence position, relative to the magnitude of the steering vector at the prompt position."""
-    magnitude_dict: Dict[str, Float[torch.Tensor, "batch pos"]] = (
-        magnitudes_of_addition(act_adds=act_adds, model=model)
-    )
-
-    # Get the magnitudes of the residual streams for the prompt
+def prompt_magnitudes(
+    prompt: str, model: HookedTransformer, act_name: str
+) -> Float[torch.Tensor, "pos"]:
     cache: ActivationCache = model.run_with_cache(
         model.to_tokens(prompt),
-        names_filter=lambda act_name: act_name in magnitude_dict.keys(),
+        names_filter=lambda act_name: act_name == act_name,
     )[1]
+    prompt_acts: Float[torch.Tensor, "batch pos d_model"] = cache[act_name]
+    assert (
+        prompt_acts.shape[0] == 1
+    ), "Prompt activations should have batch dim of 1."
+    assert (
+        len(prompt_acts.shape) == 3
+    ), "Prompt activations should have shape (1, seq_len, d_model)."
 
-    return {
-        act_name: magnitude_dict[act_name] / torch.norm(
-            cache[act_name][:, 0], dim=-1, keepdim=True
-        )
-        for act_name in magnitude_dict.keys()
-    }
+    return torch.linalg.norm(prompt_acts, dim=-1)
 
 
 # Hook function helpers

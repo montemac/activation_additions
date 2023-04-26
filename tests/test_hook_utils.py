@@ -1,14 +1,24 @@
 """ Tests for the `hook_utils` module"""
 
-from typing import Callable
+from typing import Callable, List
 import torch
+import pytest
 
 from algebraic_value_editing import hook_utils
+from algebraic_value_editing.prompt_utils import RichPrompt
+from transformer_lens.HookedTransformer import HookedTransformer
+
+
+# Fixtures
+@pytest.fixture(name="attn_2l_model", scope="module")
+def fixture_model() -> HookedTransformer:
+    """Test fixture that returns a small pre-trained transformer."""
+    return HookedTransformer.from_pretrained(
+        model_name="attn-only-2l", device="cpu"
+    )
 
 
 # Test for front and back modifiers in hook_fn_from_activations()
-
-
 def test_hook_fn_from_slice():
     """Test that we can selectively modify a portion of the residual stream."""
     input_tensor: torch.Tensor = torch.zeros((1, 2, 4))
@@ -53,3 +63,66 @@ def test_hook_fn_from_activations():
     # result: torch.Tensor = hook_fxn(input_tensor)
 
     # assert torch.eq(result, front_target).all(), "xvec = front test failed"
+
+
+def test_magnitudes_zeros(attn_2l_model):
+    """Test that the magnitudes of a coeff-zero RichPrompt are zero."""
+    # Create a RichPrompt with all zeros
+    act_add = RichPrompt(prompt="Test", coeff=0, act_name=0)
+
+    # Get the magnitudes
+    magnitudes = hook_utils.steering_vec_magnitudes(
+        act_adds=[act_add], model=attn_2l_model
+    )
+
+    # Check that they're all zero
+    assert torch.all(magnitudes == 0), "Magnitudes are not all zero"
+    assert len(magnitudes.shape) == 1, "Magnitudes are not the right shape"
+
+
+def test_magnitudes_cancels(attn_2l_model):
+    """Test that the magnitudes are zero when the RichPrompts are exact opposites."""
+    # Create a RichPrompt with all zeros
+    additions = [
+        RichPrompt(prompt="Test", coeff=1, act_name=0),
+        RichPrompt(prompt="Test", coeff=-1, act_name=0),
+    ]
+
+    # Get the magnitudes
+    magnitudes = hook_utils.steering_vec_magnitudes(
+        act_adds=additions, model=attn_2l_model
+    )
+
+    # Check that they're all zero
+    assert torch.all(magnitudes == 0), "Magnitudes are not all zero"
+
+
+def test_multi_layers_not_allowed(attn_2l_model):
+    """Try injecting a RichPrompt with multiple layers, which should
+    fail."""
+    additions: List[RichPrompt] = [
+        RichPrompt(prompt="Test", coeff=1, act_name=0),
+        RichPrompt(prompt="Test", coeff=1, act_name=1),
+    ]
+
+    with pytest.raises(NotImplementedError):
+        hook_utils.steering_vec_magnitudes(
+            act_adds=additions, model=attn_2l_model
+        )
+
+
+def test_multi_same_layer(attn_2l_model):
+    """Try injecting a RichPrompt with multiple additions to the same
+    layer, which should succeed, even if the injections have different
+    tokenization lengths."""
+    additions_same: List[RichPrompt] = [
+        RichPrompt(prompt="Test", coeff=1, act_name=0),
+        RichPrompt(prompt="Test2521", coeff=1, act_name=0),
+    ]
+
+    magnitudes: torch.Tensor = hook_utils.steering_vec_magnitudes(
+        act_adds=additions_same, model=attn_2l_model
+    )
+    assert len(magnitudes.shape) == 1, "Magnitudes are not the right shape"
+    # Assert not all zeros
+    assert torch.any(magnitudes != 0), "Magnitudes are all zero?"
