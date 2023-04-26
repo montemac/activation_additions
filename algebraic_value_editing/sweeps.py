@@ -1,10 +1,20 @@
 """ Functions for performing automated sweeps of algebraic value editing
 over layers, coeffs, etc. """
 
-from typing import Iterable, Optional, List, Tuple, Union, Dict, Callable
+from typing import (
+    Iterable,
+    Optional,
+    List,
+    Tuple,
+    Union,
+    Dict,
+    Callable,
+)
 
 import numpy as np
 import pandas as pd
+import torch
+import torch.nn.functional
 import plotly.express as px
 import plotly.graph_objects as go
 from tqdm.auto import tqdm
@@ -23,6 +33,8 @@ def make_rich_prompts(
     phrases: List[List[Tuple[str, float]]],
     act_names: Union[List[str], np.ndarray],
     coeffs: Union[List[float], np.ndarray],
+    pad: bool = False,
+    model: Optional[HookedTransformer] = None,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
 ) -> pd.DataFrame:
     """Make a single series of RichPrompt lists by combining all permutations
@@ -30,23 +42,62 @@ def make_rich_prompts(
     additional coeffs that are applied to lists of phrases as an
     additional scale factor. For example, a 'phrase diff' at various coeffs can
     be created by passing `phrases=[[(phrase1, 1.0), (phrase2, -1.0)]]`
-    and `coeffs=[-10, -1, 1, 10]`.
+    and `coeffs=[-10, -1, 1, 10]`.  Phrases can optionally be padded so
+    that each RichPrompt that will be injected simultaneously has the
+    same token length.  Padding uses spaces and is done at right (this
+    might be changed in future to allow the same args as the x_vector
+    function). If pad==True, model must be provided also.
 
     The returned DataFrame has columns for the RichPrompt lists, and the
     inputs that generated each one (i.e. phrases, act_name, coeff)."""
+    assert (
+        pad is False or model is not None
+    ), "model must be provided if pad==True"
     rows = []
     for phrases_this in phrases:
         for act_name in act_names:
             for coeff in coeffs:
                 rich_prompts_this = []
-                for phrase, init_coeff in phrases_this:
-                    rich_prompts_this.append(
-                        RichPrompt(
-                            coeff=init_coeff * coeff,
-                            act_name=act_name,
-                            prompt=phrase,
+                if pad:
+                    pad_token: int = model.to_single_token(" ")
+                    # Convert all phrases into tokens
+                    tokens_list = [
+                        model.to_tokens(phrase)[0]
+                        for phrase, init_coeff in phrases_this
+                    ]
+                    # Get max length of tokens
+                    max_len = max([tokens.shape[-1] for tokens in tokens_list])
+                    # Pad each phrase's tokens
+                    tokens_list = [
+                        torch.nn.functional.pad(
+                            tokens,
+                            (0, max_len - tokens.shape[-1]),
+                            mode="constant",
+                            value=pad_token,
                         )
-                    )
+                        for tokens in tokens_list
+                    ]
+                    # Create the RichPrompts using the padded tokens
+                    for (phrase, init_coeff), tokens in zip(
+                        phrases_this, tokens_list
+                    ):
+                        rich_prompts_this.append(
+                            RichPrompt(
+                                coeff=init_coeff * coeff,
+                                act_name=act_name,
+                                tokens=tokens.squeeze(),
+                            )
+                        )
+                else:
+                    # Create the RichPrompts using the phrase strings
+                    for phrase, init_coeff in phrases_this:
+                        rich_prompts_this.append(
+                            RichPrompt(
+                                coeff=init_coeff * coeff,
+                                act_name=act_name,
+                                prompt=phrase,
+                            )
+                        )
                 rows.append(
                     {
                         "rich_prompts": rich_prompts_this,
