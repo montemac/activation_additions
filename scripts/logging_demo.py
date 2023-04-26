@@ -25,7 +25,9 @@ _ = torch.set_grad_enabled(False)
 # Load a model
 MODEL = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
-).to("cuda:0")
+)
+
+_ = MODEL.to("cuda:0")
 
 
 # %%
@@ -38,7 +40,7 @@ rich_prompts: List[prompt_utils.RichPrompt] = [
         act_name=6,
         model=MODEL,
         pad_method="tokens_right",
-        custom_pad_id=MODEL.to_single_token(" "),
+        custom_pad_id=int(MODEL.to_single_token(" ")),
     ),
 ]
 completion_utils.print_n_comparisons(

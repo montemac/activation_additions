@@ -134,6 +134,7 @@ dmypy.json
 # Misc
 *.pkl
 .vscode
+results*
 *~
 *prof
 *old_ave*
