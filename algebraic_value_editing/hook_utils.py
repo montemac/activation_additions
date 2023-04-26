@@ -5,7 +5,10 @@ from typing import List, Callable, Optional, Dict, Tuple
 from collections import defaultdict
 from jaxtyping import Float, Int
 import funcy as fn
+
 import torch
+from torch.nn.utils.rnn import pad_sequence
+from einops import reduce
 
 from transformer_lens import ActivationCache
 from transformer_lens.HookedTransformer import HookedTransformer
@@ -59,6 +62,64 @@ def get_activation_dict(
     return activation_dict
 
 
+# Get magnitudes
+def magnitudes_of_addition(
+    act_adds: List[RichPrompt], model: HookedTransformer
+) -> Dict[str, Float[torch.Tensor, "pos"]]:
+    """Compute the magnitude of the net steering vector at each sequence
+    position."""
+    act_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]] = (
+        get_activation_dict(model=model, rich_prompts=act_adds)
+    )
+    if len(act_dict) > 1:
+        raise NotImplementedError(
+            "Only one activation name is supported for now."
+        )
+
+    # Get the RichPrompt activations from the dict
+    activations_lst: List[Float[torch.Tensor, "batch pos d_model"]] = list(
+        act_dict.values()
+    )[0]
+    assert all(
+        act.shape[0] == 1 for act in activations_lst
+    ), "All activations should have batch dim of 1."
+
+    # Pad the activations and get rid of batch dim
+    padded_activations: Float[torch.Tensor, "list batch pos d_model"] = (
+        pad_sequence(activations_lst, batch_first=True).squeeze()
+    )
+
+    summed_activations: Float[torch.Tensor, "batch pos d_model"] = reduce(
+        padded_activations, "lst pos d_model -> pos d_model", "sum"
+    )
+
+    # Compute the norm of the summed activations
+    return torch.norm(summed_activations, dim=-1)
+
+
+def magnitudes_relative_to_prompt(
+    act_adds: List[RichPrompt], model: HookedTransformer, prompt: str
+) -> Dict[str, Float[torch.Tensor, "batch pos"]]:
+    """Compute the magnitude of the steering vector at each sequence position, relative to the magnitude of the steering vector at the prompt position."""
+    magnitude_dict: Dict[str, Float[torch.Tensor, "batch pos"]] = (
+        magnitudes_of_addition(act_adds=act_adds, model=model)
+    )
+
+    # Get the magnitudes of the residual streams for the prompt
+    cache: ActivationCache = model.run_with_cache(
+        model.to_tokens(prompt),
+        names_filter=lambda act_name: act_name in magnitude_dict.keys(),
+    )[1]
+
+    return {
+        act_name: magnitude_dict[act_name] / torch.norm(
+            cache[act_name][:, 0], dim=-1, keepdim=True
+        )
+        for act_name in magnitude_dict.keys()
+    }
+
+
+# Hook function helpers
 def hook_fn_from_activations(
     activations: Float[torch.Tensor, "batch pos d_model"],
     res_stream_slice: slice = slice(None),

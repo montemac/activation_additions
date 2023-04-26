@@ -238,11 +238,11 @@ def pretty_print_completions(
         mod_str = bold_text(
             prompt if mod_prompt_override is None else mod_prompt_override
         )
-        if all_modified: 
+        if all_modified:
             new_row = [mod_str + _remove_eos(row[0])]
-        else if all_normal:
+        elif all_normal:
             new_row = [normal_str + _remove_eos(row[0])]
-        else: 
+        else:
             normal_str += _remove_eos(row[0])
             mod_str += _remove_eos(row[1])
             new_row = [normal_str, mod_str]
