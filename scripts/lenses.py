@@ -23,8 +23,10 @@ import pandas as pd
 # %%
 
 model_name = 'gpt2-xl'
-# device = torch.device('cuda', 1)
-device = torch.device('mps')
+
+if torch.has_cuda:  device = torch.device('cuda', 1)
+elif torch.has_mps: device = torch.device('mps')
+else: device = torch.device('cpu')
 
 torch.set_grad_enabled(False)
 
