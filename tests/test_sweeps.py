@@ -1,6 +1,5 @@
 """ Test suite for sweeps.py """
 
-# %%
 import pickle
 from typing import Tuple
 import os
@@ -12,17 +11,10 @@ import plotly.graph_objects as go
 
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import sweeps
-from algebraic_value_editing import prompt_utils
+from algebraic_value_editing import sweeps, prompt_utils, utils
 from algebraic_value_editing.prompt_utils import RichPrompt
 
-try:
-    from IPython.core.getipython import get_ipython
-
-    get_ipython().run_line_magic("reload_ext", "autoreload")  # type: ignore
-    get_ipython().run_line_magic("autoreload", "2")  # type: ignore
-except AttributeError:
-    pass
+utils.enable_ipython_reload()
 
 # Filename for pre-pickled assets
 SWEEP_OVER_PROMPTS_CACHE_FN: str = "tests/sweep_over_prompts_cache.pkl"
@@ -40,6 +32,12 @@ def fixture_model() -> HookedTransformer:
     )
 
 
+def load_cached_sweep_over_prompts():
+    """Load pre-saved sweep results."""
+    with open(SWEEP_OVER_PROMPTS_CACHE_FN, "rb") as file:
+        return pickle.load(file)
+
+
 def test_make_rich_prompts():
     """Test for make_rich_prompts() function.  Provides a simple set of
     phrases+coeffs, activation names and additional coeffs that the
@@ -48,24 +46,26 @@ def test_make_rich_prompts():
     reference output."""
     # Call the function under test
     rich_prompts_df: pd.DataFrame = sweeps.make_rich_prompts(
-        [[("Good", 1.0), ("Bad", -1.0)], [("Amazing", 2.0)]],
-        [prompt_utils.get_block_name(block_num=num) for num in [6, 7, 8]],
-        np.array([1.0, 5, 10.0, 20.0]),
+        phrases=[[("Good", 1.0), ("Bad", -1.0)], [("Amazing", 2.0)]],
+        act_names=[
+            prompt_utils.get_block_name(block_num=num) for num in [6, 7, 8]
+        ],
+        coeffs=np.array([1.0, 5, 10.0, 20.0]),
     )
     # Compre to pre-defined target
     pd.testing.assert_frame_equal(rich_prompts_df, MAKE_RICH_PROMPTS_TARGET)
 
 
 def do_sweep(
-    model: HookedTransformer,
+    model: HookedTransformer, **sweep_kwargs
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Convenience function to perform a small example sweep and return
     the resulting DataFrames"""
     act_name: str = prompt_utils.get_block_name(block_num=0)
     rich_prompts_df = sweeps.make_rich_prompts(
-        [[("Love", 1.0), ("Fear", -1.0)]],
-        [act_name],
-        np.array([1.0, 10.0]),
+        phrases=[[("Love", 1.0), ("Fear", -1.0)]],
+        act_names=[act_name],
+        coeffs=np.array([1.0, 10.0]),
     )
     normal_df, patched_df = sweeps.sweep_over_prompts(
         model=model,
@@ -78,6 +78,7 @@ def do_sweep(
         num_normal_completions=4,
         num_patched_completions=4,
         seed=42,
+        **sweep_kwargs
     )
     return normal_df, patched_df, rich_prompts_df
 
@@ -110,8 +111,7 @@ def test_sweep_over_prompts(model):
     a handful of RichPrompts and prompts, and compares results to a
     pre-cached reference output."""
     normal_df, patched_df, _ = do_sweep(model)
-    with open(SWEEP_OVER_PROMPTS_CACHE_FN, "rb") as file:
-        normal_target, patched_target, _, _, _ = pickle.load(file)
+    normal_target, patched_target, _, _, _ = load_cached_sweep_over_prompts()
     pd.testing.assert_frame_equal(normal_df, normal_target)
     pd.testing.assert_frame_equal(patched_df, patched_target)
 
@@ -121,14 +121,14 @@ def test_reduce_sweep_results():
     sweep results as input, and pre-calculated reduction results as test
     target."""
     # Load sweep results and target reduction results
-    with open(SWEEP_OVER_PROMPTS_CACHE_FN, "rb") as file:
-        (
-            normal_df,
-            patched_df,
-            rich_prompts_df,
-            reduced_normal_target,
-            reduced_patched_target,
-        ) = pickle.load(file)
+    (
+        normal_df,
+        patched_df,
+        rich_prompts_df,
+        reduced_normal_target,
+        reduced_patched_target,
+    ) = load_cached_sweep_over_prompts()
+
     # Reduce DataFrames and compare reductions to target
     reduced_normal_df, reduced_patched_df = sweeps.reduce_sweep_results(
         normal_df, patched_df, rich_prompts_df
@@ -142,8 +142,14 @@ def test_plot_sweep_results():
     of plot, just verifies that the function funs without exceptions
     with various calling signatures and returns the correct object
     type."""
-    with open(SWEEP_OVER_PROMPTS_CACHE_FN, "rb") as file:
-        _, _, _, reduced_normal_df, reduced_patched_df = pickle.load(file)
+    (
+        _,
+        _,
+        _,
+        reduced_normal_df,
+        reduced_patched_df,
+    ) = load_cached_sweep_over_prompts()
+    
     fig = sweeps.plot_sweep_results(
         data=reduced_patched_df,
         col_to_plot="loss",
