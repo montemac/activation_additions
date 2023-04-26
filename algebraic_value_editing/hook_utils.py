@@ -127,7 +127,7 @@ def prompt_magnitudes(
         len(prompt_acts.shape) == 3
     ), "Prompt activations should have shape (1, seq_len, d_model)."
 
-    return torch.linalg.norm(prompt_acts, dim=-1)
+    return torch.linalg.norm(prompt_acts[0], dim=-1)
 
 
 # Hook function helpers

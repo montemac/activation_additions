@@ -4,7 +4,7 @@ from typing import Callable, List
 import torch
 import pytest
 
-from algebraic_value_editing import hook_utils
+from algebraic_value_editing import hook_utils, prompt_utils
 from algebraic_value_editing.prompt_utils import RichPrompt
 from transformer_lens.HookedTransformer import HookedTransformer
 
@@ -126,3 +126,27 @@ def test_multi_same_layer(attn_2l_model):
     assert len(magnitudes.shape) == 1, "Magnitudes are not the right shape"
     # Assert not all zeros
     assert torch.any(magnitudes != 0), "Magnitudes are all zero?"
+
+
+def test_prompt_magnitudes(attn_2l_model):
+    """Test that the magnitudes of a prompt are not zero."""
+    # Create a RichPrompt with all zeros
+    act_add = RichPrompt(prompt="Test", coeff=1, act_name=0)
+
+    # Get the steering vector magnitudes
+    steering_magnitudes: torch.Tensor = hook_utils.steering_vec_magnitudes(
+        act_adds=[act_add], model=attn_2l_model
+    )
+    prompt_magnitudes: torch.Tensor = hook_utils.prompt_magnitudes(
+        prompt="Test",
+        model=attn_2l_model,
+        act_name=prompt_utils.get_block_name(block_num=0),
+    )
+
+    # Check that these magnitudes are equal
+    assert torch.allclose(
+        steering_magnitudes, prompt_magnitudes
+    ), "Magnitudes are not equal"
+    assert (
+        len(prompt_magnitudes.shape) == 1
+    ), "Prompt magnitudes are not the right shape"
