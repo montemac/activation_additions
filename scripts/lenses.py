@@ -14,6 +14,7 @@ from algebraic_value_editing import completion_utils
 from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 import algebraic_value_editing.hook_utils as hook_utils
 from plotly.subplots import make_subplots
+from transformers import AutoModelForCausalLM
 
 import torch
 import pandas as pd
@@ -22,17 +23,28 @@ import pandas as pd
 # %%
 
 model_name = 'gpt2-xl'
-device = torch.device('cuda', 1)
+# device = torch.device('cuda', 1)
+device = torch.device('mps')
 
 torch.set_grad_enabled(False)
+
+# Load model from huggingface
+hf_model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    # revision=f"checkpoint-{cfg.checkpoint_value}"
+)
+
 model: HookedTransformer = HookedTransformer.from_pretrained(
     model_name=model_name,
+    hf_model=hf_model,
     device="cpu",
 ).to(device)
 model.cfg.device = device
 model.eval()
 
-tuned_lens = TunedLens.load(model_name, map_location=device).to(device)
+# %%
+
+tuned_lens = TunedLens.from_model_and_pretrained(hf_model, lens_resource_id=model_name).to(device)
 
 # %%
 # Library helpers
@@ -209,3 +221,5 @@ completion_utils.print_n_comparisons(
     top_p=0.8,
     tokens_to_generate=8,
 )
+
+# %%
