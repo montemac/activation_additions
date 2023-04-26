@@ -76,8 +76,16 @@ class RichPrompt:
         return f"RichPrompt({self.tokens}, {self.coeff}, {self.act_name})"
 
     def __eq__(self, other) -> bool:
-        return (
+        # If they don't both have prompt or tokens attribute
+        if hasattr(self, "prompt") ^ hasattr(other, "prompt"):
+            return False
+        prompt_eq: bool = (
             self.prompt == other.prompt
+            if hasattr(self, "prompt")
+            else torch.equal(self.tokens, other.tokens)
+        )
+        return (
+            prompt_eq
             and self.coeff == other.coeff
             and self.act_name == other.act_name
         )
