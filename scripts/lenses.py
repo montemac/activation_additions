@@ -3,7 +3,7 @@
 %autoreload 2
 
 # %%
-from typing import List, Dict, Callable
+from typing import List, Dict, Callable, Literal
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from tuned_lens import TunedLens
@@ -13,6 +13,7 @@ import numpy as np
 from algebraic_value_editing import completion_utils
 from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 import algebraic_value_editing.hook_utils as hook_utils
+from plotly.subplots import make_subplots
 
 import torch
 import pandas as pd
@@ -46,7 +47,6 @@ def prediction_traj_from_outputs(logits, cache, prompt):
     model_log_probs = logits.log_softmax(dim=-1).squeeze().detach().cpu().numpy()
     traj_log_probs.append(model_log_probs)
 
-
     input_ids = model.tokenizer.encode(prompt) + [model.tokenizer.eos_token_id]
 
 
@@ -58,6 +58,19 @@ def prediction_traj_from_outputs(logits, cache, prompt):
     )
     return prediction_traj
 
+
+def get_prediction_trajectories(caches, dataframes):
+    # FIXME: Not real logits. Last layer of resid_pre. Getting real were annoying so I'm postponing (required for shapes to match)
+    fake_logits_list = [
+        tuned_lens(list(cache.values())[-1], get_layer_num(list(cache.keys())[-1]))
+        for cache in caches
+    ]
+
+    full_prompts = [df['prompts'][0] + df['completions'][0] for df in dataframes]
+    return [
+        prediction_traj_from_outputs(logits, cache, full_prompt)
+        for full_prompt, logits, cache in zip(full_prompts, fake_logits_list, caches)
+    ]
 
 
 def get_layer_num(name):
@@ -77,18 +90,21 @@ def fwd_hooks_from_activ_hooks(activ_hooks):
     return [(name, hook_fn) for name, hook_fns in activ_hooks.items() for hook_fn in hook_fns]
 
 
-def run_hooked_and_normal_with_cache(model, **kwargs):
+def run_hooked_and_normal_with_cache(model, rich_prompts, kw):
     """
     Run hooked and normal with cache.
     
     Args:
-        kwargs: Keyword arguments to pass to `completion_utils.gen_using_model`.
+        model: The model to run.
+        rich_prompts: A list of RichPrompts.
+        kw: Keyword arguments to pass to `completion_utils.gen_using_model`.
             Must include `prompt_batch` and `tokens_to_generate`.
     
     Returns:
         normal_and_modified_df: A list of two dataframes, one for normal and one for modified.
         normal_and_modified_cache: A list of two caches, one for normal and one for modified.
     """
+    assert len(kw.get('prompt_batch', [])) == 1, f'Only one prompt is supported. Got {len(kw.get("prompt_batch", []))}'
 
     # ======== Get modified and normal completions ======== 
 
@@ -102,7 +118,7 @@ def run_hooked_and_normal_with_cache(model, **kwargs):
 
         # IMPORTANT: We call caching hooks *after* the value editing hooks.
         with model.hooks(fwd_hooks=fwd_hooks + caching_hooks):
-            results_df = completion_utils.gen_using_model(model, **kwargs)
+            results_df = completion_utils.gen_using_model(model, **kw)
             results_df['is_modified'] = is_modified
         normal_and_modified_df.append(results_df)
         normal_and_modified_cache.append(cache)
@@ -110,20 +126,76 @@ def run_hooked_and_normal_with_cache(model, **kwargs):
     return normal_and_modified_df, normal_and_modified_cache
 
 
+
+Metric = Literal['entropy', 'forward_kl', 'max_probability']
+
+
+def apply_metric(metric: Metric, pt: PredictionTrajectory):
+    return getattr(pt, metric)()
+
+
+def plot_lens_diff(
+    caches: List[Dict[str, torch.Tensor]],
+    dataframes: List[pd.DataFrame],
+    metric: Metric,
+    layer_stride: int = 4,
+):
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        shared_xaxes=False,
+        vertical_spacing=0.03,
+        # subplot_titles=("Entropy", "Forward KL", "Cross Entropy", "Max Probability"),
+    )
+
+    fig.update_layout(height=1000, width=800, title_text="Tokens visualized with the Tuned Lens")
+
+    # TODO: What if this changes?
+    trajectories = get_prediction_trajectories(caches, dataframes)
+
+    # Update heatmap data inside playground function
+    hm_normal = apply_metric(metric, trajectories[0]).heatmap(layer_stride=layer_stride)
+    hm_modified = apply_metric(metric, trajectories[1]).heatmap(layer_stride=layer_stride)
+
+    fig.add_trace(hm_normal, row=1, col=1)
+    fig.add_trace(hm_modified, row=2, col=1)
+    fig.show()
+
+
 # %%
+# Main playground for lenses. Run with ctrl+enter
 
-prompt = "I hate you,"# Today, I got denied for a raise. I'm feeling"
+prompt = "Frozen starts off with a scene about"
 
-rich_prompts: List[RichPrompt] = [
+rich_prompts = [
     *get_x_vector(
-        prompt1="Love",
-        prompt2="Hate",
-        coeff=1000,
-        act_name=1,
-        model=model,
+        prompt1="I always talk about weddings",
+        prompt2="I never talk about weddings",
+        coeff=4,
+        act_name=6,
         pad_method="tokens_right",
-    ),
+        model=model,
+        custom_pad_id=model.to_single_token(" "),
+    )
 ]
+
+dataframes, caches = run_hooked_and_normal_with_cache(
+    model=model, rich_prompts=rich_prompts,
+    kw=dict(prompt_batch=[prompt] * 1, tokens_to_generate=2, top_p=0.3, seed=0),
+)
+
+trajectories = get_prediction_trajectories(caches, dataframes)
+
+plot_lens_diff(
+    caches=caches,
+    dataframes=dataframes,
+    metric='entropy',
+    layer_stride=4,
+)
+
+# %%
+# Play with printing completions to check behavior
+
 
 completion_utils.print_n_comparisons(
     prompt=prompt,
@@ -136,68 +208,3 @@ completion_utils.print_n_comparisons(
     top_p=0.8,
     tokens_to_generate=8,
 )
-
-
-# %%
-
-(normal_df, modified_df), (normal_cache, modified_cache) = run_hooked_and_normal_with_cache(
-    model,
-    prompt_batch=[prompt] * 1,
-    tokens_to_generate=2
-)
-
-normal_df, modified_df
-
-# Plot it!
-# %%
-
-
-import plotly.io as pio
-from plotly.subplots import make_subplots
-from ipywidgets import interact, IntSlider
-
-
-
-logits = tuned_lens(list(modified_cache.values())[-1], get_layer_num(list(modified_cache.keys())[-1])) # FIXME: Not real logits. Last layer of resid_pre.
-
-full_prompt = modified_df['prompts'][0] + modified_df['completions'][0]
-prediction_traj = prediction_traj_from_outputs(logits, modified_cache, full_prompt)
-
-fig = make_subplots(
-    rows=3,
-    cols=1,
-    shared_xaxes=True,
-    vertical_spacing=0.03,
-    subplot_titles=("Entropy", "Forward KL", "Cross Entropy", "Max Probability"),
-)
-
-fig.add_trace(
-    prediction_traj.entropy().heatmap(
-        colorbar_y=0.89, colorbar_len=0.25, textfont={'size':10}
-    ),
-    row=1, col=1
-)
-
-fig.add_trace(
-    prediction_traj.forward_kl().heatmap(
-        colorbar_y=0.63, colorbar_len=0.25, textfont={'size':10}
-    ),
-    row=2, col=1
-)
-
-fig.add_trace(
-    prediction_traj.max_probability().heatmap(
-        colorbar_y=0.11, colorbar_len=0.25, textfont={'size':10}
-    ),
-    row=3, col=1
-)
-
-# fig.add_trace(
-#     prediction_traj.cross_entropy().heatmap(
-#         colorbar_y=0.37, colorbar_len=0.25, textfont={'size':10}
-#     ),
-#     row=4, col=1
-# )
-
-fig.update_layout(height=2400, width=1200, title_text="Tokens visualized with the Tuned Lens")
-fig.show()
