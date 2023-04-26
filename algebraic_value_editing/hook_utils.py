@@ -1,15 +1,18 @@
 """ Utilities for hooking into a model and modifying activations. """
 
-from typing import List, Callable, Optional, Dict
+from typing import List, Callable, Optional, Dict, Tuple, Union, Any
 from collections import defaultdict
 from jaxtyping import Float, Int
 import funcy as fn
 import torch
 
 from transformer_lens import ActivationCache
-from transformer_lens.HookedTransformer import HookedTransformer
+from transformer_lens.HookedTransformer import HookedTransformer, Loss
 from transformer_lens.hook_points import HookPoint
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import (
+    RichPrompt,
+    pad_tokens_to_match_rich_prompts,
+)
 
 
 def get_prompt_activations(
@@ -66,7 +69,10 @@ def hook_fn_from_activations(
     cached activations for that prompt to the existing activations at
     the hook point.
     """
-    assert xvec_position in ['front','back'], 'invalid xvec_position'
+    assert xvec_position in [
+        "front",
+        "back",
+    ], "invalid xvec_position"
 
     def prompt_hook(
         resid_pre: Float[torch.Tensor, "batch pos d_model"],
@@ -94,16 +100,17 @@ def hook_fn_from_activations(
         # NOTE this is going to fail when context window starts rolling
         # over
 
-        if xvec_position == 'back':
-            resid_pre[...,-injection_len:, :] = (
+        if xvec_position == "back":
+            resid_pre[..., -injection_len:, :] = (
                 activations + resid_pre[..., -injection_len:, :]
             )  # Only add to first bit of the stream
-        else: #default case if xvec_position == 'front'
+        else:  # default case if xvec_position == 'front'
             resid_pre[..., :injection_len, :] = (
                 activations + resid_pre[..., :injection_len, :]
             )  # Only add to first bit of the stream
 
         return resid_pre
+
     return prompt_hook
 
 
@@ -123,7 +130,8 @@ def hook_fns_from_act_dict(
     for act_name, act_list in activation_dict.items():
         # Compose the hook functions for each prompt
         act_fns: List[Callable] = [
-            hook_fn_from_activations(activations, xvec_position) for activations in act_list
+            hook_fn_from_activations(activations, xvec_position)
+            for activations in act_list
         ]
         hook_fns[act_name] = fn.compose(*act_fns)
 
@@ -131,8 +139,9 @@ def hook_fns_from_act_dict(
 
 
 def hook_fns_from_rich_prompts(
-    model: HookedTransformer, rich_prompts: List[RichPrompt],
-    xvec_position: str = 'front',
+    model: HookedTransformer,
+    rich_prompts: List[RichPrompt],
+    xvec_position: str = "front",
 ) -> Dict[str, Callable]:
     """Takes a list of `RichPrompt`s and makes a single activation-modifying forward hook.
 
@@ -152,6 +161,75 @@ def hook_fns_from_rich_prompts(
     ] = get_activation_dict(model, rich_prompts)
 
     # Make the hook functions
-    hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(activation_dict, xvec_position)
+    hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(
+        activation_dict, xvec_position
+    )
 
     return hook_fns
+
+
+def forward_with_rich_prompts(
+    model: HookedTransformer,
+    rich_prompts: List[RichPrompt],
+    input: Any,
+    xvec_position: str = "front",
+    injection_mode: str = "overlay",
+    **forward_kwargs,
+) -> Union[
+    None,
+    Float[torch.Tensor, "batch pos d_vocab"],
+    Loss,
+    Tuple[Float[torch.Tensor, "batch pos d_vocab"], Loss],
+]:
+    """Convenience function to call the forward function of a provided
+    transformer model, applying hook functions based on a provided list
+    of RichPrompts and tearing them down after in an exception-safe
+    manner. Several injection modes are possible for the RichPrompts:
+    overlay (default) simply injects the RichPrompts over the
+    activations of the provided input, according xvec_position;
+    pad space-pads the input first as needed so that the
+    RichPrompts don't overlap the input text; pad_remove is the same as
+    pad, but the return values of the forward call are modified to
+    remove the padding token positions to make the padding transparent
+    to the caller.  Option pad_remove cannot be used when loss is
+    returned and loss_per_token==False."""
+    assert injection_mode in [
+        "overlay",
+        "pad",
+        "pad_remove",
+    ], "Invalid injection mode"
+    assert (
+        injection_mode != "pad_remove"
+        or forward_kwargs.get("return_type", "logits") == "logits"
+        or forward_kwargs.get("loss_per_token", False)
+    ), "Must set loss_per_token=True when using pad_remove and returning loss"
+    # Pad the input if needed
+    input_tokens = model.to_tokens(input)
+    if injection_mode in ["pad", "pad_remove"]:
+        (
+            input_tokens,
+            rich_prompt_len,
+        ) = pad_tokens_to_match_rich_prompts(model, input_tokens, rich_prompts)
+    # TODO: TransformerLens now has a hooks() context manager, should
+    # move to latest version and use that to simplify this code
+    hook_fns = hook_fns_from_rich_prompts(
+        model=model, rich_prompts=rich_prompts, xvec_position=xvec_position
+    )
+    model.remove_all_hook_fns()
+    try:
+        for act_name, hook_fn in hook_fns.items():
+            model.add_hook(act_name, hook_fn)
+        ret = model.forward(input_tokens, **forward_kwargs)
+    finally:
+        model.remove_all_hook_fns()
+    # Trim padding positions from return objects if needed
+    return_type = forward_kwargs.get("return_type", "logits")
+    if injection_mode == "pad_remove":
+        remove_pad = lambda val: torch.concat(
+            [val[:, 0:1, ...], val[:, rich_prompt_len:, ...]], axis=1
+        )
+        if return_type in ["logits", "loss"]:
+            ret = remove_pad(ret)
+        elif return_type == "both":
+            ret = (remove_pad(ret[0]), remove_pad(ret[1]))
+    return ret

@@ -75,9 +75,9 @@ yelp_sample = pd.concat(
 
 # Get a loss metric based on the model.  Note that this will always just
 # use the model so hooks, etc. will change the behavior of this metric!
-metrics_dict = {"loss": metrics.get_loss_metric(MODEL, agg_mode="mean")}
-
-# Get the normal loss and add it to the DataFrame
+metrics_dict = {
+    "loss": metrics.get_loss_metric(MODEL, agg_mode=["mean", "full"])
+}
 yelp_sample = metrics.add_metric_cols(
     yelp_sample,
     metrics_dict,
@@ -119,14 +119,28 @@ patched_df = sweeps.sweep_over_metrics(
 
 # Join in some data from the original DataFrame, and the coeffs
 results_df = patched_df.join(
-    yelp_sample[["loss", "sentiment"]],
+    yelp_sample[["loss_mean", "loss_full", "sentiment"]],
     on="text_index",
     lsuffix="_mod",
     rsuffix="_norm",
 )
 results_df["coeff"] = COEFFS[results_df["rich_prompt_index"]]
-results_df["loss_diff"] = results_df["loss_mod"] - results_df["loss_norm"]
-results_df = (
+results_df["loss_mean_diff"] = (
+    results_df["loss_mean_mod"] - results_df["loss_mean_norm"]
+)
+results_df["loss_full_diff"] = (
+    results_df["loss_full_mod"] - results_df["loss_full_norm"]
+)
+
+# Hackily ignore the patch region
+MASK_PATCH_REGION = True
+PATCH_OFFSET_POS = 2
+if MASK_PATCH_REGION:
+    results_df["loss_mean_diff"] = results_df["loss_full_diff"].apply(
+        lambda inp: inp[PATCH_OFFSET_POS:].mean()
+    )
+
+results_grouped_df = (
     results_df.groupby(["coeff", "sentiment"])
     .mean(numeric_only=True)
     .reset_index()
@@ -135,13 +149,14 @@ results_df = (
 # TODO: don't include patch region in loss mean?  Space-pad first to
 # length of x-vector??
 
-# Plot average loss vs coeff by sentiment
+# Plot average loss vs coeff by is_weddings
 px.line(
-    results_df,
+    results_grouped_df,
     x="coeff",
-    y="loss_diff",
+    y="loss_mean_diff",
     color="sentiment",
-    title="Increase in loss for Yelp reviews over coeffs by sentiment<br>"
+    title=f"Increase in mean loss for reviews over coeffs by sentiment"
+    + f" (mask patch: {MASK_PATCH_REGION})<br>"
     + f"{[MODEL.tokenizer.decode(token) for token in rich_prompts[0][0].tokens]} - "
     + f"{[MODEL.tokenizer.decode(token) for token in rich_prompts[0][1].tokens]}",
 ).show()

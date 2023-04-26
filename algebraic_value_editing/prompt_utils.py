@@ -1,7 +1,7 @@
 """ Tools for specifying prompts and coefficients for algebraic value
 editing. """
 
-from typing import Tuple, Optional, Union, Callable
+from typing import Tuple, Optional, Union, Callable, List
 from jaxtyping import Int
 import torch
 import torch.nn.functional
@@ -167,3 +167,45 @@ def get_x_vector(
         prompt=prompt2, coeff=-1 * coeff, act_name=act_name
     )
     return end_point, start_point
+
+
+def pad_tokens_to_match_rich_prompts(
+    model: HookedTransformer,
+    tokens: Int[torch.Tensor, "batch pos"],
+    rich_prompts: List[RichPrompt],
+) -> Int[torch.Tensor, "batch pos"]:
+    """Tokenize and space-pad the front of the provided string so that
+    none of the RichPrompts will overlap with the unpadded text,
+    returning the padded tokens and the index at which the tokens from
+    the original string begin.  Not that the padding is inserted AFTER
+    the BOS and before the original-string-excluding-BOS."""
+    # Get the max token len of the RichPrompts
+    rich_prompt_len = 0
+    for rich_prompt in rich_prompts:
+        try:
+            rich_prompt_len = max(len(rich_prompt.tokens), rich_prompt_len)
+        except AttributeError:
+            rich_prompt_len = max(
+                len(model.to_tokens(rich_prompt.prompt).squeeze()),
+                rich_prompt_len,
+            )
+    # Input tokens already has BOS prepended, so insert the padding
+    # after that.
+    # Note that the RichPrompts always have BOS at the start, and we
+    # don't want to include this length in our padding as it's fine
+    # if the RichPrompt overlaps this location since it will have
+    # zero effect if the RichPrompts are proper x-vectors., so we
+    # pad with pad_len - 1
+    tokens = torch.concat(
+        [
+            tokens[:, :1],
+            torch.full(
+                (1, rich_prompt_len - 1),
+                model.to_single_token(" "),
+                device=model.cfg.device,
+            ),
+            tokens[:, 1:],
+        ],
+        axis=1,
+    )
+    return tokens, rich_prompt_len

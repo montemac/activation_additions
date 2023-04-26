@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from tqdm.auto import tqdm
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import metrics, logging
+from algebraic_value_editing import metrics, logging, hook_utils
 from algebraic_value_editing.prompt_utils import RichPrompt
 from algebraic_value_editing.completion_utils import (
     gen_using_hooks,
@@ -151,6 +151,74 @@ def sweep_over_prompts(
         normal_all = metrics.add_metric_cols(normal_all, metrics_dict)
         patched_all = metrics.add_metric_cols(patched_all, metrics_dict)
     return normal_all, patched_all
+
+
+# TODO: this interface overall is somewhat awkward and could be
+# re-designed.  In general it might make sense to redesign with more
+# than just model completions in mind?
+@logging.loggable
+def sweep_over_metrics(
+    model: HookedTransformer,
+    texts: Union[Iterable[str], pd.Series],
+    rich_prompts: Iterable[List[RichPrompt]],
+    metrics_dict: Dict[str, Callable[[Iterable[str]], pd.DataFrame]],
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
+    **metric_args,
+) -> pd.DataFrame:
+    """Apply all the metrics to the provided input texts after hooking the
+    provided model with each of the provided RichPrompts in turn.  The
+    iterable of RichPrompts may be created directly for simple cases, or
+    created by sweeping over e.g. layers, coeffs, ingredients, etc.
+    using other functions in this module.
+
+    The expected use case for this function is that the metrics in
+    metrics_dict are closed over the same provided model, so that
+    changing the model via hooking will change the output of the metric
+    functions.  This design may change in future.
+
+    args:
+        model: The model to apply RichPrompts to.
+
+        texts: The input texts to apply the metrics to. Can be an
+        iterable or a Series.
+
+        rich_prompts: An iterable of RichPrompt lists to patch into the
+        model.
+
+        metrics_dict: A dict of named metric functions.
+
+        log: To enable logging of this call to wandb, pass either
+        True, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the wandb init call.  False to disable logging.
+
+    returns:
+        A tuple of DataFrames, one containing normal, unpatched
+        completions for each prompt, the other containing patched
+        completions.
+    """
+    # Create the input text DataFrame
+    texts_df = pd.DataFrame({"text": texts})
+    # Iterate over RichPrompts
+    patched_list = []
+    for index, rich_prompts_this in enumerate(tqdm(rich_prompts)):
+        hook_fns = hook_utils.hook_fns_from_rich_prompts(
+            model=model,
+            rich_prompts=rich_prompts_this,
+        )
+        # Get the modified loss and append
+        model.remove_all_hook_fns()
+        for act_name, hook_fn in hook_fns.items():
+            model.add_hook(act_name, hook_fn)
+        patched_df = metrics.add_metric_cols(
+            texts_df, metrics_dict, cols_to_use="text", **metric_args
+        )
+        patched_df["rich_prompt_index"] = index
+        patched_list.append(patched_df)
+        model.remove_all_hook_fns()
+
+    # Create the final patched df and return both
+    patched_all = pd.concat(patched_list).reset_index(names="text_index")
+    return patched_all
 
 
 def reduce_sweep_results(
