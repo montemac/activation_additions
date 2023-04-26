@@ -30,7 +30,7 @@ from typing import List, Dict, Callable
 from functools import partial
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import completion_utils 
+from algebraic_value_editing import completion_utils, hook_utils 
 from algebraic_value_editing.completion_utils import print_n_comparisons
 from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 
@@ -94,7 +94,8 @@ love_minus_hate_prompts: List[RichPrompt] = (
     ]
 )
 
-
+rel_mags: torch.Tensor = hook_utils.steering_magnitudes_relative_to_prompt(prompt="I hate you because", model=model, act_adds=love_minus_hate_prompts)
+# %% 
 print_n_comparisons(model=model,
     prompt="I hate you because",
     tokens_to_generate=150,

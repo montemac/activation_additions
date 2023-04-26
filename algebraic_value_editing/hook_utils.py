@@ -7,7 +7,6 @@ from jaxtyping import Float, Int
 import funcy as fn
 
 import torch
-from torch.nn.utils.rnn import pad_sequence
 from einops import reduce
 
 from transformer_lens import ActivationCache
@@ -65,7 +64,7 @@ def get_activation_dict(
 # Get magnitudes
 def steering_vec_magnitudes(
     act_adds: List[RichPrompt], model: HookedTransformer
-) -> Dict[str, Float[torch.Tensor, "pos"]]:
+) -> Float[torch.Tensor, "pos"]:
     """Compute the magnitude of the net steering vector at each sequence
     position."""
     act_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]] = (
@@ -128,6 +127,34 @@ def prompt_magnitudes(
     ), "Prompt activations should have shape (1, seq_len, d_model)."
 
     return torch.linalg.norm(prompt_acts[0], dim=-1)
+
+
+def steering_magnitudes_relative_to_prompt(
+    prompt: str,
+    act_adds: List[RichPrompt],
+    model: HookedTransformer,
+) -> Float[torch.Tensor, "pos"]:
+    """Get the prompt and steering vector magnitudes and return their
+    pairwise division."""
+    # Figure out what act_name should be
+    if isinstance(act_adds[0].act_name, int):
+        act_name: str = prompt_utils.get_block_name(
+            block_num=act_adds[0].act_name
+        )
+    else:
+        act_name: str = act_adds[0].act_name
+
+    # Get magnitudes
+    prompt_mags: Float[torch.Tensor, "pos"] = prompt_magnitudes(
+        prompt=prompt, model=model, act_name=act_name
+    )
+    steering_vec_mags: Float[torch.Tensor, "pos"] = steering_vec_magnitudes(
+        act_adds=act_adds, model=model
+    )
+
+    # Divide the steering vector magnitudes by the prompt magnitudes
+    min_seq_len: int = min(prompt_mags.shape[0], steering_vec_mags.shape[0])
+    return steering_vec_mags[:min_seq_len] / prompt_mags[:min_seq_len]
 
 
 # Hook function helpers

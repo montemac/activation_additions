@@ -150,3 +150,42 @@ def test_prompt_magnitudes(attn_2l_model):
     assert (
         len(prompt_magnitudes.shape) == 1
     ), "Prompt magnitudes are not the right shape"
+
+
+def test_relative_mags_ones(attn_2l_model):
+    """Test whether the relative magnitudes are one for a prompt and
+    its own RichPrompt."""
+    act_add = RichPrompt(prompt="Test", coeff=1, act_name=0)
+    rel_mags: torch.Tensor = hook_utils.steering_magnitudes_relative_to_prompt(
+        prompt="Test",
+        model=attn_2l_model,
+        act_adds=[act_add],
+    )
+
+    # Assert these are all 1s
+    assert torch.allclose(
+        rel_mags, torch.ones_like(rel_mags)
+    ), "Relative mags not 1"
+    assert (
+        len(rel_mags.shape) == 1
+    ), "Relative mags should only have the sequence dim"
+
+
+def test_relative_mags_diff_shape(attn_2l_model):
+    """Test that a long prompt and a short RichPrompt can be compared,
+    and vice versa."""
+    long_add = RichPrompt(prompt="Test2521531lk dsa ;las", coeff=1, act_name=0)
+    short_add = RichPrompt(prompt="Test", coeff=1, act_name=0)
+    long_prompt: str = "Test2521531lk dsa ;las"
+    short_prompt: str = "Test"
+
+    # Get the relative magnitudes
+    for add, prompt in zip([long_add, short_add], [short_prompt, long_prompt]):
+        assert len(add.prompt) != len(
+            prompt
+        ), "Prompt and RichPrompt are the same length"
+        _ = hook_utils.steering_magnitudes_relative_to_prompt(
+            prompt=prompt,
+            model=attn_2l_model,
+            act_adds=[add],
+        )
