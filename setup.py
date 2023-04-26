@@ -25,6 +25,7 @@ setup(
         "openai>=0.27.2",
         "pytest",
         "plotly",
+        "nbformat",
         "Ipython",
         "ipywidgets",
     ],

@@ -293,7 +293,9 @@ def print_n_comparisons(
 
         `log`: To enable logging of this call to wandb, pass either
         True, or a dict contining any of ('tags', 'group', 'notes') to
-        pass these keys to the wandb init call.  False to disable logging.
+        pass these keys to the wandb init call.  False to disable
+        logging.
+        
         `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
 
         `kwargs`: Keyword arguments to pass to
