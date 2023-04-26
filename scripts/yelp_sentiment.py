@@ -14,6 +14,8 @@ import plotly.graph_objects as go
 import plotly as py
 import plotly.subplots
 import langdetect
+import nltk
+import nltk.data
 
 from transformer_lens import HookedTransformer
 
@@ -24,6 +26,7 @@ from algebraic_value_editing import (
     completion_utils,
     metrics,
     sweeps,
+    experiments,
 )
 
 utils.enable_ipython_reload()
@@ -36,7 +39,7 @@ _ = torch.set_grad_enabled(False)
 # Load a model
 MODEL: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
-).to("cuda:0")
+).to("cuda:1")
 
 
 # %%
@@ -55,13 +58,15 @@ MODEL: HookedTransformer = HookedTransformer.from_pretrained(
 # yelp_data = yelp_data[["stars", "sentiment", "text"]]
 
 # Load pre-processed
-yelp_data = pd.read_csv("../data/restaurant_proc.csv")
+yelp_data = pd.read_csv("../data/restaurant_proc.csv").drop(
+    "Unnamed: 0", axis="columns"
+)
 
 
 # %%
-# Pick the first N positive and negative review and check loss
-num_each_sentiment = 100
-offset = 100
+# Pick the first N positive and negative reviews
+num_each_sentiment = 30
+offset = 0
 yelp_sample = pd.concat(
     [
         yelp_data[yelp_data["sentiment"] == "positive"].iloc[
@@ -71,95 +76,53 @@ yelp_sample = pd.concat(
             offset : (offset + num_each_sentiment)
         ],
     ]
-).reset_index()
+).reset_index(drop=True)
 
-# Get a loss metric based on the model.  Note that this will always just
-# use the model so hooks, etc. will change the behavior of this metric!
-metrics_dict = {
-    "loss": metrics.get_loss_metric(MODEL, agg_mode=["mean", "full"])
-}
-yelp_sample = metrics.add_metric_cols(
-    yelp_sample,
-    metrics_dict,
-    cols_to_use="text",
-    show_progress=True,
-    prefix_cols=False,
-)
+nltk.download("punkt")
+tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
-
-# %%
-# Make the hook functions and get the modified loss, maybe with a sweep
-COEFFS = np.linspace(-5, 5, 21)
-
-rich_prompts = [
-    list(
-        prompt_utils.get_x_vector(
-            prompt1=" worst",
-            prompt2="",
-            coeff=coeff,
-            act_name=14,
-            model=MODEL,
-            pad_method="tokens_right",
-            custom_pad_id=MODEL.to_single_token(" "),
-        ),
+yelp_sample_sentences_list = []
+for idx, row in yelp_sample.iterrows():
+    sentences = tokenizer.tokenize(row["text"])
+    yelp_sample_sentences_list.append(
+        pd.DataFrame(
+            {
+                "text": sentences,
+                "sentiment": row["sentiment"],
+                "review_sample_index": idx,
+            }
+        )
     )
-    for coeff in COEFFS
+yelp_sample_sentences = pd.concat(yelp_sample_sentences_list).reset_index(
+    drop=True
+)
+# Filter out super short sentences
+MIN_LEN = 6
+yelp_sample_sentences = yelp_sample_sentences[
+    yelp_sample_sentences["text"].str.len() >= MIN_LEN
 ]
 
-patched_df = sweeps.sweep_over_metrics(
-    model=MODEL,
-    texts=yelp_sample["text"],
-    rich_prompts=rich_prompts,
-    metrics_dict=metrics_dict,
-    prefix_cols=False,
-)
 
 # %%
-# Process the results
-
-# Join in some data from the original DataFrame, and the coeffs
-results_df = patched_df.join(
-    yelp_sample[["loss_mean", "loss_full", "sentiment"]],
-    on="text_index",
-    lsuffix="_mod",
-    rsuffix="_norm",
+# Use the experiment function
+fig, mod_df, results_grouped_df = experiments.run_corpus_loss_experiment(
+    corpus_name="Yelp reviews",
+    model=MODEL,
+    # labeled_texts=yelp_sample[["text", "sentiment"]],
+    labeled_texts=yelp_sample_sentences[["text", "sentiment"]],
+    x_vector_phrases=(" worst", ""),
+    # act_names=[0, 6],
+    act_names=[6],
+    coeffs=np.linspace(-2, 2, 11),
+    # coeffs=[-1, 0, 1],
+    # coeffs=[0],
+    method="mask_injection_loss",
+    # method="normal",
+    facet_col_qty=None,
+    label_col="sentiment",
+    color_qty="sentiment",
 )
-results_df["coeff"] = COEFFS[results_df["rich_prompt_index"]]
-results_df["loss_mean_diff"] = (
-    results_df["loss_mean_mod"] - results_df["loss_mean_norm"]
-)
-results_df["loss_full_diff"] = (
-    results_df["loss_full_mod"] - results_df["loss_full_norm"]
-)
-
-# Hackily ignore the patch region
-MASK_PATCH_REGION = True
-PATCH_OFFSET_POS = 2
-if MASK_PATCH_REGION:
-    results_df["loss_mean_diff"] = results_df["loss_full_diff"].apply(
-        lambda inp: inp[PATCH_OFFSET_POS:].mean()
-    )
-
-results_grouped_df = (
-    results_df.groupby(["coeff", "sentiment"])
-    .mean(numeric_only=True)
-    .reset_index()
-)
-
-# TODO: don't include patch region in loss mean?  Space-pad first to
-# length of x-vector??
-
-# Plot average loss vs coeff by is_weddings
-px.line(
-    results_grouped_df,
-    x="coeff",
-    y="loss_mean_diff",
-    color="sentiment",
-    title=f"Increase in mean loss for reviews over coeffs by sentiment"
-    + f" (mask patch: {MASK_PATCH_REGION})<br>"
-    + f"{[MODEL.tokenizer.decode(token) for token in rich_prompts[0][0].tokens]} - "
-    + f"{[MODEL.tokenizer.decode(token) for token in rich_prompts[0][1].tokens]}",
-).show()
+fig.show()
 
 
 # %%
