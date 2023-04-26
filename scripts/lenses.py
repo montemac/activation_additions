@@ -159,19 +159,19 @@ def plot_lens_diff(
 
     fig.add_trace(hm_normal, row=1, col=1)
     fig.add_trace(hm_modified, row=2, col=1)
-    fig.show()
+    return fig
 
 
 # %%
 # Main playground for lenses. Run with ctrl+enter
 
-prompt = "Frozen starts off with a scene about"
+prompt = "I hate you because"
 
 rich_prompts = [
     *get_x_vector(
-        prompt1="I always talk about weddings",
-        prompt2="I never talk about weddings",
-        coeff=4,
+        prompt1="Love",
+        prompt2="Hate",
+        coeff=5,
         act_name=6,
         pad_method="tokens_right",
         model=model,
@@ -181,17 +181,18 @@ rich_prompts = [
 
 dataframes, caches = run_hooked_and_normal_with_cache(
     model=model, rich_prompts=rich_prompts,
-    kw=dict(prompt_batch=[prompt] * 1, tokens_to_generate=2, top_p=0.3, seed=0),
+    kw=dict(prompt_batch=[prompt] * 1, tokens_to_generate=6, top_p=0.3, seed=0),
 )
 
 trajectories = get_prediction_trajectories(caches, dataframes)
 
-plot_lens_diff(
+fig = plot_lens_diff(
     caches=caches,
     dataframes=dataframes,
     metric='entropy',
-    layer_stride=4,
+    layer_stride=2,
 )
+fig.show()
 
 # %%
 # Play with printing completions to check behavior
