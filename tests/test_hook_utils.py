@@ -71,7 +71,7 @@ def test_magnitudes_zeros(attn_2l_model):
     act_add = RichPrompt(prompt="Test", coeff=0, act_name=0)
 
     # Get the magnitudes
-    magnitudes = hook_utils.steering_vec_magnitudes(
+    magnitudes: torch.Tensor = hook_utils.steering_vec_magnitudes(
         act_adds=[act_add], model=attn_2l_model
     )
 
@@ -83,13 +83,13 @@ def test_magnitudes_zeros(attn_2l_model):
 def test_magnitudes_cancels(attn_2l_model):
     """Test that the magnitudes are zero when the RichPrompts are exact opposites."""
     # Create a RichPrompt with all zeros
-    additions = [
+    additions: List[RichPrompt] = [
         RichPrompt(prompt="Test", coeff=1, act_name=0),
         RichPrompt(prompt="Test", coeff=-1, act_name=0),
     ]
 
     # Get the magnitudes
-    magnitudes = hook_utils.steering_vec_magnitudes(
+    magnitudes: torch.Tensor = hook_utils.steering_vec_magnitudes(
         act_adds=additions, model=attn_2l_model
     )
 
