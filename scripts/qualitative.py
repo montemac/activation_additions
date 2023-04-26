@@ -141,8 +141,8 @@ mod_df: pd.DataFrame = completion_utils.gen_using_rich_prompts(
 )
 
 # %%
-for df in [normal_df, mod_df]:
-    completion_utils.pretty_print_completions(df, normal_title="Replacing the first token", mod_title="Adding activations for the original prompt", mod_prompt_override="I hate you because")
+results: pd.DataFrame = pd.concat([normal_df, mod_df], ignore_index=True)
+completion_utils.pretty_print_completions(results, normal_title="Replacing the first token", mod_title="Adding activations for the original prompt", mod_prompt_override="I hate you because")
 
 # %% [markdown] 
 # Add analysis TODO
