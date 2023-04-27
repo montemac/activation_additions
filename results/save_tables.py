@@ -156,15 +156,14 @@ def print_n_comparisons(
     results: pd.DataFrame = pd.concat(data_frames, ignore_index=True)
 
     # Write the activation addition information
-    if "rich_prompts" in kwargs:
-        for rp in kwargs["rich_prompts"]:
-            if not hasattr(rp, "prompt"):
-                # If the prompt is not a string, it's a list of tokens
-                rp.prompt = model.to_string(rp.tokens[1:])
-            with open(csv_file, "a") as f:
-                # Write rp into the CSV file, escaping commas
-                writer = csv.writer(f)
-                writer.writerow([str(rp)])
+    for rp in rich_prompts:
+        if not hasattr(rp, "prompt"):
+            # If the prompt is not a string, it's a list of tokens
+            rp.prompt = model.to_string(rp.tokens[1:])
+        with open(csv_file, "a") as f:
+            # Write rp into the CSV file, escaping commas
+            writer = csv.writer(f)
+            writer.writerow([str(rp)])
 
     # Write each of the tokenizations on a separate row
     with open(csv_file, "a") as f:
@@ -176,15 +175,14 @@ def print_n_comparisons(
         file_name=csv_file,
     )
 
-    # AA tokenizations
-    if "rich_prompts" in kwargs:
-        for rp in kwargs["rich_prompts"]:
-            write_tokenization_row(
-                toks=model.to_str_tokens(
-                    rp.tokens if hasattr(rp, "tokens") else rp.prompt
-                ),
-                file_name=csv_file,
-            )
+    # Activation addition tokenizations
+    for rp in rich_prompts:
+        write_tokenization_row(
+            toks=model.to_str_tokens(
+                rp.tokens if hasattr(rp, "tokens") else rp.prompt
+            ),
+            file_name=csv_file,
+        )
     results.to_csv(
         csv_file,
         columns=["prompts", "completions", "is_modified"],
