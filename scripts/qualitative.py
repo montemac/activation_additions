@@ -104,6 +104,16 @@ print_n_comparisons(model=model,
     **default_kwargs,
 ) 
 
+# %% Now add to the right residual streams
+print_n_comparisons(model=model,
+    prompt="I hate you because",
+    tokens_to_generate=150,
+    rich_prompts=love_minus_hate_prompts,
+    addition_location="back",
+    num_comparisons=num_comparisons,
+    **default_kwargs,   
+)
+
 # %% [markdown]
 # Note that the third modified completion contains "Love ____ because I
 # love ____", which is actually a modification of the input prompt, with

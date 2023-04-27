@@ -40,7 +40,7 @@ def preserve_rng_state(func):
 # Ensure that even if we set the seed, we don't change the RNG state globally
 @preserve_rng_state
 @logging.loggable
-def gen_using_hooks(
+def gen_using_hooks(  # TODO make sure that kwargs handles addition_location is handled properly
     model: HookedTransformer,
     prompt_batch: List[str],
     hook_fns: Dict[str, Callable],
@@ -65,7 +65,8 @@ def gen_using_hooks(
 
         `log`: To enable logging of this call to wandb, pass either
         True, or a dict contining any of ('tags', 'group', 'notes') to
-        pass these keys to the wandb init call.  False to disable logging.
+        pass these keys to the wandb init call.  False to disable
+        logging.
 
         `sampling_kwargs`: Keyword arguments to pass to the model's
         `generate` function.
@@ -169,6 +170,7 @@ def gen_using_rich_prompts(
     )
 
     return gen_using_hooks(model=model, hook_fns=hook_fns, log=False, **kwargs)
+
 
 # Display utils #
 def bold_text(text: str) -> str:
@@ -295,7 +297,7 @@ def print_n_comparisons(
         True, or a dict contining any of ('tags', 'group', 'notes') to
         pass these keys to the wandb init call.  False to disable
         logging.
-        
+
         `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
 
         `kwargs`: Keyword arguments to pass to
