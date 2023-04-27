@@ -281,6 +281,7 @@ def print_n_comparisons(
     num_comparisons: int = 5,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     rich_prompts: Optional[List[RichPrompt]] = None,
+    addition_location: str = "front",
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
@@ -299,6 +300,11 @@ def print_n_comparisons(
         logging.
 
         `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
+
+        `addition_location`: Whether to add `activations` from
+        `rich_prompts` to the front-positioned
+        or back-positioned residual streams in the forward poss. Must be
+        either "front" or "back".
 
         `kwargs`: Keyword arguments to pass to
         `gen_using_hooks`.
@@ -319,6 +325,7 @@ def print_n_comparisons(
             prompt_batch=prompt_batch,
             model=model,
             rich_prompts=rich_prompts,
+            addition_location=addition_location,
             **kwargs,
         )
         data_frames.append(mod_df)

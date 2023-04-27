@@ -114,8 +114,8 @@ def steering_vec_magnitudes(
 def prompt_magnitudes(
     prompt: str, model: HookedTransformer, act_name: str
 ) -> Float[torch.Tensor, "pos"]:
-    """ Compute the magnitude of the prompt activations at position
-    `act_name` in `model`'s forward pass on `prompt`. """
+    """Compute the magnitude of the prompt activations at position
+    `act_name` in `model`'s forward pass on `prompt`."""
     cache: ActivationCache = model.run_with_cache(
         model.to_tokens(prompt),
         names_filter=lambda act_name: act_name == act_name,
@@ -163,7 +163,7 @@ def steering_magnitudes_relative_to_prompt(
 def hook_fn_from_activations(
     activations: Float[torch.Tensor, "batch pos d_model"],
     addition_location: str = "front",
-    res_stream_slice: slice = slice(None), 
+    res_stream_slice: slice = slice(None),
 ) -> Callable:
     """Takes an activation tensor and returns a hook function that adds the
     cached activations for that prompt to the existing activations at
@@ -218,7 +218,11 @@ def hook_fn_from_activations(
             prompt_seq_len >= activations_seq_len
         ), "The prompt is shorter than the activation sequence to be added."
 
-        sequence_slice = slice(0, activations_seq_len) if addition_location == "front" else slice(-activations_seq_len, None)
+        sequence_slice = (
+            slice(0, activations_seq_len)
+            if addition_location == "front"
+            else slice(-activations_seq_len - 1, -1)
+        )
         indexing_operation: Tuple[slice, slice, slice] = (
             slice(None),  # Apply to all batches
             sequence_slice,  # Only add to first/last residual streams

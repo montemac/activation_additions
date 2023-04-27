@@ -4,8 +4,8 @@
 # is fickle and subject to both selection effects and confirmation bias.
 
 # %%
-!%load_ext autoreload
-!%autoreload 2
+%load_ext autoreload
+%autoreload 2
 
 # %%
 try:
@@ -119,47 +119,20 @@ prompts: List[str] = [
     "This new diet trend is taking the world by storm, but is it really effective?",
 ] 
 
+# What ActivationAddition settings to use
 add_prompt1: str = "Anger"
 add_prompt2: str = "Calm"
 COEFF: float = 1.0
+
 DF_COLS: List[str] = ["Prompt", "Activation Location", "Activation Name", "Magnitude"]
-activation_locations: List[int] = torch.arange(0, 48, 1).tolist()
 
-# %%
-# Create an empty dataframe with the required columns
-prompt_df = pd.DataFrame(
-    columns=DF_COLS
-)
-
-from algebraic_value_editing import prompt_utils
-
-# Loop through activation locations and prompts
-for act_loc in activation_locations:
-    act_name: str = prompt_utils.get_block_name(block_num=act_loc)
-    for prompt in prompts:
-        mags: torch.Tensor = hook_utils.prompt_magnitudes(
-            model=model, prompt=prompt, act_name=act_name
-        ).cpu() # TODO can speed this up greatly 
-
-        # Create a new dataframe row with the current data
-        row = pd.DataFrame(
-            {
-                "Prompt": prompt,
-                "Activation Location": act_loc,
-                "Activation Name": act_name,
-                "Magnitude": mags,
-            }
-        )
-
-        # Append the new row to the dataframe
-        prompt_df = pd.concat([prompt_df, row], ignore_index=True)
 
 # %% [markdown]
-# ## Plotting the distribution of activation magnitudes
+# ## Plotting the distribution of residual stream magnitudes
 # As the forward pass progresses through the network, the residual
 # stream tends to increase in magnitude in an exponential fashion. This
 # is easily visible in the histogram below, which shows the distribution
-# of activation magnitudes for each layer of the network. The activation
+# of residual stream magnitudes for each layer of the network. The activation
 # distribution translates by an almost constant factor each 6 layers,
 # and the x-axis (magnitude) is log-scale, so magnitude apparently
 # increases exponentially with layer number. 
@@ -179,16 +152,86 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 
-prompt_df["LogMagnitude"] = np.log10(prompt_df["Magnitude"])
-fig = px.histogram(prompt_df, x="LogMagnitude", color="Activation Location",
-           marginal="rug", histnorm="percent", nbins=100, opacity=0.5, barmode="overlay", color_discrete_sequence=px.colors.sequential.Rainbow[::-1])
+def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
+    """Plot a histogram of the residual stream magnitudes for each layer
+    of the network."""
+    assert "Magnitude" in df.columns, "Dataframe must have a 'Magnitude' column"
 
-fig.update_layout(legend_title_text="Layer Number",
-                  title="Activation Magnitude Distribution by Layer Number",
-                  xaxis_title="Magnitude (log 10)",
-                  yaxis_title="Percentage of layer activations")
+    df["LogMagnitude"] = np.log10(df["Magnitude"])
+    fig = px.histogram(df, x="LogMagnitude", color="Activation Location",  
+              marginal="rug", histnorm="percent", nbins=100, opacity=0.5, barmode="overlay", color_discrete_sequence=px.colors.sequential.Rainbow[::-1])
 
+    fig.update_layout(legend_title_text="Layer Number",
+                      title="Residual Stream Magnitude Distribution by Layer Number",
+                      xaxis_title="Magnitude (log 10)",
+                      yaxis_title="Percentage of streams")
+
+    return fig
+# %%
+activation_locations_6: List[int] = torch.arange(0, 48, 6).tolist()
+
+# %%
+# Create an empty dataframe with the required columns
+prompt_df = pd.DataFrame(
+    columns=DF_COLS
+)
+
+from algebraic_value_editing import prompt_utils
+
+# Loop through activation locations and prompts
+for act_loc in activation_locations_6:
+    act_name: str = prompt_utils.get_block_name(block_num=act_loc)
+    for prompt in prompts:
+        mags: torch.Tensor = hook_utils.prompt_magnitudes(
+            model=model, prompt=prompt, act_name=act_name
+        ).cpu() 
+
+        # Create a new dataframe row with the current data
+        row = pd.DataFrame(
+            {
+                "Prompt": prompt,
+                "Activation Location": act_loc,
+                "Activation Name": act_name,
+                "Magnitude": mags,
+            }
+        )
+
+        # Append the new row to the dataframe
+        prompt_df = pd.concat([prompt_df, row], ignore_index=True)
+# %%
+fig: go.Figure = magnitude_histogram(prompt_df)
 fig.show() 
+
+# %% [markdown]
+# Let's examine where in the first 6 layers the fast magnitude gain
+# occurs.
+
+# %% 
+activation_locations: List[int] = list(range(7))
+first_6_df = pd.DataFrame(columns=DF_COLS)
+
+for act_loc in activation_locations:
+    act_name: str = prompt_utils.get_block_name(block_num=act_loc)
+    for prompt in prompts:
+        mags: torch.Tensor = hook_utils.prompt_magnitudes(
+            model=model, prompt=prompt, act_name=act_name
+        ).cpu() 
+
+        # Create a new dataframe row with the current data
+        row = pd.DataFrame(
+            {
+                "Prompt": prompt,
+                "Activation Location": act_loc,
+                "Activation Name": act_name,
+                "Magnitude": mags,
+            }
+        )
+
+        # Append the new row to the dataframe
+        first_6_df = pd.concat([first_6_df, row], ignore_index=True)
+
+fig: go.Figure = magnitude_histogram(first_6_df)
+fig.show()
 
 # %% [markdown]
 # ## Plotting steering vector magnitudes against layer number
@@ -199,6 +242,7 @@ fig.show()
 
 # %%
 # Create an empty dataframe with the required columns
+all_resid_pre_locations: List[int] = torch.arange(0, 48, 1).tolist()
 addition_df = pd.DataFrame(
     columns=DF_COLS
 )
@@ -206,7 +250,7 @@ addition_df = pd.DataFrame(
 from algebraic_value_editing import prompt_utils
 
 # Loop through activation locations and prompts
-for act_loc in activation_locations:
+for act_loc in all_resid_pre_locations:
     anger_calm_additions: List[RichPrompt] = [
         RichPrompt(prompt=add_prompt1, coeff=COEFF, act_name=act_loc), 
         RichPrompt(prompt=add_prompt2, coeff=-COEFF, act_name=act_loc)
@@ -262,7 +306,7 @@ steering_df = pd.DataFrame(
     columns=DF_COLS
 )
 
-for act_loc in activation_locations:
+for act_loc in all_resid_pre_locations:
     anger_calm_additions: List[RichPrompt] = [
         RichPrompt(prompt=add_prompt1, coeff=COEFF, act_name=act_loc), 
         RichPrompt(prompt=add_prompt2, coeff=-COEFF, act_name=act_loc)
@@ -296,7 +340,7 @@ relative_df = pd.DataFrame(
     columns=DF_COLS
 )
 
-for act_loc in activation_locations:
+for act_loc in all_resid_pre_locations:
     anger_adds: List[RichPrompt] = [
         RichPrompt(prompt=add_prompt1, coeff=COEFF, act_name=act_loc),
         RichPrompt(prompt=add_prompt2, coeff=-COEFF, act_name=act_loc)

@@ -6,8 +6,8 @@
 # <b style="color: red">To use this notebook, go to Runtime > Change Runtime Type and select GPU as the hardware accelerator. Depending on the model chosen, you may need to select "high RAM."</b>
 
 # %%
-!%load_ext autoreload
-!%autoreload 2
+%load_ext autoreload
+%autoreload 2
 
 # %%
 try:
