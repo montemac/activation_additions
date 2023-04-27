@@ -119,12 +119,16 @@ prompts: List[str] = [
     "This new diet trend is taking the world by storm, but is it really effective?",
 ] 
 
-# %% 
-activation_locations: List[int] = torch.arange(0, 48, 6).tolist()
+add_prompt1: str = "Anger"
+add_prompt2: str = "Calm"
+COEFF: float = 1.0
+DF_COLS: List[str] = ["Prompt", "Activation Location", "Activation Name", "Magnitude"]
+activation_locations: List[int] = torch.arange(0, 48, 1).tolist()
 
+# %%
 # Create an empty dataframe with the required columns
 prompt_df = pd.DataFrame(
-    columns=["Prompt", "Activation Location", "Activation Name", "Magnitude"]
+    columns=DF_COLS
 )
 
 from algebraic_value_editing import prompt_utils
@@ -135,7 +139,7 @@ for act_loc in activation_locations:
     for prompt in prompts:
         mags: torch.Tensor = hook_utils.prompt_magnitudes(
             model=model, prompt=prompt, act_name=act_name
-        ).cpu()
+        ).cpu() # TODO can speed this up greatly 
 
         # Create a new dataframe row with the current data
         row = pd.DataFrame(
@@ -158,10 +162,18 @@ for act_loc in activation_locations:
 # of activation magnitudes for each layer of the network. The activation
 # distribution translates by an almost constant factor each 6 layers,
 # and the x-axis (magnitude) is log-scale, so magnitude apparently
-# increases exponentially with layer number.
-# 
+# increases exponentially with layer number. 
+#
 # (Intriguingly, there are a few outlier residual streams which have
 # magnitude over an order of magnitude larger than the rest.)
+# 
+# Alex's first guess for the exponential magnitude increase was: Each OV circuit is a linear function of the
+# residual stream given a fixed attention pattern. Then you add the head
+# OV outputs back into a residual stream, which naively doubles the
+# magnitude assuming the OV outputs have similar norm to the input
+# residual stream. The huge problem with this explanation is layernorm, which
+# should basically whiten the output of the OV circuits if the gain
+# parameters are close to 1. 
 # %%
 import plotly.express as px
 import plotly.graph_objects as go
@@ -176,7 +188,7 @@ fig.update_layout(legend_title_text="Layer Number",
                   xaxis_title="Magnitude (log 10)",
                   yaxis_title="Percentage of layer activations")
 
-fig.show()
+fig.show() 
 
 # %% [markdown]
 # ## Plotting steering vector magnitudes against layer number
@@ -188,7 +200,7 @@ fig.show()
 # %%
 # Create an empty dataframe with the required columns
 addition_df = pd.DataFrame(
-    columns=["Prompt", "Activation Location", "Activation Name", "Magnitude"]
+    columns=DF_COLS
 )
 
 from algebraic_value_editing import prompt_utils
@@ -196,8 +208,8 @@ from algebraic_value_editing import prompt_utils
 # Loop through activation locations and prompts
 for act_loc in activation_locations:
     anger_calm_additions: List[RichPrompt] = [
-        RichPrompt(prompt="Anger", coeff=5, act_name=act_loc), 
-        RichPrompt(prompt="Calm", coeff=-5, act_name=act_loc)
+        RichPrompt(prompt=add_prompt1, coeff=COEFF, act_name=act_loc), 
+        RichPrompt(prompt=add_prompt2, coeff=-COEFF, act_name=act_loc)
     ]
     act_name: str = prompt_utils.get_block_name(block_num=act_loc)
     for addition in anger_calm_additions:
@@ -247,13 +259,13 @@ fig.show()
 # %% Now let's plot how the steering vector magnitudes change with layer
 # number
 steering_df = pd.DataFrame(
-    columns=["Prompt", "Activation Location", "Activation Name", "Magnitude"]
+    columns=DF_COLS
 )
 
 for act_loc in activation_locations:
     anger_calm_additions: List[RichPrompt] = [
-        RichPrompt(prompt="Anger", coeff=5, act_name=act_loc), 
-        RichPrompt(prompt="Calm", coeff=-5, act_name=act_loc)
+        RichPrompt(prompt=add_prompt1, coeff=COEFF, act_name=act_loc), 
+        RichPrompt(prompt=add_prompt2, coeff=-COEFF, act_name=act_loc)
     ]
 
     mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
@@ -281,13 +293,13 @@ fig.show()
 # %% Let's plot the steering vector magnitudes against the prompt
 # magnitudes
 relative_df = pd.DataFrame(
-    columns=["Prompt", "Activation Location", "Activation Name", "Magnitude"]
+    columns=DF_COLS
 )
 
 for act_loc in activation_locations:
     anger_adds: List[RichPrompt] = [
-        RichPrompt(prompt="Anger", coeff=5, act_name=act_loc),
-        RichPrompt(prompt="Calm", coeff=-5, act_name=act_loc)
+        RichPrompt(prompt=add_prompt1, coeff=COEFF, act_name=act_loc),
+        RichPrompt(prompt=add_prompt2, coeff=-COEFF, act_name=act_loc)
     ]
     mags: torch.Tensor = hook_utils.steering_magnitudes_relative_to_prompt(
         model=model, prompt="I think you're a", act_adds=anger_adds
