@@ -280,7 +280,7 @@ def pretty_print_completions(
 
 
 @logging.loggable
-def print_and_save_n_comparisons(
+def print_n_comparisons(
     prompt: str,
     model: HookedTransformer,
     num_comparisons: int = 5,

@@ -41,7 +41,7 @@ rich_prompts: List[prompt_utils.RichPrompt] = [
         custom_pad_id=int(MODEL.to_single_token(" ")),
     ),
 ]
-completion_utils.print_and_save_n_comparisons(
+completion_utils.print_n_comparisons(
     prompt="Frozen starts off with a scene about",
     num_comparisons=5,
     model=MODEL,

@@ -326,7 +326,7 @@ def test_simple_generation(attn_2l_model: HookedTransformer):
         RichPrompt(prompt="Love", coeff=100.0, act_name=1)
     ]
 
-    completion_utils.print_and_save_n_comparisons(
+    completion_utils.print_n_comparisons(
         prompt="Here's how I feel about you.",
         num_comparisons=1,
         model=attn_2l_model,
@@ -341,7 +341,7 @@ def test_n_comparisons_seed_selection(attn_2l_model: HookedTransformer):
         RichPrompt(prompt="Love", coeff=100.0, act_name=1)
     ]
 
-    completion_utils.print_and_save_n_comparisons(
+    completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
         model=attn_2l_model,
@@ -358,7 +358,7 @@ def test_multiple_prompts(attn_2l_model: HookedTransformer):
         ),
     ]
 
-    completion_utils.print_and_save_n_comparisons(
+    completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
         model=attn_2l_model,
@@ -374,7 +374,7 @@ def test_empty_prompt(attn_2l_model: HookedTransformer):
         RichPrompt(prompt="", coeff=100.0, act_name=1),
     ]
 
-    completion_utils.print_and_save_n_comparisons(
+    completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
         model=attn_2l_model,
@@ -385,7 +385,7 @@ def test_empty_prompt(attn_2l_model: HookedTransformer):
 
 def test_no_modified(attn_2l_model: HookedTransformer):
     """Test that we can generate only normal completions."""
-    completion_utils.print_and_save_n_comparisons(
+    completion_utils.print_n_comparisons(
         prompt="I think you're ",
         num_comparisons=5,
         model=attn_2l_model,
