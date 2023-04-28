@@ -7,15 +7,18 @@ The returned metric functions all take an Iterable of strings, and
 return a DataFrame of metric outputs, with the provided strings as the
 index and one column per output provided by the metric. """
 
-from typing import List, Dict, Callable, Optional, Union
+from typing import List, Dict, Callable, Optional, Union, Tuple
 from collections.abc import Iterable
 import re
 
 from tqdm.auto import tqdm
 import pandas as pd
+import torch
+import torch.nn.functional as F
 from transformers import pipeline
 import openai
 from transformer_lens import HookedTransformer
+from transformer_lens.utils import lm_cross_entropy_loss
 
 TextMetricFunc = Callable[[Iterable[str], bool], pd.DataFrame]
 
@@ -69,7 +72,8 @@ def get_loss_metric(
                 .detach()
                 .cpu()
                 .numpy()
-            ).squeeze()
+                .squeeze()
+            )
             loss_values = {}
             if "mean" in agg_mode:
                 loss_values[f"loss_mean"] = loss.mean()
@@ -81,6 +85,120 @@ def get_loss_metric(
                 loss_values[f"loss_full"] = loss
             loss_list.append(loss_values)
         return pd.DataFrame(loss_list, index=strs)
+
+    return metric_func
+
+
+def forward_with_funcs(
+    model: HookedTransformer,
+    funcs: Tuple[Optional[Callable], Optional[Callable]],
+    *fwd_args,
+    **fwd_kwargs,
+):
+    """Function to make a forward call on a model with pre/post
+    fusnctions optionally specified in the funcs tuple."""
+    pre_ret = None
+    try:
+        if funcs is not None and funcs[0] is not None:
+            pre_ret = funcs[0](model)
+        return model.forward(*fwd_args, **fwd_kwargs)
+    finally:
+        if funcs is not None and funcs[1] is not None:
+            funcs[1](model, pre_ret)
+
+
+def get_logprob_metric(
+    model: HookedTransformer,
+    agg_mode: Union[str, list[str]] = "actual_next_token",
+    q_model: Optional[HookedTransformer] = None,
+    p_funcs: Optional[Tuple[Optional[Callable], Optional[Callable]]] = None,
+    q_funcs: Optional[Tuple[Optional[Callable], Optional[Callable]]] = None,
+) -> TextMetricFunc:
+    """Create a model-log-prob metric using a provided HookedTransformer.
+    The metric function returns the log-probs of the provided input text on
+    the provided model, aggregated according to `agg_mode`, which must
+    be one of `["actual_next_token", "full", "kl_div"]` or a list of such (which will
+    results in one column per agg mode provided).  Mode
+    "actual_next_token" returns the log-prob for the actual next token
+    in the input sequence, i.e. the negative of the by-token loss.  Mode
+    "full" simply returns the full log-prob object, of shape (num
+    positions, num_tokens).  Mode "kl_div" returns the KL divergence
+    D_KL(model||q_model) of the next-token distribution at each
+    position, i.e. the return object has shape (num positions). To use
+    the "kl_div" mode, a q_model must be provided.  The arguments
+    p_funcs and q_funcs can be optionally used to modify the respective
+    models before any forward calls are made.  The main use case for
+    this is to allow model and q_model to be the same, but for either
+    the p case or q case to have changes in the hook function setup that
+    produce different results.  These tuples can define a pre-forward
+    functiaon, a post-forward function, or both.  The post-forward will
+    be called even if the pre-forward or the actual forward call raises
+    an exception.  The pre-forward return value will be passed to the
+    post-forward function as the second positional argument."""
+    if not isinstance(agg_mode, list):
+        agg_mode = [agg_mode]
+    assert all(
+        [mode in ["actual_next_token", "full", "kl_div"] for mode in agg_mode]
+    ), "Invalid agg mode"
+    assert (
+        "kl_div" not in agg_mode or q_model is not None
+    ), "Q model must be provided when using kl_div agg mode"
+
+    def metric_func(
+        strs: Iterable[str], show_progress: bool = False
+    ) -> pd.DataFrame:
+        values_list = []
+        for text in tqdm(strs, disable=not show_progress):
+            tokens = model.to_tokens(text)
+            # Run the forward call on the (p) model
+            logits = forward_with_funcs(
+                model, p_funcs, input=tokens, return_type="logits"
+            )
+            values = {}
+            if "actual_next_token" in agg_mode:
+                # Logprob of the next token is just the negative of the
+                # cross entropy loss
+                values["logprob_actual_next_token"] = (
+                    -lm_cross_entropy_loss(logits, tokens, per_token=True)
+                    .detach()
+                    .cpu()
+                    .numpy()
+                    .squeeze()
+                )
+            if "full" in agg_mode:
+                values["logprob_full"] = (
+                    F.log_softmax(logits, dim=-1)
+                    .detach()
+                    .cpu()
+                    .numpy()
+                    .squeeze()
+                )
+            if "kl_div" in agg_mode:
+                # Calculate KL div explicitly to avoid scipy dependency
+                # and use existing log-probs
+                logits_pq = [
+                    logits,
+                    forward_with_funcs(
+                        q_model, q_funcs, input=tokens, return_type="logits"
+                    ),
+                ]
+                logprobs_pq = [
+                    F.log_softmax(logits, dim=-1) for logits in logits_pq
+                ]
+                probs_pq = [
+                    torch.distributions.Categorical(logits=logits).probs
+                    for logits in logits_pq
+                ]
+                values["logprob_kl_div"] = (
+                    (probs_pq[0] * (logprobs_pq[0] - logprobs_pq[1]))
+                    .sum(axis=-1)
+                    .detach()
+                    .cpu()
+                    .numpy()
+                    .squeeze()
+                )
+            values_list.append(values)
+        return pd.DataFrame(values_list, index=strs)
 
     return metric_func
 

@@ -8,7 +8,7 @@ import torch
 
 from transformer_lens import ActivationCache
 from transformer_lens.HookedTransformer import HookedTransformer, Loss
-from transformer_lens.hook_points import HookPoint
+from transformer_lens.hook_points import HookPoint, LensHandle
 from algebraic_value_editing.prompt_utils import (
     RichPrompt,
     pad_tokens_to_match_rich_prompts,
@@ -233,3 +233,43 @@ def forward_with_rich_prompts(
         elif return_type == "both":
             ret = (remove_pad(ret[0]), remove_pad(ret[1]))
     return ret
+
+
+def remove_and_return_hooks(
+    model: HookedTransformer,
+) -> Dict[str, List[Callable]]:
+    """Convenience function to get all the hooks currently attached to a
+    model's hook_points, store them, remove them, and return them for
+    later reattachmenet.  Can be used to temporarily return a model to
+    "normal" behavior.  Note that the hook objects are the full hook
+    functions, not the original functions, as these have already been
+    wrapped.
+    """
+    hooks_by_hook_point_name = {}
+    for name, hook_point in model.hook_dict.items():
+        if len(hook_point._forward_hooks) > 0:
+            hooks_by_hook_point_name[name] = list(
+                hook_point._forward_hooks.values()
+            )
+    model.remove_all_hook_fns()
+    return hooks_by_hook_point_name
+
+
+def add_hooks_from_dict(
+    model: HookedTransformer,
+    hook_fns: Union[Dict[str, Callable], Dict[str, List[Callable]]],
+    do_remove: bool = False,
+):
+    """Convenience function to add a set of hook functions defined in a
+    dictionkary keyed by hook point name.  Values can be single
+    functions or lists of functions."""
+    if do_remove:
+        model.remove_all_hook_fns()
+    for name, funcs in hook_fns.items():
+        if not isinstance(funcs, list):
+            funcs = [funcs]
+        for func in funcs:
+            hook_point = model.hook_dict[name]
+            handle = hook_point.register_forward_hook(func)
+            handle = LensHandle(handle, False)
+            hook_point.fwd_hooks.append(handle)
