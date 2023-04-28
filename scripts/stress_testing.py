@@ -11,7 +11,7 @@
 try:
     import algebraic_value_editing
 except ImportError:
-    commit = "eb1b349"  # Stable commit
+    commit = "eb1b349"  # Stable commit # TODO edit
     get_ipython().run_line_magic(  # type: ignore
         magic_name="pip",
         line=(
@@ -613,7 +613,7 @@ for prompt in anger_prompts:
 # steering vector's effect from the embedding vector, and not from the
 # other "cognitive work" done by blocks 0–19.
 
-# %% TODO turn into function
+# %% 
 # Record the embedding vector for `Anger` - `Calm` 
 def hooks_source_to_target(model: HookedTransformer, act_adds: List[RichPrompt], target_block: int, source_block: int = 0) -> Dict[str, Callable]:
     """ Record the net steering vector at `source_block` for the prompts
@@ -634,6 +634,8 @@ def hooks_source_to_target(model: HookedTransformer, act_adds: List[RichPrompt],
 
 # %%
 # Get the hooks for the steering vector at layer 0
-anger_hooks: Dict[str, Callable] = hooks_source_to_target(model=model, act_adds=anger_calm_additions, target_block=20, source_block=0)
+transplant_hooks: Dict[str, Callable] = hooks_source_to_target(model=model, act_adds=anger_calm_additions, target_block=20, source_block=0)
 
 # Run the model with these hooks
+transplant_df: pd.DataFrame = completion_utils.gen_using_hooks(model=model, prompt_batch=["I think you're a"] * 5, hook_fns=transplant_hooks, seed=0, **sampling_kwargs)
+# %%
