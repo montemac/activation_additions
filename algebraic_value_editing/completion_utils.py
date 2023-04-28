@@ -40,7 +40,7 @@ def preserve_rng_state(func):
 # Ensure that even if we set the seed, we don't change the RNG state globally
 @preserve_rng_state
 @logging.loggable
-def gen_using_hooks(  # TODO make sure that kwargs handles addition_location is handled properly
+def gen_using_hooks(
     model: HookedTransformer,
     prompt_batch: List[str],
     hook_fns: Dict[str, Callable],

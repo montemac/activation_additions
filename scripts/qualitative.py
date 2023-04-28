@@ -105,7 +105,7 @@ print_n_comparisons(model=model,
 ) 
 
 # %% Now add to the right residual streams
-print_n_comparisons(model=model,
+print_n_comparisons(model=model, # TODO remove?
     prompt="I hate you because",
     tokens_to_generate=150,
     rich_prompts=love_minus_hate_prompts,
@@ -471,7 +471,6 @@ print_n_comparisons(model=model,
     num_comparisons=num_comparisons,
     **default_kwargs,
 )
-
 # %% [markdown]
 # Simple emotional variations seem to work well with `GPT2-XL`.
 

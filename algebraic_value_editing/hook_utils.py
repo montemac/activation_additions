@@ -210,8 +210,6 @@ def hook_fn_from_activations(
             # values for the latest residual stream, not the full
             # sequence
             return resid_pre
-            # TODO figure out way to make long vectors apply to short prompts,
-            #  by e.g. iteratively tracking in a class?
 
         # Add activations to the residual stream
         assert (
@@ -221,7 +219,7 @@ def hook_fn_from_activations(
         sequence_slice = (
             slice(0, activations_seq_len)
             if addition_location == "front"
-            else slice(-activations_seq_len - 1, -1)
+            else slice(-activations_seq_len, None)
         )
         indexing_operation: Tuple[slice, slice, slice] = (
             slice(None),  # Apply to all batches
