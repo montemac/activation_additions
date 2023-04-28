@@ -613,4 +613,27 @@ for prompt in anger_prompts:
 # steering vector's effect from the embedding vector, and not from the
 # other "cognitive work" done by blocks 0–19.
 
+# %% TODO turn into function
+# Record the embedding vector for `Anger` - `Calm` 
+def hooks_source_to_target(model: HookedTransformer, act_adds: List[RichPrompt], target_block: int, source_block: int = 0) -> Dict[str, Callable]:
+    """ Record the net steering vector at `source_block` for the prompts
+    and coefficients given by `RichPrompts`, and return a dictionary with a hook which adds
+    the activations at `target_block`."""
+    for block_num in (source_block, target_block):
+        assert 0 <= block_num <= model.cfg.n_layers, f"block_num must be between 0 and {model.n_layers}, inclusive."
+
+    source_adds: List[RichPrompt] = [RichPrompt(prompt=act_add.prompt, coeff=act_add.coeff, act_name=source_block) for act_add in act_adds]
+
+    # Make a dictionary of hooks which add to the activations at the
+    # source layer
+    embed_dict: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(model=model, rich_prompts=source_adds) 
+
+    # We want to add at the target layer d
+    target_dict: Dict[str, Callable] = {prompt_utils.get_block_name(block_num=target_block): embed_dict[prompt_utils.get_block_name(block_num=source_block)]} 
+    return target_dict
+
 # %%
+# Get the hooks for the steering vector at layer 0
+anger_hooks: Dict[str, Callable] = hooks_source_to_target(model=model, act_adds=anger_calm_additions, target_block=20, source_block=0)
+
+# Run the model with these hooks

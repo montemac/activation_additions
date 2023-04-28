@@ -15,7 +15,7 @@ from algebraic_value_editing.prompt_utils import RichPrompt
 from algebraic_value_editing import prompt_utils
 
 
-def get_prompt_activations(
+def get_prompt_activations(  # TODO rename
     model: HookedTransformer, rich_prompt: RichPrompt
 ) -> Float[torch.Tensor, "batch pos d_model"]:
     """Takes a `RichPrompt` and returns the rescaled activations for that
