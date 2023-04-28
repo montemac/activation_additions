@@ -310,10 +310,10 @@ fig.show()
 
 # %% [markdown]
 # To confirm the exponential increase in magnitude, let's plot the L2
-# norm of the residual stream at position `i`` just before layer `t``,
-# divided by the norm before `t-1``.
+# norm of the residual stream at position `i` just before layer `t``,
+# divided by the norm before `t-1`.
 
-# %%
+# %% 
 for act_loc in all_resid_pre_locations:
     if act_loc == 0: continue
     act_name, act_name_prev = [prompt_utils.get_block_name(block_num=loc) for loc in (act_loc, act_loc - 1)]

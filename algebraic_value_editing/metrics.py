@@ -108,10 +108,10 @@ def get_openai_metric(
     - Bias: RLHF models are very biased towards giving moderate ratings like 7. In future we may want to consider normalizing the ratings to be more centered around 5. (And doing this for humans as well.)
     """
 
-    def chunks(lst: List[str], len: int):
-        """Yield successive `len`-sized chunks from `lst`."""
-        for i in range(0, len(lst), len):
-            yield lst[i : i + len]
+    def chunks(lst: List[str], size: int):
+        """Yield successive `size` chunks from `lst`."""
+        for i in range(0, len(lst), size):
+            yield lst[i : i + size]
 
     def _intify(s):
         return int(s) if s.isdigit() else None
@@ -132,8 +132,10 @@ def get_openai_metric(
                 temperature=0.0,
                 max_tokens=max_reasoning_tokens,
             )
-            chunk_reasoning = [choice["text"] for choice in response.choices]
-            contexts = [
+            chunk_reasoning: List[str] = [
+                choice["text"] for choice in response.choices
+            ]
+            contexts: List[str] = [
                 prompt + reasoning
                 for prompt, reasoning in zip(prompts, chunk_reasoning)
             ]
@@ -147,7 +149,7 @@ def get_openai_metric(
                 max_tokens=1,
             )
 
-            chunk_ratings = [
+            chunk_ratings: List[Optional[int]] = [
                 _intify(r["text"].strip()) for r in response["choices"]
             ]
             ratings.extend(chunk_ratings)
