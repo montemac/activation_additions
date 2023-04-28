@@ -16,11 +16,13 @@ from transformers import pipeline
 import openai
 
 
+# pylint: disable=dangerous-default-value (False positive since we don't
+# mutate the default value)
 def add_metric_cols(
     data: pd.DataFrame,
     metrics_dict: Dict[str, Callable[[Iterable[str]], pd.DataFrame]],
     cols_to_use: List[str] = ["prompts", "completions"],
-):
+) -> pd.DataFrame:
     """Apply a dict of named metrics to a series of strings
     specified by by a particular set of DataFrame columns (which will be
     concatenated), adding the metric outputs as additional columns and
