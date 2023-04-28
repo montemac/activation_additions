@@ -123,7 +123,9 @@ def print_and_save_n_completions(
     # Iterate once if rich_prompts is empty
     if rich_prompts != []:
         hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
-            model=language_model, rich_prompts=rich_prompts
+            model=language_model,
+            rich_prompts=rich_prompts,
+            addition_location=addition_location,
         )
         mod_df: pd.DataFrame = gen_using_hooks(
             prompt_batch=prompt_batch,
@@ -148,6 +150,7 @@ def print_and_save_n_completions(
 
     # Write each of the tokenizations on a separate row
     with open(csv_file, "a", encoding="utf-8") as file:
+        file.write(f"Addition location: {addition_location}\n")
         file.write("Tokenizations\n")
 
     # Prompt tokenization

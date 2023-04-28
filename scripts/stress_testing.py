@@ -309,8 +309,9 @@ fig: go.Figure = line_plot(addition_df, log_y=True)
 fig.show()
 
 # %% [markdown]
-# To confirm the exponential increase in magnitude, let's plot the L2
-# norm of the residual stream at position `i` just before layer `t``,
+# To confirm the exponential increase in magnitude, let's plot the
+# Frobenius
+# norm of the residual stream at position `i` just before layer `t`,
 # divided by the norm before `t-1`.
 
 # %% 
