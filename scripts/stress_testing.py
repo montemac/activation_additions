@@ -24,7 +24,7 @@ except ImportError:
 # %%
 import torch
 import pandas as pd 
-from typing import List, Callable, Dict 
+from typing import List, Callable, Dict, Tuple
 from jaxtyping import Float
 
 from transformer_lens.HookedTransformer import HookedTransformer
@@ -614,7 +614,6 @@ for prompt in anger_prompts:
 # other "cognitive work" done by blocks 0–19.
 
 # %% 
-# Record the embedding vector for `Anger` - `Calm` 
 def hooks_source_to_target(model: HookedTransformer, act_adds: List[RichPrompt], target_block: int, source_block: int = 0) -> Dict[str, Callable]:
     """ Record the net steering vector at `source_block` for the prompts
     and coefficients given by `RichPrompts`, and return a dictionary with a hook which adds
@@ -634,8 +633,110 @@ def hooks_source_to_target(model: HookedTransformer, act_adds: List[RichPrompt],
 
 # %%
 # Get the hooks for the steering vector at layer 0
-transplant_hooks: Dict[str, Callable] = hooks_source_to_target(model=model, act_adds=anger_calm_additions, target_block=20, source_block=0)
+transplant_hooks_0: Dict[str, Callable] = hooks_source_to_target(model=model, act_adds=anger_calm_additions, target_block=20, source_block=0)
 
 # Run the model with these hooks
-transplant_df: pd.DataFrame = completion_utils.gen_using_hooks(model=model, prompt_batch=["I think you're a"] * 5, hook_fns=transplant_hooks, seed=0, **sampling_kwargs)
+transplant_df_0, normal_df = [completion_utils.gen_using_hooks(model=model, prompt_batch=["I think you're a"] * 15, hook_fns=hooks, seed=0, **sampling_kwargs) for hooks in (transplant_hooks_0, anger_hooks)]
+
+# Set this is_modified to be False, since this is the "baseline"
+# condition
+normal_df["is_modified"] = False
+
+df: pd.DataFrame = pd.concat([normal_df, transplant_df_0], ignore_index=True)
+
+completion_utils.pretty_print_completions(results=df, normal_title="Adding anger steering vector (layer 20), at layer 20", mod_title="Adding Anger-Calm embeddings (layer 0), at layer 20")
+# %% [markdown] 
+# At most, adding the embeddings to layer 20 has a very small effect on
+# the qualitative anger of the completions. This is evidence that the
+# layer 0-19 heads are doing a lot of the work of adding extra
+# directions to the anger steering vector, such that the steering vector
+# actually increases the probability of angry completions.
+# 
+# However, as we saw before, the norm of early layers is exponentially
+# smaller than later layers (like 20). In particular, there's a large
+# jump between layer 0 and 2. Let's try sourcing a steering vector
+# from the residual stream just before layer 2, and then adding that
+# layer-2 vector to layer 20.
+
 # %%
+# Get the hooks for the steering vector at layer 2
+transplant_hooks_2: Dict[str, Callable] = hooks_source_to_target(model=model, act_adds=anger_calm_additions, target_block=20, source_block=2)
+
+# Run the model with these hooks
+transplant_df_2: pd.DataFrame = completion_utils.gen_using_hooks(model=model, prompt_batch=["I think you're a"] * 15, hook_fns=transplant_hooks_2, seed=0, **sampling_kwargs)
+
+df_2: pd.DataFrame = pd.concat([normal_df, transplant_df_2], ignore_index=True)
+
+completion_utils.pretty_print_completions(results=df_2, normal_title="Adding anger steering vector (layer 20), at layer 20", mod_title="Adding Anger-Calm embeddings (layer 2), at layer 20")
+# %% [markdown]
+# This is a much larger effect than we saw before. It's not as large as 
+# the effect of adding the normal steering vector, but still -- layers 0
+# and 1 are apparently doing substantial steering-relevant cognitive work!
+# 
+# (Note that if we had used "I think you're" instead of "I think
+# you're a", neither the 0->20 nor the 2->20 vectors would have shown
+# much effect. By contrast, the usual 20->20 steering vector works in
+# both situations. Thus, even if layers 0 and 1 help a bit, they aren't
+# producing nearly as stable of an effect as layers 2 to 19 add in.)
+# 
+# Now let's try rescaling this steering vector further, and see if we
+# can't norm-adjust it to be as effective as the normal steering vector.
+# We can in fact compute how the norm of the vector changes over this
+# part of the model, and rescale appropriately! 
+
+# %% 
+def anger_calm_block_n(block_num: int) -> Tuple[RichPrompt, RichPrompt]:
+    assert 0 <= block_num <= model.cfg.n_layers
+    return RichPrompt(prompt=anger_calm_additions[0].prompt, coeff=anger_calm_additions[0].coeff, act_name=block_num), RichPrompt(prompt=anger_calm_additions[1].prompt, coeff=anger_calm_additions[1].coeff, act_name=block_num)
+
+layer_2_mags, layer_20_mags = [hook_utils.steering_vec_magnitudes(model=model, act_adds=list(anger_calm_block_n(n))) for n in (2, 20)]
+
+rel_mags: torch.Tensor = (layer_20_mags / layer_2_mags)[1:] # Ignore first token because division by 0
+new_coeff: float = rel_mags.mean().item()
+
+print(f"To rescale from layer 2 to 20, we need to multiply by about {new_coeff:.2f}")
+# %% Rescale the activation additions and try again
+rescaled_additions: List[RichPrompt] = [RichPrompt(prompt=add.prompt, coeff=add.coeff * new_coeff, act_name=add.act_name) for add in anger_calm_additions]
+
+rescaled_hooks_2: Dict[str, Callable] = hooks_source_to_target(model=model, act_adds=rescaled_additions, target_block=20, source_block=2)
+
+# Run the model with these hooks
+rescaled_df_2: pd.DataFrame = completion_utils.gen_using_hooks(model=model, prompt_batch=["I think you're a"] * 15, hook_fns=rescaled_hooks_2, seed=0, **sampling_kwargs)
+
+combined_rescaled_df: pd.DataFrame = pd.concat([normal_df, rescaled_df_2], ignore_index=True)
+
+completion_utils.pretty_print_completions(results=combined_rescaled_df, normal_title="Adding anger steering vector (layer 20), at layer 20", mod_title="Adding Anger-Calm embeddings (layer 2), at layer 20")
+# %% [markdown]
+# Even after rescaling by the appropriate amount, the steering vector 
+# sourced from layer 2 is still not as effective as the normal steering 
+# vector. This suggests that the embedding / early-steering (pre-layer 2) vector is not just getting
+# amplified by layers 2–19. Instead, useful computational work is being
+# done by these layers, which then can be added to forward passes in
+# order to make them "angrier" on certain prompts we've examined.
+
+# %% [markdown]
+# ## Only adding in a slice of the steering vector
+# GPT-2-XL has a 1,600-dimensional residual stream (i.e.
+# `d_model=1600`). Alex was curious about whether we could get some steering
+# effect by only 
+# adding in certain dimensions of the residual stream (e.g. dimensions
+# 0–799). He thought this probably (75%) wouldn't work, but the
+# experiment was cheap and interesting and so he ran it. 
+# 
+# More precisely, suppose we add in the first _n_% of the residual
+# stream dimensions for the `_wedding`-`_` vector. To what extent will
+# the prompts be about weddings, as opposed to garbage or unrelated
+# topics? Will lopping off part of the vector To [his
+# surprise](https://predictionbook.com/predictions/211472),* the "weddingness" of the completions smoothly increases with _n_!
+# 
+# \* This was before the random-vector experiments were run. The
+#   random-vector results make it less surprising that "just chop off
+#   half the dimensions" doesn't ruin outputs. But the random-addition result still doesn't
+#   predict a smooth relationship between (% of dimensions added)
+#   and (weddingness of output).
+
+# %%
+wedding_additions: List[RichPrompt] = [RichPrompt(prompt=" wedding", coeff=1.0, act_name=6), RichPrompt(prompt=" ", coeff=-1.0, act_name=6)]
+
+slice_to_add: slice = slice(0, model.cfg.d_model // 2)
+completion_utils.print_n_comparisons(prompt="I went up to my friend and said", model=model, rich_prompts=wedding_additions, num_comparisons=10, res_stream_slice=slice_to_add, **sampling_kwargs) # TODO plot quantitative metric here 

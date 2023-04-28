@@ -137,6 +137,7 @@ def gen_using_rich_prompts(
     rich_prompts: List[RichPrompt],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     addition_location: str = "front",
+    res_stream_slice: slice = slice(None),
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts.
@@ -154,6 +155,9 @@ def gen_using_rich_prompts(
         `addition_location`: The position at which to add the activations into
         the residual stream. Can be 'front' or 'back'.
 
+        `res_stream_slice`: A slice specifying which parts of the
+        residual stream to add to.
+
         `kwargs`: Keyword arguments to pass to `gen_using_hooks`.
 
     returns:
@@ -167,6 +171,7 @@ def gen_using_rich_prompts(
         model=model,
         rich_prompts=rich_prompts,
         addition_location=addition_location,
+        res_stream_slice=res_stream_slice,
     )
 
     return gen_using_hooks(model=model, hook_fns=hook_fns, log=False, **kwargs)
@@ -282,6 +287,7 @@ def print_n_comparisons(
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     rich_prompts: Optional[List[RichPrompt]] = None,
     addition_location: str = "front",
+    res_stream_slice: slice = slice(None),
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
@@ -306,6 +312,9 @@ def print_n_comparisons(
         or back-positioned residual streams in the forward poss. Must be
         either "front" or "back".
 
+        `res_stream_slice`: A slice specifying which activation positions to add
+        into the residual stream.
+
         `kwargs`: Keyword arguments to pass to
         `gen_using_hooks`.
     """
@@ -326,6 +335,7 @@ def print_n_comparisons(
             model=model,
             rich_prompts=rich_prompts,
             addition_location=addition_location,
+            res_stream_slice=res_stream_slice,
             **kwargs,
         )
         data_frames.append(mod_df)

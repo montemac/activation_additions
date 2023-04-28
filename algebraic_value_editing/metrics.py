@@ -26,6 +26,10 @@ def add_metric_cols(
     concatenated), adding the metric outputs as additional columns and
     returning the resulting DataFrame.
     """
+    assert all(
+        col in data.columns for col in cols_to_use
+    ), f"Columns {cols_to_use} not found in data"
+
     for metric_name, metric_func in metrics_dict.items():
         data["metric_inputs"] = data[cols_to_use].agg("".join, axis=1)
         metric_df = metric_func(data["metric_inputs"].to_list()).add_prefix(
@@ -91,12 +95,11 @@ def get_word_count_metric(
     return metric_func
 
 
-
 def get_openai_metric(
-    model_name: str, # e.g. text-davinci-003
-    criterion: str, # e.g. "happy" gives prompt "How happy is this text?" as a prompt
-    chunk_size: int = 19, # max chunk size passed to openai (limit is 19 for text-davinci-003)
-    max_reasoning_tokens: int = 100, # max tokens to use for reasoning
+    model_name: str,  # e.g. text-davinci-003
+    criterion: str,  # e.g. "happy" gives prompt "How happy is this text?" as a prompt
+    chunk_size: int = 19,  # max chunk size passed to openai (limit is 19 for text-davinci-003)
+    max_reasoning_tokens: int = 100,  # max tokens to use for reasoning
 ):
     """Create a metric using an OpenAI model. and chain-of-thought. The model is called twice, first to get a reasoning for the rating, then to get the rating itself (from 1-10). The metric function returns a dataframe with two columns: "rating" and "reasoning"
 
@@ -105,10 +108,10 @@ def get_openai_metric(
     - Bias: RLHF models are very biased towards giving moderate ratings like 7. In future we may want to consider normalizing the ratings to be more centered around 5. (And doing this for humans as well.)
     """
 
-    def chunks(lst: List[str], n: int):
-        """Yield successive n-sized chunks from lst."""
-        for i in range(0, len(lst), n):
-            yield lst[i : i + n]
+    def chunks(lst: List[str], len: int):
+        """Yield successive `len`-sized chunks from `lst`."""
+        for i in range(0, len(lst), len):
+            yield lst[i : i + len]
 
     def _intify(s):
         return int(s) if s.isdigit() else None
@@ -118,29 +121,41 @@ def get_openai_metric(
         reasoning = []
 
         for chunk in chunks(list(strs), chunk_size):
-            prompts = [f"How {criterion} is this text? Give reasoning in 1-3 sentences. Text:\n{s}\nReasoning:\n" for s in chunk]
+            prompts = [
+                f"How {criterion} is this text? Give reasoning in 1-3"
+                f" sentences. Text:\n{s}\nReasoning:\n"
+                for s in chunk
+            ]
             response = openai.Completion.create(
                 model=model_name,
                 prompt=prompts,
                 temperature=0.0,
                 max_tokens=max_reasoning_tokens,
             )
-            chunk_reasoning = [choice['text'] for choice in response.choices]
-            contexts = [prompt + reasoning for prompt, reasoning in zip(prompts, chunk_reasoning)]
+            chunk_reasoning = [choice["text"] for choice in response.choices]
+            contexts = [
+                prompt + reasoning
+                for prompt, reasoning in zip(prompts, chunk_reasoning)
+            ]
             response = openai.Completion.create(
                 model=model_name,
-                prompt=[f"{ctx}\n\n{criterion.title()} rating (1-5):" for ctx in contexts],
+                prompt=[
+                    f"{ctx}\n\n{criterion.title()} rating (1-5):"
+                    for ctx in contexts
+                ],
                 temperature=0.0,
                 max_tokens=1,
             )
 
-
-            chunk_ratings = [_intify(r["text"].strip()) for r in response["choices"]]
+            chunk_ratings = [
+                _intify(r["text"].strip()) for r in response["choices"]
+            ]
             ratings.extend(chunk_ratings)
             reasoning.extend(chunk_reasoning)
 
         # Return dataframe with ratings and reasoning
-        return pd.DataFrame({"rating": ratings, "reasoning": reasoning}, index=strs)
-
+        return pd.DataFrame(
+            {"rating": ratings, "reasoning": reasoning}, index=strs
+        )
 
     return metric_func
