@@ -87,9 +87,9 @@ print(f"GPT2-XL has {num_layers} layers.")
 
 # %%
 love_minus_hate_prompts: List[RichPrompt] = (
-    [  # TODO use coeffs from post, or update post
+    [  
         *get_x_vector_preset(
-            prompt1="Love", prompt2="Hate", coeff=1, act_name=6
+            prompt1="Love", prompt2="Hate", coeff=5, act_name=6 # NOTE that 1 works here too
         )
     ]
 )
@@ -104,15 +104,6 @@ print_n_comparisons(model=model,
     **default_kwargs,
 ) 
 
-# %% Now add to the right residual streams
-print_n_comparisons(model=model, # TODO remove?
-    prompt="I hate you because",
-    tokens_to_generate=150,
-    rich_prompts=love_minus_hate_prompts,
-    addition_location="back",
-    num_comparisons=num_comparisons,
-    **default_kwargs,   
-)
 
 # %% [markdown]
 # Note that the third modified completion contains "Love ____ because I
@@ -127,7 +118,6 @@ print_n_comparisons(model=model, # TODO remove?
 # these two were the same, that would be surprising to us, as it would
 # imply commutivity in the following diagram:
 #
-# **TODO diagram**
 # https://q.uiver.app/?q=WzAsNSxbMCwwLCJcXHRleHR7YGBJIGhhdGUgeW91IGJlY2F1c2VcIn0iXSxbNCwwLCJcXHRleHR7YGBMb3ZlIGhhdGUgeW91IGJlY2F1c2UnJ30iXSxbNCw0LCJcXHRleHR7RGlzdHJpYnV0aW9uIG92ZXIgY29tcGxldGlvbnN9Il0sWzQsNywiXFx0ZXh0e0p1ZGdtZW50fSJdLFswLDQsIlxcdGV4dHtBZGQgYExvdmUnLCBzdWJ0cmFjdCBgSGF0ZScgYWN0aXZhdGlvbnMgfVxcZnJhY3sxfXs4fSBcXFxcXFx0ZXh0eyBvZiB3YXkgdGhyb3VnaCBmb3J3YXJkIHBhc3N9Il0sWzAsNF0sWzQsMl0sWzEsMl0sWzAsMV0sWzIsMywiXFx0ZXh0e0RlY2lzaW9uOiBBcmUgdGhlc2UgY29tcGxldGlvbnMgYXJlIGFib3V0IHdlZGRpbmdzfSIsMl1d 
 
 # %% [markdown]

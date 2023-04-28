@@ -43,7 +43,7 @@ weddings_prompts = [
     )
 ]
 
-completion_utils.print_n_comparisons(
+completion_utils.print_and_save_n_comparisons(
     model=MODEL,
     prompt="Frozen starts off with a scene about",
     tokens_to_generate=50,

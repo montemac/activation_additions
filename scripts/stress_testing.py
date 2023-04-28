@@ -576,24 +576,27 @@ for prompt in anger_prompts:
 anger_hooks: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(model=model, rich_prompts=anger_calm_additions)
 
 for prompt in anger_prompts:
-    anger_logits: Float[torch.Tensor, "batch seq vocab"] = model.run_with_hooks(prompt, fwd_hooks=list(anger_hooks.items()))
+    seq_slice: slice = slice(3, None) # Slice off the first 3 tokens, whose outputs will be messed up by the ActivationAddition
+    logit_indexing: Tuple[slice, slice] = (slice(None), seq_slice)
+
+    anger_logits: Float[torch.Tensor, "batch seq vocab"] = model.run_with_hooks(prompt, fwd_hooks=list(anger_hooks.items()))[logit_indexing] 
 
     model.add_hook(name=act_name, hook=hook)
-    rand_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)
+    rand_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[logit_indexing] 
     model.remove_all_hook_fns()
 
-    normal_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)
+    normal_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[logit_indexing]
 
     # Convert logits to probabilities using softmax
     normal_probs, rand_probs, anger_probs = [torch.nn.functional.softmax(logits, dim=-1) for logits in [normal_logits, rand_logits, anger_logits]]
 
-    # Compute KL between the two
-    kl_rand, kl_anger = [torch.nn.functional.kl_div(input=probs, target=normal_probs, reduction="batchmean") for probs in [rand_probs, anger_probs]]
+    # Compute KL between the two, negating because kl_div computes negation of KL
+    kl_rand, kl_anger = [torch.nn.functional.kl_div(input=probs.log(), target=normal_probs, reduction="batchmean") for probs in [rand_probs, anger_probs]]
 
     print(completion_utils.bold_text(f"Prompt: {prompt}"))
-    print(f"KL between probs with and without random vector: {kl_rand:.3f}")
-    print(f"KL between probs with and without anger vector: {kl_anger:.3f}")
-    print(f"KL(normal || anger) - KL(normal || rand) = {kl_anger - kl_rand:.3f}\n")
+    print(f"KL between probs with and without random vector: {kl_rand:.5f}")
+    print(f"KL between probs with and without anger vector: {kl_anger:.5f}")
+    print(f"KL(normal || anger) - KL(normal || rand) = {kl_anger - kl_rand:.5f}\n")
 
 
 # %% [markdown]
@@ -756,7 +759,7 @@ completion_utils.pretty_print_completions(results=combined_rescaled_df, normal_t
 # \* This was before the random-vector experiments were run. The
 #   random-vector results make it less surprising that "just chop off
 #   half the dimensions" doesn't ruin outputs. But the random-addition result still doesn't
-#   predict a smooth relationship between (% of dimensions added)
+#   predict a smooth relationship between (% of dimensions modified)
 #   and (weddingness of output).
 
 # %%

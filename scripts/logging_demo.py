@@ -23,9 +23,7 @@ _ = torch.set_grad_enabled(False)
 
 # %%
 # Load a model
-MODEL = HookedTransformer.from_pretrained(
-    model_name="gpt2-xl", device="cpu"
-)
+MODEL = HookedTransformer.from_pretrained(model_name="gpt2-xl", device="cpu")
 
 _ = MODEL.to("cuda:0")
 
@@ -43,8 +41,8 @@ rich_prompts: List[prompt_utils.RichPrompt] = [
         custom_pad_id=int(MODEL.to_single_token(" ")),
     ),
 ]
-completion_utils.print_n_comparisons(
-    prompt=("Frozen starts off with a scene about"),
+completion_utils.print_and_save_n_comparisons(
+    prompt="Frozen starts off with a scene about",
     num_comparisons=5,
     model=MODEL,
     rich_prompts=rich_prompts,
