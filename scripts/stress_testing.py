@@ -263,16 +263,18 @@ for act_loc in all_resid_pre_locations:
         RichPrompt(prompt="Calm", coeff=-1, act_name=act_loc)
     ]
     act_name: str = prompt_utils.get_block_name(block_num=act_loc)
+
     for addition in anger_calm_additions:
         mags: torch.Tensor = hook_utils.prompt_magnitudes(
             model=model, prompt=addition.prompt, act_name=act_name
         ).cpu()
 
         for pos, mag in enumerate(mags):
-            # Create a new dataframe row with the current data
+            res_stream: str = f"{addition.prompt}, pos {pos}"
+            # Create a new dataframe row with the current data 
             row = pd.DataFrame(
                 {
-                    "Prompt": [f"{addition.prompt}, pos {pos}"],
+                    "Prompt": [res_stream],
                     "Activation Location": [act_loc],
                     "Activation Name": [act_name],
                     "Magnitude": [mag],
@@ -284,8 +286,9 @@ for act_loc in all_resid_pre_locations:
 
 # %% Make a plotly line plot of the RichPrompt magnitudes
 
-def line_plot(df: pd.DataFrame, log_y: bool = True, title: str = "ActivationAddition Prompt Magnitude by Layer Number", legend_title_text: str = "Prompt") -> go.Figure:
-    """ Make a line plot of the RichPrompt magnitudes. """
+def line_plot(df: pd.DataFrame, log_y: bool = True, title: str = "Residual Stream Magnitude by Layer Number", legend_title_text: str = "Prompt") -> go.Figure:
+    """ Make a line plot of the RichPrompt magnitudes. If log_y is True,
+    adds a column to the dataframe with the log10 of the magnitude."""
     for col in ["Prompt", "Activation Location", "Magnitude"]:
         assert col in df.columns, f"Column {col} not in dataframe"
 
@@ -302,8 +305,29 @@ def line_plot(df: pd.DataFrame, log_y: bool = True, title: str = "ActivationAddi
     return fig
 
 # %% 
-fig: go.Figure = line_plot(addition_df)
+fig: go.Figure = line_plot(addition_df, log_y=True)
 fig.show()
+
+# %% [markdown]
+# To confirm the exponential increase in magnitude, let's plot the L2
+# norm of the residual stream at position `i`` just before layer `t``,
+# divided by the norm before `t-1``.
+
+# %%
+for act_loc in all_resid_pre_locations:
+    if act_loc == 0: continue
+    act_name, act_name_prev = [prompt_utils.get_block_name(block_num=loc) for loc in (act_loc, act_loc - 1)]
+    
+    mags, mags_prev = [hook_utils.prompt_magnitudes(
+        model=model, prompt="MATS is really cool", act_name=name
+    ).cpu() for name in (act_name, act_name_prev)]
+
+    print(f"Layer {act_loc}: {mags / mags_prev}")
+
+# %% [markdown]
+# The exponential increase in magnitude is confirmed (at a rate of
+# around 1.05^t), outside of the
+# zeroth position (`<|endoftext|>`), which we already know is an outlier.
 
 # %% [markdown] Now let's plot how the steering vector magnitudes change with layer
 # number. These magnitudes are the L2 norms of the net activation
