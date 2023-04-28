@@ -124,6 +124,8 @@ sampling_kwargs: Dict[str, float] = {
     "freq_penalty": 1.0
 }
 
+num_layers: int = model.cfg.n_layers
+
 # %% [markdown]
 # ## Plotting the distribution of residual stream magnitudes
 # As the forward pass progresses through the network, the residual
@@ -168,7 +170,7 @@ def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
 
     return fig
 # %%
-activation_locations_6: List[int] = torch.arange(0, 48, 6).tolist()
+activation_locations_6: List[int] = torch.arange(0, num_layers, 6).tolist()
 
 # %%
 # Create an empty dataframe with the required columns
@@ -247,7 +249,7 @@ fig.show()
 
 # %%
 # Create an empty dataframe with the required columns
-all_resid_pre_locations: List[int] = torch.arange(0, 48, 1).tolist()
+all_resid_pre_locations: List[int] = torch.arange(0, num_layers, 1).tolist()
 addition_df = pd.DataFrame(
     columns=DF_COLS
 )
@@ -538,6 +540,48 @@ for prompt in anger_prompts:
 # break/modify via generic random intervention,
 # and is instead controllable through consistent feature directions
 # which are added to its forward pass by steering vectors. 
+# 
+# Let's also measure the KL between the logits output by the model with
+# and without the random vector. This will give us a sense of how much
+# the random vector is changing the behavior. As a baseline, we'll
+# compare to the KL for the anger steering vector.
+
+# %%
+# Get the logits with and without the random vector, and with/without
+# the anger steering vector.
+anger_hooks: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(model=model, rich_prompts=anger_calm_additions)
+
+for prompt in anger_prompts:
+    anger_logits: Float[torch.Tensor, "batch seq vocab"] = model.run_with_hooks(prompt, fwd_hooks=list(anger_hooks.items()))
+
+    model.add_hook(name=act_name, hook=hook)
+    rand_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)
+    model.remove_all_hook_fns()
+
+    normal_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)
+
+    # Convert logits to probabilities using softmax
+    normal_probs, rand_probs, anger_probs = [torch.nn.functional.softmax(logits, dim=-1) for logits in [normal_logits, rand_logits, anger_logits]]
+
+    # Compute KL between the two
+    kl_rand, kl_anger = [torch.nn.functional.kl_div(input=probs, target=normal_probs, reduction="batchmean") for probs in [rand_probs, anger_probs]]
+
+    print(completion_utils.bold_text(f"Prompt: {prompt}"))
+    print(f"KL between probs with and without random vector: {kl_rand:.3f}")
+    print(f"KL between probs with and without anger vector: {kl_anger:.3f}")
+    print(f"KL(normal || anger) - KL(normal || rand) = {kl_anger - kl_rand:.3f}\n")
+
+
+# %% [markdown]
+# For both prompts, KL(normal || random) = KL(normal || anger) to within
+# 0.1 nats. This is a very small difference relative to the KLs in
+# question. Since the steering vector changes the qualitative behavior
+# of the model in a recognizable direction (increasing number of angry
+# completions), but the random vector doesn't have an effect we can
+# perceive on the two `anger_prompts`, we tentatively conclude that the
+# steering vector is doing something "special" relative to most
+# directions we could add to the forward pass.
+
 # %% [markdown]
 # # Testing the hypothesis that we're "basically injecting extra tokens"
 # There's a hypothesis that the steering vectors are just injecting
@@ -555,6 +599,18 @@ for prompt in anger_prompts:
 # Even though this hypothesis isn't strictly true, there are still
 # interesting versions to investigate. For example, consider the
 # steering vector formed by adding `Anger` and subtracting `Calm` at
-# layer 20, with coefficient 10. Perhaps what we're really doing is 
+# layer 20, with coefficient 10. Perhaps what matters is not so much the
+# "cognitive work" done by transformer blocks 0 through 19, but the
+# 10*(embed(`Anger`) - embed(`Calm`)) vector. (As pointed out by the [mathematical
+# framework for transformer
+# circuits](https://transformer-circuits.pub/2021/framework/index.html),
+# this is a component of the `Anger`-`Calm` steering vector.)
+# 
+# We test this hypothesis by recording the relevant embedding
+# vector, and then hooking in to the model at layer 20 to add the vector
+# to the forward pass. If this also makes GPT-2-XL talk about
+# weddings more, in a coherent way, that's evidence that a lot of the
+# steering vector's effect from the embedding vector, and not from the
+# other "cognitive work" done by blocks 0–19.
 
 # %%
