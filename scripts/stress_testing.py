@@ -613,7 +613,7 @@ for prompt in anger_prompts:
 # Lastly, we see that a "random text vector" indeed produces strange
 # results. However, the results are still syntactically coherent. 
 
-# %% TODO finish this up
+# %%
 nonsense_vector: List[RichPrompt] = [
     *prompt_utils.get_x_vector(
         prompt1="fdsajl; fs",
@@ -630,20 +630,56 @@ nonsense_vector: List[RichPrompt] = [
 anger_mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
     model=model, act_adds=anger_calm_additions
 ).cpu()
-avg_mag: float = anger_mags.mean().item()
 
 nonsense_mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
     model=model, act_adds=nonsense_vector
 ).cpu()
 
+# Get average ratio between non-EOS anger and nonsense tokens
+scaling_factor: float = anger_mags[1:].mean().item() / nonsense_mags[1:].mean().item() 
 
-scaling_factors: torch.Tensor = avg_mag / nonsense_mags[1:].norm(dim=1)
-rand_act = rand_act * scaling_factors[:, None]
+rescaled_nonsense_vector: List[RichPrompt] = [
+    *prompt_utils.get_x_vector(
+        prompt1="fdsajl; fs",
+        prompt2="",
+        coeff=10*scaling_factor,
+        act_name=20,
+        model=model,
+        pad_method="tokens_right",
+        custom_pad_id=int(model.to_single_token(" ")),
+    )
+]
+
+# See how the model responds to the nonsense vector
+completion_utils.print_n_comparisons(
+    model=model,
+    prompt="I went up to my friend and said",
+    rich_prompts=rescaled_nonsense_vector,
+    num_comparisons=5,
+    **sampling_kwargs
+)
+
+# %% [markdown] 
+# The model isn't very affected by the properly scaled nonsense vector.
+# However, very large nonsense vectors do affect the model:
+
+# %%
+large_nonsense_vector: List[RichPrompt] = [
+    *prompt_utils.get_x_vector(
+        prompt1="fdsajl; fs",
+        prompt2="",
+        coeff=1000,
+        act_name=20,
+        model=model,
+        pad_method="tokens_right",
+        custom_pad_id=int(model.to_single_token(" ")),
+    )
+]
 
 completion_utils.print_n_comparisons(
     model=model,
     prompt="I went up to my friend and said",
-    rich_prompts=nonsense_vector,
+    rich_prompts=large_nonsense_vector,
     num_comparisons=5,
     **sampling_kwargs
 )
