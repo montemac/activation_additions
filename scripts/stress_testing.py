@@ -609,6 +609,44 @@ for prompt in anger_prompts:
 # perceive on the two `anger_prompts`, we tentatively conclude that the
 # steering vector is doing something "special" relative to most
 # directions we could add to the forward pass.
+#
+# Lastly, we see that a "random text vector" indeed produces strange
+# results. However, the results are still syntactically coherent. 
+
+# %% TODO finish this up
+nonsense_vector: List[RichPrompt] = [
+    *prompt_utils.get_x_vector(
+        prompt1="fdsajl; fs",
+        prompt2="",
+        coeff=10,
+        act_name=20,
+        model=model,
+        pad_method="tokens_right",
+        custom_pad_id=int(model.to_single_token(" ")),
+    )
+]
+
+# Let's make sure the nonsense vector is the same scale as the anger vector
+anger_mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
+    model=model, act_adds=anger_calm_additions
+).cpu()
+avg_mag: float = anger_mags.mean().item()
+
+nonsense_mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
+    model=model, act_adds=nonsense_vector
+).cpu()
+
+
+scaling_factors: torch.Tensor = avg_mag / nonsense_mags[1:].norm(dim=1)
+rand_act = rand_act * scaling_factors[:, None]
+
+completion_utils.print_n_comparisons(
+    model=model,
+    prompt="I went up to my friend and said",
+    rich_prompts=nonsense_vector,
+    num_comparisons=5,
+    **sampling_kwargs
+)
 
 # %% [markdown]
 # # Testing the hypothesis that we're "basically injecting extra tokens"
@@ -720,11 +758,11 @@ def anger_calm_block_n(block_num: int) -> Tuple[RichPrompt, RichPrompt]:
 layer_2_mags, layer_20_mags = [hook_utils.steering_vec_magnitudes(model=model, act_adds=list(anger_calm_block_n(n))) for n in (2, 20)]
 
 rel_mags: torch.Tensor = (layer_20_mags / layer_2_mags)[1:] # Ignore first token because division by 0
-new_coeff: float = rel_mags.mean().item()
+rescale_2_to_20_factor: float = rel_mags.mean().item()
 
-print(f"To rescale from layer 2 to 20, we need to multiply by about {new_coeff:.2f}")
+print(f"To rescale from layer 2 to 20, we need to multiply by about {rescale_2_to_20_factor:.2f}")
 # %% Rescale the activation additions and try again
-rescaled_additions: List[RichPrompt] = [RichPrompt(prompt=add.prompt, coeff=add.coeff * new_coeff, act_name=add.act_name) for add in anger_calm_additions]
+rescaled_additions: List[RichPrompt] = [RichPrompt(prompt=add.prompt, coeff=add.coeff * rescale_2_to_20_factor, act_name=add.act_name) for add in anger_calm_additions]
 
 rescaled_hooks_2: Dict[str, Callable] = hooks_source_to_target(model=model, act_adds=rescaled_additions, target_block=20, source_block=2)
 
@@ -755,16 +793,92 @@ completion_utils.pretty_print_completions(results=combined_rescaled_df, normal_t
 # stream dimensions for the `_wedding`-`_` vector. To what extent will
 # the prompts be about weddings, as opposed to garbage or unrelated
 # topics? Will lopping off part of the vector To [his
-# surprise](https://predictionbook.com/predictions/211472),* the "weddingness" of the completions smoothly increases with _n_!
+# surprise](https://predictionbook.com/predictions/211472),* the
+# "weddingness" of the completions smoothly increases with _n_! 
+#
+# To illustrate this, we'll run 100 completions for 10 _n_ values, and
+# plot the average number of wedding words there are per completion.
 # 
 # \* This was before the random-vector experiments were run. The
 #   random-vector results make it less surprising that "just chop off
 #   half the dimensions" doesn't ruin outputs. But the random-addition result still doesn't
 #   predict a smooth relationship between (% of dimensions modified)
 #   and (weddingness of output).
+# %% 
+wedding_additions: List[RichPrompt] = [RichPrompt(prompt=" wedding", coeff=4.0, act_name=6), RichPrompt(prompt=" ", coeff=-4.0, act_name=6)]
+wedding_completions: int = 100
+
+from algebraic_value_editing import metrics
+metrics_dict: Dict[str, Callable] = {
+    "wedding_words": metrics.get_word_count_metric(
+        [
+            "wedding",
+            "weddings",
+            "wed",
+            "marry",
+            "married",
+            "marriage",
+            "bride",
+            "groom",
+            "honeymoon",
+        ]
+    ),
+}
+
+dfs: List[pd.DataFrame] = []
+
+for frac in [num / 10. for num in range(11)]: 
+    slice_to_add: slice = slice(0, int(model.cfg.d_model * frac))
+    fractional_df: pd.DataFrame = completion_utils.gen_using_rich_prompts(model=model, prompt_batch=["I went up to my friend and said"] * wedding_completions, rich_prompts=wedding_additions, res_stream_slice=slice_to_add, seed=0, **sampling_kwargs)
+
+    # Store the fraction of dims we modified
+    fractional_df["frac_dims_added"] = frac
+    dfs.append(fractional_df)    
+
+merged_df: pd.DataFrame = pd.concat(dfs, ignore_index=True)
+
+# Store how many wedding words are present for each completion
+merged_df = metrics.add_metric_cols(data=merged_df, metrics_dict=metrics_dict)
 
 # %%
-wedding_additions: List[RichPrompt] = [RichPrompt(prompt=" wedding", coeff=1.0, act_name=6), RichPrompt(prompt=" ", coeff=-1.0, act_name=6)]
+# Make a line plot of the avg. number of wedding words in the
+# completions, as a function of the fraction of dimensions added
+avg_words_df: pd.DataFrame = merged_df.groupby("frac_dims_added").mean(numeric_only=True).reset_index()
 
-slice_to_add: slice = slice(0, model.cfg.d_model // 2)
-completion_utils.print_n_comparisons(prompt="I went up to my friend and said", model=model, rich_prompts=wedding_additions, num_comparisons=10, res_stream_slice=slice_to_add, **sampling_kwargs) # TODO plot quantitative metric here 
+fig: go.Figure = px.line(
+    avg_words_df,
+    x="frac_dims_added",
+    y="wedding_words_count",
+    title="(Average # of wedding words in completions) vs (fraction of dimensions affected by steering vector)",
+    labels={
+        "frac_dims_added": "Fraction of dimensions affected by steering vector",
+        "wedding_words_count": "Avg. # of wedding words",
+    },
+)
+
+# Show ticks along 0, 0.1, ... 1.0
+fig.update_xaxes(tickmode="array", tickvals=[num / 10. for num in range(11)])
+
+# Set x range to [0,1]
+fig.update_xaxes(range=[-.01, 1.01])
+
+# Show datapoints with markers
+fig.update_traces(mode="markers+lines")
+
+fig.show()
+
+
+# %% [markdown]
+# Shockingly, for the `frac=0.7` setting, adding in the first 1,120 (out of 1,600) dimensions of the
+# residual stream is enough to make the completions _more_ about
+# weddings than if we added in at all 1,600 dimensions (`frac=1.0`). Let's peek at
+# some of these completions and see if they make sense:
+
+# %% 
+df_head: pd.DataFrame = merged_df.loc[merged_df["frac_dims_added"] == 0.7].head()
+completion_utils.pretty_print_completions(results=df_head, mod_title=f"Adding wedding vector, first 70% of dimensions")
+
+# %% [markdown]
+# The completions are indeed about weddings! And it's still coherent.
+# Yet another mystery. NOTE talk about implications for privileged basis
+# (but hesitant, since n=1 datapoints?)
