@@ -35,7 +35,7 @@ from algebraic_value_editing.prompt_utils import RichPrompt
 # %%
 model_name = "gpt2-xl"
 
-device: str = "cuda:3" if torch.cuda.is_available() else "cpu"
+device: str = "cuda" if torch.cuda.is_available() else "cpu"
 model: HookedTransformer = HookedTransformer.from_pretrained(
     model_name, device="cpu"
 )
