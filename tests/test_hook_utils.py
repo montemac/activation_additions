@@ -46,7 +46,7 @@ def test_hook_fn_from_activations():
     hook_fxn: Callable = hook_utils.hook_fn_from_activations(activations=activations, addition_location="back")
     result: torch.Tensor = hook_fxn(input_tensor)
 
-    assert torch.eq(result, back_target).all(), "xvec = back test failed"
+    assert torch.eq(result, back_target).all(), "xvec = back test failed, incorrect changes were made to the input tensor"
 
     # this needs to be repeated because it did replacements in-place and the tensor is now modified
     input_tensor: torch.Tensor = torch.ones((1, 10, 1))
@@ -58,7 +58,60 @@ def test_hook_fn_from_activations():
     hook_fxn: Callable = hook_utils.hook_fn_from_activations(activations=activations, addition_location="front")
     result: torch.Tensor = hook_fxn(input_tensor)
 
-    assert torch.eq(result, front_target).all(), "xvec = front test failed"
+    assert torch.eq(result, front_target).all(), "xvec = front test failed, incorrect changes were made to the input tensor"
+
+
+def test_hook_fn_from_activations_mid():
+    """Testing the front and back modifiers of the xvec_position"""
+    #both even
+    input_tensor: torch.Tensor = torch.ones((1, 10, 1))
+    activations: torch.Tensor = 2 * torch.ones((1, 4, 1))
+
+    mid_target: torch.Tensor = torch.tensor([[1, 1, 1, 3, 3, 3, 3, 1, 1, 1]])
+    mid_target: torch.Tensor = mid_target.unsqueeze(0).unsqueeze(-1)
+
+    hook_fxn: Callable = hook_utils.hook_fn_from_activations(activations=activations, addition_location="mid")
+    result: torch.Tensor = hook_fxn(input_tensor)
+
+    assert torch.eq(result, mid_target).all(), "xvec = mid test failed (case input and activations both even length), incorrect changes were made to the input tensor"
+
+
+    #one odd (input)
+    input_tensor: torch.Tensor = torch.ones((1, 9, 1))
+    activations: torch.Tensor = 2 * torch.ones((1, 4, 1))
+
+    mid_target: torch.Tensor = torch.tensor([[1, 1, 3, 3, 3, 3, 3, 1, 1, 1]])
+    mid_target: torch.Tensor = mid_target.unsqueeze(0).unsqueeze(-1)
+
+    hook_fxn: Callable = hook_utils.hook_fn_from_activations(activations=activations, addition_location="mid")
+    result: torch.Tensor = hook_fxn(input_tensor)
+
+    assert torch.eq(result, mid_target).all(), "xvec = mid test failed (case input len odd and activations len even), incorrect changes were made to the input tensor"
+
+
+    #one odd (activations)
+    input_tensor: torch.Tensor = torch.ones((1, 10, 1))
+    activations: torch.Tensor = 2 * torch.ones((1, 3, 1))
+
+    mid_target: torch.Tensor = torch.tensor([[1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1]])
+    mid_target: torch.Tensor = mid_target.unsqueeze(0).unsqueeze(-1)
+
+    hook_fxn: Callable = hook_utils.hook_fn_from_activations(activations=activations, addition_location="mid")
+    result: torch.Tensor = hook_fxn(input_tensor)
+
+    assert torch.eq(result, mid_target).all(), "xvec = mid test failed (case input len even and activations len odd), incorrect changes were made to the input tensor"
+
+    #both odd
+    input_tensor: torch.Tensor = torch.ones((1, 9, 1))
+    activations: torch.Tensor = 2 * torch.ones((1, 3, 1))
+
+    mid_target: torch.Tensor = torch.tensor([[1, 1, 1, 3, 3, 3, 1, 1, 1]])
+    mid_target: torch.Tensor = mid_target.unsqueeze(0).unsqueeze(-1)
+
+    hook_fxn: Callable = hook_utils.hook_fn_from_activations(activations=activations, addition_location="mid")
+    result: torch.Tensor = hook_fxn(input_tensor)
+
+    assert torch.eq(result, mid_target).all(), "xvec = mid test failed (case input len and activations len both odd), incorrect changes were made to the input tensor"
 
 
 def test_magnitudes_zeros(attn_2l_model):
