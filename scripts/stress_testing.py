@@ -35,6 +35,7 @@ except ImportError:
     )
 
 
+
 # %%
 import torch
 import pandas as pd
@@ -47,16 +48,16 @@ from algebraic_value_editing import hook_utils, prompt_utils, completion_utils
 from algebraic_value_editing.prompt_utils import RichPrompt
 
 
+
 # %%
 device: str = "cuda:1"  # TODO update for colab
 model_name = "gpt2-xl"
-model: HookedTransformer = HookedTransformer.from_pretrained(
-    model_name, device="cpu"
-)
+model: HookedTransformer = HookedTransformer.from_pretrained(model_name, device="cpu")
 _ = model.to(device)
 
 _ = torch.set_grad_enabled(False)
 torch.manual_seed(0)  # For reproducibility
+
 
 
 # %% [markdown]
@@ -219,10 +220,7 @@ prompts: List[str] = [
         "I've been using this acne cream for a month and it's only making my"
         " skin worse, anyone else having this issue?"
     ),
-    (
-        "The secret to a happy and healthy relationship is communication and"
-        " trust"
-    ),
+    ("The secret to a happy and healthy relationship is communication and" " trust"),
     "Rumor has it that the famous celebrity couple is getting a divorce",
     (
         "I recently switched to a vegan diet and I feel so much better, I"
@@ -248,10 +246,7 @@ prompts: List[str] = [
         "I love this new TV show, the characters are so well-developed and the"
         " plot is amazing"
     ),
-    (
-        "A devastating earthquake hit the city last night, leaving thousands"
-        " homeless"
-    ),
+    ("A devastating earthquake hit the city last night, leaving thousands" " homeless"),
     "Scientists discover a new species of fish deep in the ocean",
     "Why are people still believing in flat earth theory?",
     (
@@ -270,6 +265,7 @@ prompts: List[str] = [
 ]
 
 
+
 # %%
 DF_COLS: List[str] = [
     "Prompt",
@@ -285,6 +281,7 @@ sampling_kwargs: Dict[str, float] = {
 }
 
 num_layers: int = model.cfg.n_layers
+
 
 
 # %% [markdown]
@@ -319,9 +316,7 @@ import numpy as np
 def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
     """Plot a histogram of the residual stream magnitudes for each layer
     of the network."""
-    assert (
-        "Magnitude" in df.columns
-    ), "Dataframe must have a 'Magnitude' column"
+    assert "Magnitude" in df.columns, "Dataframe must have a 'Magnitude' column"
 
     df["LogMagnitude"] = np.log10(df["Magnitude"])
     fig = px.histogram(
@@ -344,6 +339,7 @@ def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
     )
 
     return fig
+
 
 
 # %%
@@ -375,9 +371,11 @@ for act_loc in activation_locations_6:
         prompt_df = pd.concat([prompt_df, row], ignore_index=True)
 
 
+
 # %%
 fig: go.Figure = magnitude_histogram(prompt_df)
 fig.show()
+
 
 
 # %% [markdown]
@@ -410,6 +408,7 @@ for act_loc in activation_locations:
 
 fig: go.Figure = magnitude_histogram(first_6_df)
 fig.show()
+
 
 
 # %% [markdown]
@@ -491,13 +490,13 @@ def line_plot(
     return fig
 
 
+
 # %%
 log_fig = line_plot(addition_df, log_y=True)
 log_fig.show()
 
 normal_fig = line_plot(addition_df, log_y=False)
 normal_fig.show()
-
 
 
 # %% [markdown]
@@ -563,6 +562,7 @@ relative_fig.add_hline(y=1, line_dash="dash", line_color="black")
 relative_fig.show()
 
 
+
 # %%
 # Print the geometric mean of the magnitude growth rates
 for pos in range(6):
@@ -573,14 +573,15 @@ for pos in range(6):
         f" rate of {geom_avg:.3f}"
     )
 
+
 # %% [markdown]
 # The exponential increase in magnitude is confirmed, with tokens having
 # an average growth rate of about 1.12. Once again, the `<|endoftext|>` token is an outlier.
 
 # %% [markdown]
 # Now let's plot how the steering vector magnitudes change with layer
-# number. These magnitudes are the L2 norms of the net activation
-# vectors (adding one residual stream for "Anger" and subtracting the
+# number. These magnitudes are the Frobenius norms of the net activation
+# vectors (adding residual streams "Anger" and subtracting the
 # residual streams for "Calm"). Let's sanity-check that the magnitudes
 # look reasonable, given what we just learned about the usual distribution of
 # residual stream magnitudes.
@@ -598,9 +599,7 @@ def steering_magnitudes_dataframe(
 
     for act_loc in locations:
         relocated_adds: List[RichPrompt] = [
-            RichPrompt(
-                prompt=act_add.prompt, coeff=act_add.coeff, act_name=act_loc
-            )
+            RichPrompt(prompt=act_add.prompt, coeff=act_add.coeff, act_name=act_loc)
             for act_add in act_adds
         ]
         mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
@@ -627,6 +626,7 @@ def steering_magnitudes_dataframe(
     return steering_df
 
 
+
 # %% Make a plotly line plot of the steering vector magnitudes
 anger_calm_additions: List[RichPrompt] = [
     RichPrompt(prompt="Anger", coeff=1, act_name=0),
@@ -642,9 +642,10 @@ fig: go.Figure = line_plot(steering_df)
 fig.show()
 
 
+
 # %% [markdown]
 # These steering vector magnitudes also increase exponentially with
-# layer number.  
+# layer number. This is in line with our previous results.
 #
 # The steering vector's 0 position `<|endoftext|>` - `<|endoftext|>` magnitude is always 0,
 # because it's the zero vector. Thus, its relative magnitude is also 0.
@@ -663,9 +664,7 @@ def relative_magnitudes_dataframe(
 
     for act_loc in locations:
         relocated_adds: List[RichPrompt] = [
-            RichPrompt(
-                prompt=act_add.prompt, coeff=act_add.coeff, act_name=act_loc
-            )
+            RichPrompt(prompt=act_add.prompt, coeff=act_add.coeff, act_name=act_loc)
             for act_add in act_adds
         ]
         mags: torch.Tensor = hook_utils.steering_magnitudes_relative_to_prompt(
@@ -692,6 +691,7 @@ def relative_magnitudes_dataframe(
     return relative_df
 
 
+
 # %% Make a line plot of the relative steering vector magnitudes
 anger_calm_additions: List[RichPrompt] = [
     RichPrompt(prompt="Anger", coeff=1, act_name=0),
@@ -708,7 +708,7 @@ fig: go.Figure = line_plot(
     relative_df,
     log_y=False,
     legend_title_text="Residual stream",
-    title="Positionwise Steering Vector Magnitude / Prompt Magnitude",
+    title="Positionwise (Steering Vector Magnitude) / (Prompt Magnitude)",
 )
 
 # Add a subtitle
@@ -730,15 +730,15 @@ fig.update_layout(
 fig.show()
 
 
+
 # %% [markdown]
-# We don't know why the relative magnitude decreases during the forward
-# pass.
-#
+# (We don't know why the relative magnitude decreases during the forward
+# pass.)
 
 # %% [markdown]
 # Great, so there are reasonable relative magnitudes of the `Anger` -
 # `Calm` steering vector.
-# Is this true for other vectors? Some vectors, like ` anger` - ` calm`,
+# Is this true for other vectors? Some vectors, like `_anger` - `_calm`,
 # have little qualitative impact. Maybe they're low-norm?
 
 # %%
@@ -779,6 +779,7 @@ fig.update_layout(
 fig.show()
 
 
+
 # %% [markdown]
 # Nope, `_anger` – `_calm` has reasonable magnitude. So that isn't why it 
 # has little qualitative impact.
@@ -803,11 +804,16 @@ anger_calm_additions: List[RichPrompt] = [
     RichPrompt(prompt="Calm", coeff=-10, act_name=20),
 ]
 num_anger_completions: int = 5
-anger_vec: Float[torch.Tensor, "batch seq d_model"] = (
-    hook_utils.get_prompt_activations(model, anger_calm_additions[0])
-    + hook_utils.get_prompt_activations(model, anger_calm_additions[1])
-)
+anger_vec: Float[torch.Tensor, "batch seq d_model"] = hook_utils.get_prompt_activations(
+    model, anger_calm_additions[0]
+) + hook_utils.get_prompt_activations(model, anger_calm_additions[1])
 
+
+
+# %% [markdown]
+# First, the qualitative results. The "modified completions" are modified
+# via the random vector injection. The "original completions" are produced
+# by the unmodified model.
 
 # %%
 # For reference, here are the effects of this steering vector on two
@@ -817,7 +823,11 @@ anger_prompts: List[str] = [
     "Shrek starts off with a scene about",
 ]
 for prompt in anger_prompts:
-    print(completion_utils.bold_text(f"Prompt: {prompt}"))
+    print(
+        completion_utils.bold_text(
+            f"Adding the anger vector to prompt: {prompt}"
+        )
+    )
     completion_utils.print_n_comparisons(
         model=model,
         prompt=prompt,
@@ -836,9 +846,7 @@ mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
 
 # Make normally drawn random vector with about the same magnitude as the steering
 # vector (dmodel is 1600 for GPT2XL)
-rand_act: Float[torch.Tensor, "seq d_model"] = torch.randn(
-    size=[len(mags), 1600]
-)
+rand_act: Float[torch.Tensor, "seq d_model"] = torch.randn(size=[len(mags), 1600])
 
 # Rescale appropriately
 scaling_factors: torch.Tensor = mags / rand_act.norm(dim=1)
@@ -857,6 +865,7 @@ print(f"Max random vector value: {rand_act.max():.1f}")
 rand_act = rand_act.unsqueeze(0)  # Add a batch dimension
 
 
+
 # %%
 # Get the model device so we can move rand_act off of the cpu
 model_device: torch.device = next(model.parameters()).device
@@ -866,6 +875,15 @@ hook: Callable = hook_utils.hook_fn_from_activations(
 )
 act_name: str = prompt_utils.get_block_name(block_num=20)
 hooks: Dict[str, Callable] = {act_name: hook}
+
+normal_df = completion_utils.gen_using_hooks(
+    model=model,
+    prompt_batch=["I think you're"] * num_anger_completions,
+    hook_fns={},
+    tokens_to_generate=60,
+    seed=1,
+    **sampling_kwargs,
+)
 
 for prompt in anger_prompts:
     rand_df = completion_utils.gen_using_hooks(
@@ -877,8 +895,9 @@ for prompt in anger_prompts:
         **sampling_kwargs,
     )
     completion_utils.pretty_print_completions(
-        rand_df
+        pd.concat([normal_df, rand_df], ignore_index=True),
     )  # TODO show side-by-side with original
+
 
 
 # %% [markdown]
@@ -906,16 +925,12 @@ for prompt in anger_prompts:
     )  # Slice off the first 3 tokens, whose outputs will be messed up by the ActivationAddition
     logit_indexing: Tuple[slice, slice] = (slice(None), seq_slice)
 
-    anger_logits: Float[torch.Tensor, "batch seq vocab"] = (
-        model.run_with_hooks(prompt, fwd_hooks=list(anger_hooks.items()))[
-            logit_indexing
-        ]
-    )
+    anger_logits: Float[torch.Tensor, "batch seq vocab"] = model.run_with_hooks(
+        prompt, fwd_hooks=list(anger_hooks.items())
+    )[logit_indexing]
 
     model.add_hook(name=act_name, hook=hook)
-    rand_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[
-        logit_indexing
-    ]
+    rand_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[logit_indexing]
     model.remove_all_hook_fns()
 
     normal_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[
@@ -939,10 +954,8 @@ for prompt in anger_prompts:
     print(completion_utils.bold_text(f"Prompt: {prompt}"))
     print(f"KL between probs with and without random vector: {kl_rand:.5f}")
     print(f"KL between probs with and without anger vector: {kl_anger:.5f}")
-    print(
-        "KL(normal || anger) - KL(normal || rand) ="
-        f" {kl_anger - kl_rand:.5f}\n"
-    )
+    print("KL(normal || anger) - KL(normal || rand) =" f" {kl_anger - kl_rand:.5f}\n")
+
 
 
 # %% [markdown]
@@ -981,9 +994,7 @@ nonsense_mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
 ).cpu()
 
 # Get average ratio between non-EOS anger and nonsense tokens
-scaling_factor: float = (
-    anger_mags[1:].mean().item() / nonsense_mags[1:].mean().item()
-)
+scaling_factor: float = anger_mags[1:].mean().item() / nonsense_mags[1:].mean().item()
 
 rescaled_nonsense_vector: List[RichPrompt] = [
     *prompt_utils.get_x_vector(
@@ -1005,6 +1016,7 @@ completion_utils.print_n_comparisons(
     num_comparisons=5,
     **sampling_kwargs,
 )
+
 
 
 # %% [markdown]
@@ -1031,6 +1043,7 @@ completion_utils.print_n_comparisons(
     num_comparisons=5,
     **sampling_kwargs,
 )
+
 
 
 # %% [markdown]
@@ -1081,9 +1094,7 @@ def hooks_source_to_target(
         ), f"block_num must be between 0 and {model.n_layers}, inclusive."
 
     source_adds: List[RichPrompt] = [
-        RichPrompt(
-            prompt=act_add.prompt, coeff=act_add.coeff, act_name=source_block
-        )
+        RichPrompt(prompt=act_add.prompt, coeff=act_add.coeff, act_name=source_block)
         for act_add in act_adds
     ]
 
@@ -1100,6 +1111,7 @@ def hooks_source_to_target(
         ]
     }
     return target_dict
+
 
 
 # %%
@@ -1131,6 +1143,7 @@ completion_utils.pretty_print_completions(
     normal_title="Adding anger steering vector (layer 20), at layer 20",
     mod_title="Adding Anger-Calm embeddings (layer 0), at layer 20",
 )
+
 
 
 # %% [markdown]
@@ -1168,6 +1181,7 @@ completion_utils.pretty_print_completions(
     normal_title="Adding anger steering vector (layer 20), at layer 20",
     mod_title="Adding Anger-Calm embeddings (layer 2), at layer 20",
 )
+
 
 
 # %% [markdown]
@@ -1219,6 +1233,7 @@ print(
 )
 
 
+
 # %% Rescale the activation additions and try again
 rescaled_additions: List[RichPrompt] = [
     RichPrompt(
@@ -1251,6 +1266,7 @@ completion_utils.pretty_print_completions(
     normal_title="Adding anger steering vector (layer 20), at layer 20",
     mod_title="Adding Anger-Calm embeddings (layer 2), at layer 20",
 )
+
 
 
 # %% [markdown]
@@ -1333,6 +1349,7 @@ merged_df: pd.DataFrame = pd.concat(dfs, ignore_index=True)
 merged_df = metrics.add_metric_cols(data=merged_df, metrics_dict=metrics_dict)
 
 
+
 # %%
 # Make a line plot of the avg. number of wedding words in the
 # completions, as a function of the fraction of dimensions added
@@ -1349,9 +1366,7 @@ fig: go.Figure = px.line(
         " dimensions affected by steering vector)"
     ),
     labels={
-        "frac_dims_added": (
-            "Fraction of dimensions affected by steering vector"
-        ),
+        "frac_dims_added": ("Fraction of dimensions affected by steering vector"),
         "wedding_words_count": "Avg. # of wedding words",
     },
 )
@@ -1368,6 +1383,7 @@ fig.update_traces(mode="markers+lines")
 fig.show()
 
 
+
 # %% [markdown]
 # Shockingly, for the `frac=0.7` setting, adding in the first 1,120 (out of 1,600) dimensions of the
 # residual stream is enough to make the completions _more_ about
@@ -1375,13 +1391,12 @@ fig.show()
 # some of these completions and see if they make sense:
 
 # %%
-df_head: pd.DataFrame = merged_df.loc[
-    merged_df["frac_dims_added"] == 0.7
-].head()
+df_head: pd.DataFrame = merged_df.loc[merged_df["frac_dims_added"] == 0.7].head()
 completion_utils.pretty_print_completions(
     results=df_head,
     mod_title=f"Adding wedding vector, first 70% of dimensions",
 )
+
 
 
 # %% [markdown]
