@@ -795,6 +795,11 @@ fig.show()
 #
 # But mostly, it just seems like a
 # good additional data point to have.
+#
+# We're going to draw a random vector from a normal distribution with
+# mean 0 and standard deviation 1. We'll then scale it to have the same
+# magnitude as the `Anger`–`Calm` steering vector, and show the
+# qualitative results.
 
 # %%
 # Get the steering vector magnitudes for the anger-calm steering vector
@@ -810,42 +815,11 @@ anger_vec: Float[torch.Tensor, "batch seq d_model"] = hook_utils.get_prompt_acti
 
 
 
-# %% [markdown]
-# First, the qualitative results. The "modified completions" are modified
-# via the random vector injection. The "original completions" are produced
-# by the unmodified model.
-
-# %%
-# For reference, here are the effects of this steering vector on two
-# prompts. (You'll have to scroll to see both tables.)
-anger_prompts: List[str] = [
-    "I think you're",
-    "Shrek starts off with a scene about",
-]
-for prompt in anger_prompts:
-    print(
-        completion_utils.bold_text(
-            f"Adding the anger vector to prompt: {prompt}"
-        )
-    )
-    completion_utils.print_n_comparisons(
-        model=model,
-        prompt=prompt,
-        tokens_to_generate=90,
-        rich_prompts=anger_calm_additions,
-        num_comparisons=num_anger_completions,
-        seed=1,  # Seed 0 has some disturbing outputs for the modified vector! (What you might expect if you +Anger and -Calm)
-        **sampling_kwargs,
-    )
-
-
 # %%
 mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
     model=model, act_adds=anger_calm_additions
 ).cpu()
 
-# Make normally drawn random vector with about the same magnitude as the steering
-# vector (dmodel is 1600 for GPT2XL)
 rand_act: Float[torch.Tensor, "seq d_model"] = torch.randn(size=[len(mags), 1600])
 
 # Rescale appropriately
@@ -853,6 +827,7 @@ scaling_factors: torch.Tensor = mags / rand_act.norm(dim=1)
 rand_act = rand_act * scaling_factors[:, None]
 rand_act[0, :] = 0  # Zero out the first token
 
+print("Checking for similar magnitudes between steering vector and random" " vector:")
 print(
     f"Steering vector magnitudes: {mags}\nRandom vector magnitudes:"
     f" {rand_act.norm(dim=1)}\n"
@@ -885,7 +860,12 @@ normal_df = completion_utils.gen_using_hooks(
     **sampling_kwargs,
 )
 
+anger_prompts: List[str] = [
+    "I think you're",
+    "Shrek starts off with a scene about",
+]
 for prompt in anger_prompts:
+    print("\n")
     rand_df = completion_utils.gen_using_hooks(
         model=model,
         prompt_batch=[prompt] * num_anger_completions,
@@ -896,21 +876,23 @@ for prompt in anger_prompts:
     )
     completion_utils.pretty_print_completions(
         pd.concat([normal_df, rand_df], ignore_index=True),
-    )  # TODO show side-by-side with original
-
+    )
 
 
 # %% [markdown]
-# The random vector injection has little effect on the output, given
-# similar magnitudes. **TODO** reanalyze We tentatively infer that GPT-2-XL is not easy to
-# break/modify via generic random intervention,
+# The random vector injection has some effect on the output. It makes GPT2
+# act as if Shrek is female, for example. However, the model is still
+# outputting relatively coherent text. We tentatively infer that GPT-2-XL
+# is somewhat resistant to generic random intervention,
 # and is instead controllable through consistent feature directions
 # which are added to its forward pass by steering vectors.
 #
 # Let's also measure the KL between the logits output by the model with
 # and without the random vector. This will give us a sense of how much
 # the random vector is changing the behavior. As a baseline, we'll
-# compare to the KL for the anger steering vector.
+# compare to the KL for the `Anger`–`Calm` steering vector. If the random
+# KL is higher, then the random vector is having a larger effect than
+# the steering vector.
 
 # %%
 # Get the logits with and without the random vector, and with/without
@@ -925,12 +907,16 @@ for prompt in anger_prompts:
     )  # Slice off the first 3 tokens, whose outputs will be messed up by the ActivationAddition
     logit_indexing: Tuple[slice, slice] = (slice(None), seq_slice)
 
-    anger_logits: Float[torch.Tensor, "batch seq vocab"] = model.run_with_hooks(
-        prompt, fwd_hooks=list(anger_hooks.items())
-    )[logit_indexing]
+    anger_logits: Float[torch.Tensor, "batch seq vocab"] = (
+        model.run_with_hooks(prompt, fwd_hooks=list(anger_hooks.items()))[
+            logit_indexing
+        ]
+    )
 
     model.add_hook(name=act_name, hook=hook)
-    rand_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[logit_indexing]
+    rand_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[
+        logit_indexing
+    ]
     model.remove_all_hook_fns()
 
     normal_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[
@@ -954,8 +940,10 @@ for prompt in anger_prompts:
     print(completion_utils.bold_text(f"Prompt: {prompt}"))
     print(f"KL between probs with and without random vector: {kl_rand:.5f}")
     print(f"KL between probs with and without anger vector: {kl_anger:.5f}")
-    print("KL(normal || anger) - KL(normal || rand) =" f" {kl_anger - kl_rand:.5f}\n")
-
+    print(
+        "KL(normal || anger) - KL(normal || rand) ="
+        f" {kl_anger - kl_rand:.5f}\n"
+    )  # TODO not within .1 of each other, why?
 
 
 # %% [markdown]
@@ -968,8 +956,10 @@ for prompt in anger_prompts:
 # steering vector is doing something "special" relative to most
 # directions we could add to the forward pass.
 #
-# Lastly, we see that a "random text vector" indeed produces strange
-# results. However, the results are still syntactically coherent.
+
+# %% [markdown]
+# ## A "random text" steering vector produces strange results
+# However, the results are still syntactically coherent.
 
 # %%
 nonsense_vector: List[RichPrompt] = [
@@ -1071,11 +1061,19 @@ completion_utils.print_n_comparisons(
 # this is a component of the `Anger`-`Calm` steering vector.)
 #
 # We test this hypothesis by recording the relevant embedding
-# vector, and then hooking in to the model at layer 20 to add the vector
-# to the forward pass. If this also makes GPT-2-XL talk about
-# weddings more, in a coherent way, that's evidence that a lot of the
+# vector, and then hooking in to the model at layer 20 to add the embedding vector
+# to the forward pass. 
+#
+# Suppose that this intervention also makes GPT-2-XL output completions
+# with an angry sentiment, while preserving coherence. This result would be evidence that a lot
+# of the
 # steering vector's effect from the embedding vector, and not from the
-# other "cognitive work" done by blocks 0–19.
+# other computational work done by blocks 0–19.
+#
+# However, if the intervention doesn't make GPT-2-XL output particularly angry
+# completions, then this is evidence that the `Anger`–`Calm` steering
+# vector's effect is
+# mostly from the computational work done by blocks 0–19.
 
 
 # %%
@@ -1270,7 +1268,7 @@ completion_utils.pretty_print_completions(
 
 
 # %% [markdown]
-# Even after rescaling by the appropriate amount, the steering vector
+# At a glance -- even after rescaling by the appropriate amount, the steering vector
 # sourced from layer 2 is still not as effective as the normal steering
 # vector. This suggests that the embedding / early-steering (pre-layer 2) vector is not just getting
 # amplified by layers 2–19. Instead, useful computational work is being
@@ -1278,7 +1276,7 @@ completion_utils.pretty_print_completions(
 # order to make them "angrier" on certain prompts we've examined.
 
 # %% [markdown]
-# ## Only adding in a slice of the steering vector
+# ## Only modifying certain residual stream dimensions
 # GPT-2-XL has a 1,600-dimensional residual stream (i.e.
 # `d_model=1600`). Alex was curious about whether we could get some steering
 # effect by only
@@ -1293,8 +1291,8 @@ completion_utils.pretty_print_completions(
 # surprise](https://predictionbook.com/predictions/211472),* the
 # "weddingness" of the completions smoothly increases with _n_!
 #
-# To illustrate this, we'll run 100 completions for 10 _n_ values, and
-# plot the average number of wedding words there are per completion.
+# To illustrate this, for each of 10 _n_ values, we'll generate 100 completions, and
+# plot the average number of wedding words per completion.
 #
 # \* This was before the random-vector experiments were run. The
 #   random-vector results make it less surprising that "just chop off
