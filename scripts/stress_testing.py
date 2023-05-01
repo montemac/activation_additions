@@ -9,12 +9,17 @@
 #       format_name: percent
 #       format_version: '1.3'
 #       jupytext_version: 1.11.2
+#   kernelspec:
+#     display_name: AVE
+#     language: python
+#     name: python3
 # ---
 
 # %% [markdown]
 # # Stress-testing our results
 # At this point, we've shown a lot of cool results, but qualitative data
 # is fickle and subject to both selection effects and confirmation bias.
+# In this notebook, we perform a set of qualitative stress-tests. 
 
 # %%
 try:
@@ -33,7 +38,7 @@ except ImportError:
 # %%
 import torch
 import pandas as pd
-from typing import List, Callable, Dict, Tuple
+from typing import List, Callable, Dict, Tuple, Union
 from jaxtyping import Float
 
 from transformer_lens.HookedTransformer import HookedTransformer
@@ -43,13 +48,13 @@ from algebraic_value_editing.prompt_utils import RichPrompt
 
 
 # %%
+device: str = "cuda:1"  # TODO update for colab
 model_name = "gpt2-xl"
-
-device: str = "cuda" if torch.cuda.is_available() else "cpu"
 model: HookedTransformer = HookedTransformer.from_pretrained(
     model_name, device="cpu"
 )
 _ = model.to(device)
+
 _ = torch.set_grad_enabled(False)
 torch.manual_seed(0)  # For reproducibility
 
@@ -283,7 +288,7 @@ num_layers: int = model.cfg.n_layers
 
 
 # %% [markdown]
-# ## Plotting the distribution of residual stream magnitudes
+# ## Residual stream magnitudes increase exponentially with layer number
 # As the forward pass progresses through the network, the residual
 # stream tends to increase in magnitude in an exponential fashion. This
 # is easily visible in the histogram below, which shows the distribution
@@ -304,7 +309,7 @@ num_layers: int = model.cfg.n_layers
 # should basically whiten the input to the OV circuits if the gain
 # parameters are close to 1.
 #
-# * Stefan Heimersheim previously noticed this phenomenon in GPT2-small.
+# \* Stefan Heimersheim previously noticed this phenomenon in GPT2-small.
 # %%
 import plotly.express as px
 import plotly.graph_objects as go
@@ -333,7 +338,7 @@ def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         legend_title_text="Layer Number",
-        title="Residual Stream Magnitude Distribution by Layer Number",
+        title="Residual Stream Magnitude by Layer Number",
         xaxis_title="Magnitude (log 10)",
         yaxis_title="Percentage of streams",
     )
@@ -368,6 +373,7 @@ for act_loc in activation_locations_6:
 
         # Append the new row to the dataframe
         prompt_df = pd.concat([prompt_df, row], ignore_index=True)
+
 
 # %%
 fig: go.Figure = magnitude_histogram(prompt_df)
@@ -422,8 +428,6 @@ fig.show()
 # Create an empty dataframe with the required columns
 all_resid_pre_locations: List[int] = torch.arange(0, num_layers, 1).tolist()
 addition_df = pd.DataFrame(columns=DF_COLS)
-
-from algebraic_value_editing import prompt_utils
 
 # Loop through activation locations and prompts
 for act_loc in all_resid_pre_locations:
@@ -488,8 +492,13 @@ def line_plot(
 
 
 # %%
-fig: go.Figure = line_plot(addition_df, log_y=True)
-fig.show()
+log_fig = line_plot(addition_df, log_y=True)
+log_fig.show()
+
+normal_fig = line_plot(addition_df, log_y=False)
+normal_fig.show()
+
+
 
 # %% [markdown]
 # To confirm the exponential increase in magnitude, let's plot the
@@ -498,28 +507,75 @@ fig.show()
 # divided by the norm before `t-1`.
 
 # %%
+# Make a plotly line plot of the relative magnitudes vs layer
+# number, with color representing the token location of the "MATS is
+# really cool" prompt
+
+# Create an empty dataframe with the required columns
+all_resid_pre_locations: List[int] = torch.arange(1, num_layers, 1).tolist()
+relative_df = pd.DataFrame(columns=DF_COLS)
+MATS_prompt: str = "MATS is really cool"
+
+mags_prev: torch.Tensor = hook_utils.prompt_magnitudes(
+    model=model, prompt=MATS_prompt, act_name=prompt_utils.get_block_name(0)
+).cpu()
+
+# Loop through activation locations and prompts
 for act_loc in all_resid_pre_locations:
-    if act_loc == 0:
-        continue
-    act_name, act_name_prev = [
-        prompt_utils.get_block_name(block_num=loc)
-        for loc in (act_loc, act_loc - 1)
-    ]
+    act_name: str = prompt_utils.get_block_name(block_num=act_loc)
+    mags: torch.Tensor = hook_utils.prompt_magnitudes(
+        model=model, prompt=MATS_prompt, act_name=act_name
+    ).cpu()
 
-    mags, mags_prev = [
-        hook_utils.prompt_magnitudes(
-            model=model, prompt="MATS is really cool", act_name=name
-        ).cpu()
-        for name in (act_name, act_name_prev)
-    ]
+    tokens: torch.Tensor = model.to_str_tokens(MATS_prompt)
+    for pos, mag in enumerate(mags):
+        # Create a new dataframe row with the current data
+        row = pd.DataFrame(
+            {
+                "Prompt": [tokens[pos]],
+                "Activation Location": [act_loc],
+                "Activation Name": [act_name],
+                "Magnitude": [mag / mags_prev[pos]],
+            }
+        )
 
-    print(f"Layer {act_loc}: {mags / mags_prev}")
+        # Append the new row to the dataframe
+        relative_df = pd.concat([relative_df, row], ignore_index=True)
 
+    mags_prev = mags
+
+relative_fig = line_plot(
+    relative_df,
+    log_y=False,
+    title="Magnitude(n)/Magnitude(n-1) across layers n",
+    legend_title_text="Token",
+)
+
+# Set y label to be "Magnitude growth rate"
+relative_fig.update_yaxes(title_text="Magnitude growth rate")
+
+# Set y bounds to [.9, 1.5]
+relative_fig.update_yaxes(range=[0.9, 1.5])
+
+# Plot a horizontal line at y=1
+relative_fig.add_hline(y=1, line_dash="dash", line_color="black")
+
+relative_fig.show()
+
+
+# %%
+# Print the geometric mean of the magnitude growth rates
+for pos in range(6):
+    pos_df: pd.DataFrame = relative_df[relative_df["Prompt"] == tokens[pos]]
+    geom_avg: float = pos_df["Magnitude"].prod() ** (1 / len(pos_df))
+    print(
+        f"The `{tokens[pos]}` token (position {pos}) has an average growth"
+        f" rate of {geom_avg:.3f}"
+    )
 
 # %% [markdown]
-# The exponential increase in magnitude is confirmed (at a rate of
-# around 1.05^t), outside of the
-# zeroth position (`<|endoftext|>`), which we already know is an outlier.
+# The exponential increase in magnitude is confirmed, with tokens having
+# an average growth rate of about 1.12. Once again, the `<|endoftext|>` token is an outlier.
 
 # %% [markdown]
 # Now let's plot how the steering vector magnitudes change with layer
@@ -530,8 +586,11 @@ for act_loc in all_resid_pre_locations:
 # residual stream magnitudes.
 
 
+# %%
 def steering_magnitudes_dataframe(
-    model: HookedTransformer, act_adds: List[RichPrompt], locations: List[int]
+    model: HookedTransformer,
+    act_adds: List[RichPrompt],
+    locations: List[int],
 ) -> pd.DataFrame:
     """Compute the relative magnitudes of the steering vectors at the
     locations in the model."""
@@ -582,12 +641,16 @@ steering_df: pd.DataFrame = steering_magnitudes_dataframe(
 fig: go.Figure = line_plot(steering_df)
 fig.show()
 
+
 # %% [markdown]
-# These steering vector magnitudes
+# These steering vector magnitudes also increase exponentially with
+# layer number.  
+#
+# The steering vector's 0 position `<|endoftext|>` - `<|endoftext|>` magnitude is always 0,
+# because it's the zero vector. Thus, its relative magnitude is also 0.
 
 
 # %% Let's plot the steering vector magnitudes against the prompt
-# magnitudes
 def relative_magnitudes_dataframe(
     model: HookedTransformer,
     act_adds: List[RichPrompt],
@@ -671,9 +734,6 @@ fig.show()
 # We don't know why the relative magnitude decreases during the forward
 # pass.
 #
-# (The `<|endoftext|>` - `<|endoftext|>` magnitude is always 0,
-# because
-# it's the zero vector. Thus, its relative magnitude is also 0.)
 
 # %% [markdown]
 # Great, so there are reasonable relative magnitudes of the `Anger` -
@@ -720,14 +780,15 @@ fig.show()
 
 
 # %% [markdown]
-# Nope, that's not the explanation.
+# Nope, `_anger` – `_calm` has reasonable magnitude. So that isn't why it 
+# has little qualitative impact.
 
 # %% [markdown]
 # ## Injecting similar-magnitude random vectors
 # Let's try injecting random vectors with similar magnitudes to the
 # steering vectors. If GPT2XL is mostly robust to this addition, this
-# suggests the presence of lots of tolerance to noise, and seems like
-# _very slight_ evidence of superposition (since a bunch of
+# suggests the presence of lots of tolerance to internal noise, and seems like
+# a tiny bit of evidence of superposition (since a bunch of
 # not-quite-orthogonal features will noisily unembed, and the model has
 # to be performant in the face of this).
 #
@@ -746,6 +807,7 @@ anger_vec: Float[torch.Tensor, "batch seq d_model"] = (
     hook_utils.get_prompt_activations(model, anger_calm_additions[0])
     + hook_utils.get_prompt_activations(model, anger_calm_additions[1])
 )
+
 
 # %%
 # For reference, here are the effects of this steering vector on two
@@ -814,12 +876,14 @@ for prompt in anger_prompts:
         seed=1,
         **sampling_kwargs,
     )
-    completion_utils.pretty_print_completions(rand_df)
+    completion_utils.pretty_print_completions(
+        rand_df
+    )  # TODO show side-by-side with original
 
 
 # %% [markdown]
 # The random vector injection has little effect on the output, given
-# similar magnitudes. We tentatively infer that GPT-2-XL is not easy to
+# similar magnitudes. **TODO** reanalyze We tentatively infer that GPT-2-XL is not easy to
 # break/modify via generic random intervention,
 # and is instead controllable through consistent feature directions
 # which are added to its forward pass by steering vectors.
@@ -968,6 +1032,7 @@ completion_utils.print_n_comparisons(
     **sampling_kwargs,
 )
 
+
 # %% [markdown]
 # # Testing the hypothesis that we're "basically injecting extra tokens"
 # There's a hypothesis that the steering vectors are just injecting
@@ -1067,6 +1132,7 @@ completion_utils.pretty_print_completions(
     mod_title="Adding Anger-Calm embeddings (layer 0), at layer 20",
 )
 
+
 # %% [markdown]
 # At most, adding the embeddings to layer 20 has a very small effect on
 # the qualitative anger of the completions. This is evidence that the
@@ -1102,6 +1168,7 @@ completion_utils.pretty_print_completions(
     normal_title="Adding anger steering vector (layer 20), at layer 20",
     mod_title="Adding Anger-Calm embeddings (layer 2), at layer 20",
 )
+
 
 # %% [markdown]
 # This is a much larger effect than we saw before. It's not as large as
@@ -1151,6 +1218,7 @@ print(
     f" {rescale_2_to_20_factor:.2f}"
 )
 
+
 # %% Rescale the activation additions and try again
 rescaled_additions: List[RichPrompt] = [
     RichPrompt(
@@ -1183,6 +1251,7 @@ completion_utils.pretty_print_completions(
     normal_title="Adding anger steering vector (layer 20), at layer 20",
     mod_title="Adding Anger-Calm embeddings (layer 2), at layer 20",
 )
+
 
 # %% [markdown]
 # Even after rescaling by the appropriate amount, the steering vector
@@ -1317,5 +1386,52 @@ completion_utils.pretty_print_completions(
 
 # %% [markdown]
 # The completions are indeed about weddings! And it's still coherent.
-# Yet another mystery. NOTE talk about implications for privileged basis
-# (but hesitant, since n=1 datapoints?)
+# Yet another mystery! I (Alex) mostly feel confused about how to
+# interpret these data properly. But I'll take a stab at it anyways and
+# lay out one highly speculative hypothesis.
+#
+# Suppose there's a "wedding" feature
+# direction in the residual stream activations just before layer 6. Suppose that the `_wedding` - `_` vector
+# adds or subtracts that direction. _If_ GPT-2-XL represents features in
+# a non-axis-aligned basis, then we'd expect this vector to almost
+# certainly have components in all 1,600 residual stream dimensions.
+#
+# Suppose that this feature is relevant to layer 6's attention layer. In
+# order to detect the presence and magnitude of this feature, the QKV
+# heads will need to linearly read out the presence or absence of this
+# feature. Therefore, if we truncate the residual stream vector to only
+# include the first 70% of dimensions, we'd expect the QKV heads to
+# still be able to detect the presence of this feature, but if the
+# feature is represented in a non-axis-aligned basis, then each
+# additional included dimension will (on average) slightly increase the
+# dot product between the feature vector and the QKV heads' linear
+# readout of the feature vector. This (extremely detailed and made-up
+# and maybe-wrong hypothesis) would explain the smooth increase
+# in weddingness as we add more dimensions.
+#
+# However, this does _not_ explain the non-monotonicity of the
+# relationship between the fraction of dimensions added and the
+# weddingness of the completions. This seems like some (faint) evidence of
+# axis-alignment for the wedding feature in particular, as well as
+# evidence for a bunch of other propositions.
+
+# %% [markdown]
+# Here is
+# an outline of the tests we computed:
+#
+# 1. **Plotting the magnitude of residual streams**: We plot the
+#    Frobenius norm of the residual stream activations at each layer, showing
+#    exponential growth over a range of prompts. The log-magnitude
+#    increase is greatest for the first three layers. For some reason, the position-0
+#    `<|endoftext|>` token has an enormously larger magnitude than other
+#    tokens.
+#    
+#    Furthermore, steering vector magnitudes also grow exponentially with layer
+#    number. We show that low norm is not why e.g. `_anger`–`_calm`
+#    doesn't work.
+# 2. **Steering vector sourced from layer 0/2**: We show that the
+#    steering vector sourced from layer 0 is not very effective at
+#    steering the model when added back in at layer 20. However, the
+#    steering vector sourced from layer 2 is more effective, and
+#    rescaling it by the appropriate amount makes it almost as effective
+#    as the normal steering vector.
