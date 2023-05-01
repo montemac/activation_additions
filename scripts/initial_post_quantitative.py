@@ -302,9 +302,18 @@ text = (
 )
 
 steering_aligned_tokens = {
-    9: np.array([MODEL.to_single_token(" wedding")]),
+    9: np.array(
+        [
+            MODEL.to_single_token(token_str)
+            for token_str in [
+                " wedding",
+            ]
+        ]
+    ),
     22: np.array([MODEL.to_single_token(" married")]),
 }
+
+detail_positions = [6, 8, 9]
 
 # Visualize a bunch of stuff with text str tokens on the x-axis:
 #  - Tokens in steering-aligned set T-A
@@ -319,7 +328,7 @@ rich_prompts = list(
         prompt1=" weddings",
         prompt2="",
         coeff=1.0,
-        act_name=10,
+        act_name=16,
         model=MODEL,
         pad_method="tokens_right",
         custom_pad_id=MODEL.to_single_token(" "),
@@ -339,7 +348,7 @@ def logits_to_probs_numpy(
 
 tokens = MODEL.to_tokens(text).squeeze(0)
 tokens_np = tokens.detach().cpu().numpy()
-str_tokens = np.array(MODEL.to_str_tokens(text))
+tokens_str = np.array(MODEL.to_str_tokens(text))
 logits_norm = MODEL.forward(
     input=torch.unsqueeze(tokens, 0), return_type="logits"
 ).squeeze(0)
@@ -361,14 +370,9 @@ probs_diff_actual_tokens = np.concatenate(
         ).squeeze(),
     ]
 )
-logprobs_diff_actual_tokens = np.concatenate(
-    [
-        [0],
-        np.take_along_axis(
-            probs_diff[:-1, :], tokens_np[1:, None], axis=1
-        ).squeeze(),
-    ]
-)
+logprobs_diff_actual_tokens = np.take_along_axis(
+    probs_diff[:-1, :], tokens_np[1:, None], axis=1
+).squeeze()
 
 
 # Effectiveness and focus for each sub-string
@@ -407,65 +411,88 @@ eff = np.array(eff_list)
 foc = np.array(foc_list)
 ent = np.array(ent_list)
 
+eff[: rich_prompts[0].tokens.shape[0]] = np.nan
 foc[: rich_prompts[0].tokens.shape[0]] = np.nan
 
-# px.line(eff).show()
-# px.line(foc).show()
-# px.line(ent).show()
-
-# Focus contribution
-
 # Plot!
-RWG_COLORS = [
-    "rgba(200, 40, 40, 0.85)",
-    "rgba(255, 255, 255, 0.85)",
-    "rgba(40, 150, 40, 0.85)",
-]
-RWG_COLORSCALE_EVEN = [
-    [0.0, RWG_COLORS[0]],
-    [0.5, RWG_COLORS[1]],
-    [1.0, RWG_COLORS[2]],
-]
-
-fig = py.subplots.make_subplots(
-    rows=2,
-    cols=1,
-    shared_xaxes=True,
-    subplot_titles=[
-        "Log-prob increase of actual next token",
-        "Effectiveness and focus",
-    ],
-)
-z_abs_max = np.abs(logprobs_diff_actual_tokens).max()
-fig.add_trace(
-    go.Heatmap(
-        z=logprobs_diff_actual_tokens[None, :],
-        zmin=-z_abs_max,
-        zmax=z_abs_max,
-        colorscale=RWG_COLORSCALE_EVEN,
-        # text=str_tokens[None, :],
-        # texttemplate="%{text}",
-    ),
-    row=1,
-    col=1,
-)
-fig.update_layout(
-    annotations=[
-        go.layout.Annotation(
-            x=idx,
-            y=0,
-            xref="x1",
-            yref="y1",
-            text=token_str,
-            textangle=-90,
-            align="center",
-            showarrow=False,
-        )
-        for idx, token_str in enumerate(str_tokens)
+plot_df = pd.concat(
+    [
+        # pd.DataFrame(
+        #     {
+        #         "tokens_str": tokens_str[:-1],
+        #         "value": logprobs_diff_actual_tokens,
+        #         "quantity": "log-prob increase<br>(actual next token)",
+        #     }
+        # ),
+        pd.DataFrame(
+            {
+                "tokens_str": tokens_str,
+                "value": eff,
+                "quantity": "effectiveness",
+            }
+        ),
+        pd.DataFrame(
+            {
+                "tokens_str": tokens_str,
+                "value": foc,
+                "quantity": "focus",
+            }
+        ),
     ]
+).reset_index(names="pos")
+plot_df["pos_label"] = (
+    plot_df["tokens_str"] + " : " + plot_df["pos"].astype(str)
 )
-fig.add_trace(go.Scatter(y=eff, name="effectiveness"), row=2, col=1)
-fig.add_trace(go.Scatter(y=foc, name="focus"), row=2, col=1)
-# fig.add_trace(go.Scatter(y=ent), row=2, col=1)
-fig.update_layout(yaxis_showticklabels=False, height=600)
+
+fig = px.bar(
+    plot_df,
+    x="pos_label",
+    y="value",
+    color="quantity",
+    facet_row="quantity",
+    title="Effectiveness and Focus over input sub-sequences",
+)
+quantities = plot_df["quantity"].unique()[::-1]
+fig.update_xaxes(tickangle=-90, title="")
+fig.layout["yaxis"]["title"] = quantities[0]
+fig.layout["yaxis2"]["title"] = quantities[1]
+# fig.layout["yaxis3"]["title"] = quantities[2]
+fig.layout["annotations"] = []
+fig.update_layout(showlegend=False, height=600)
 fig.show()
+fig.write_image("images/zoom_in1.png", width=png_width, height=png_height)
+
+# Show some details at specific locations
+NUM_TO_SHOW = 100
+for pos in detail_positions:
+    # Get most increased and most decreased tokens at this position
+    logprobs_diff_argsort = np.argsort(logprobs_diff[pos])
+    incr_tokens = MODEL.to_string(
+        logprobs_diff_argsort[::-1][:NUM_TO_SHOW, None].copy()
+    )
+    decr_tokens = MODEL.to_string(
+        logprobs_diff_argsort[:NUM_TO_SHOW, None].copy()
+    )
+    print(incr_tokens)
+    print(decr_tokens)
+
+
+# Effectiveness scaling
+pnorm = np.concatenate([np.logspace(-2, -1, 2), [probs_norm[9, 10614]]])[
+    None, :
+]
+pmod = np.logspace(-3, 0, 301)[:, None]
+eff = pmod * np.log(pmod / pnorm)
+df = (
+    pd.DataFrame(eff, index=pmod.squeeze(), columns=pnorm.squeeze())
+    .rename_axis(index="pmod")
+    .rename_axis(columns="pnorm")
+    .stack()
+    .reset_index()
+    .rename({0: "eff"}, axis="columns")
+)
+fig = px.line(df, x="pmod", y="eff", color="pnorm", log_x=True)
+fig.show()
+fig.write_image(
+    "images/zoom_in_eff_scale.png", width=png_width, height=png_height
+)
