@@ -173,15 +173,15 @@ def hook_fn_from_activations(
         `activations`: The activations to add in
 
         `addition_location`: Whether to add `activations` to the front-positioned
-        or back-positioned residual streams in the forward poss. Must be either "front" or "back".
+        or back-positioned residual streams in the forward poss. Must be either "front" or "mid" or "back".
 
         `res_stream_slice`: The slice of the residual stream dimensions to apply
         the activations to. If `res_stream_slice` is `slice(None)`,
         then the activations are applied to all dimensions.
     """
-    if addition_location not in ["front", "back"]:
+    if addition_location not in ["front", 'mid', "back"]:
         raise ValueError(
-            "Invalid addition_location. Must be 'front' or 'back'."
+            "Invalid addition_location. Must be 'front' or 'mid' or 'back'."
         )
     if res_stream_slice != slice(None):  # Check that the slice is valid
         assert 0 <= res_stream_slice.start < res_stream_slice.stop
@@ -221,9 +221,18 @@ def hook_fn_from_activations(
             if addition_location == "front"
             else slice(-activations_seq_len, None)
         )
+
+        if addition_location == "front":
+            sequence_slice = slice(0, activations_seq_len)
+        elif addition_location == "mid":
+            middle = resid_pre.shape[1] // 2
+            sequence_slice = slice(middle - (activations_seq_len // 2), middle + (activations_seq_len - activations_seq_len // 2 ))
+        else: #case 'back'
+            sequence_slice = slice(-activations_seq_len, None)
+
         indexing_operation: Tuple[slice, slice, slice] = (
             slice(None),  # Apply to all batches
-            sequence_slice,  # Only add to first/last residual streams
+            sequence_slice,  # Only add to first/middle/last residual streams
             res_stream_slice,
         )
 
