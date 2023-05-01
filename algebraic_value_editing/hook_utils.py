@@ -203,8 +203,14 @@ def forward_with_rich_prompts(
         or forward_kwargs.get("return_type", "logits") == "logits"
         or forward_kwargs.get("loss_per_token", False)
     ), "Must set loss_per_token=True when using pad_remove and returning loss"
+    # Tokenize if needed
+    if isinstance(input, str) or isinstance(input, list):
+        input_tokens = model.to_tokens(
+            input, prepend_bos=forward_kwargs.get("prepend_bos", True)
+        )
+    else:
+        input_tokens = input
     # Pad the input if needed
-    input_tokens = model.to_tokens(input)
     if injection_mode in ["pad", "pad_remove"]:
         (
             input_tokens,
