@@ -20,7 +20,7 @@
 try:
     import algebraic_value_editing
 except ImportError:
-    commit = "eb1b349"  # Stable commit # TODO edit
+    commit = "15bcf55"  # Stable commit
     get_ipython().run_line_magic(  # type: ignore
         magic_name="pip",
         line=(
@@ -45,8 +45,10 @@ from algebraic_value_editing.prompt_utils import RichPrompt
 # %%
 model_name = "gpt2-xl"
 
-device: str = "cuda:3" if torch.cuda.is_available() else "cpu"
-model: HookedTransformer = HookedTransformer.from_pretrained(model_name, device="cpu")
+device: str = "cuda" if torch.cuda.is_available() else "cpu"
+model: HookedTransformer = HookedTransformer.from_pretrained(
+    model_name, device="cpu"
+)
 _ = model.to(device)
 _ = torch.set_grad_enabled(False)
 torch.manual_seed(0)  # For reproducibility
@@ -212,7 +214,10 @@ prompts: List[str] = [
         "I've been using this acne cream for a month and it's only making my"
         " skin worse, anyone else having this issue?"
     ),
-    ("The secret to a happy and healthy relationship is communication and" " trust"),
+    (
+        "The secret to a happy and healthy relationship is communication and"
+        " trust"
+    ),
     "Rumor has it that the famous celebrity couple is getting a divorce",
     (
         "I recently switched to a vegan diet and I feel so much better, I"
@@ -238,7 +243,10 @@ prompts: List[str] = [
         "I love this new TV show, the characters are so well-developed and the"
         " plot is amazing"
     ),
-    ("A devastating earthquake hit the city last night, leaving thousands" " homeless"),
+    (
+        "A devastating earthquake hit the city last night, leaving thousands"
+        " homeless"
+    ),
     "Scientists discover a new species of fish deep in the ocean",
     "Why are people still believing in flat earth theory?",
     (
@@ -294,7 +302,7 @@ num_layers: int = model.cfg.n_layers
 # residual stream. The huge problem with this explanation is layernorm,
 # which is applied to the inputs to the attention and MLP layers. This
 # should basically whiten the input to the OV circuits if the gain
-# parameters are close to 1. 
+# parameters are close to 1.
 #
 # * Stefan Heimersheim previously noticed this phenomenon in GPT2-small.
 # %%
@@ -306,7 +314,9 @@ import numpy as np
 def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
     """Plot a histogram of the residual stream magnitudes for each layer
     of the network."""
-    assert "Magnitude" in df.columns, "Dataframe must have a 'Magnitude' column"
+    assert (
+        "Magnitude" in df.columns
+    ), "Dataframe must have a 'Magnitude' column"
 
     df["LogMagnitude"] = np.log10(df["Magnitude"])
     fig = px.histogram(
@@ -329,6 +339,7 @@ def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
     )
 
     return fig
+
 
 # %%
 # Create an empty dataframe with the required columns
@@ -491,7 +502,8 @@ for act_loc in all_resid_pre_locations:
     if act_loc == 0:
         continue
     act_name, act_name_prev = [
-        prompt_utils.get_block_name(block_num=loc) for loc in (act_loc, act_loc - 1)
+        prompt_utils.get_block_name(block_num=loc)
+        for loc in (act_loc, act_loc - 1)
     ]
 
     mags, mags_prev = [
@@ -509,44 +521,52 @@ for act_loc in all_resid_pre_locations:
 # around 1.05^t), outside of the
 # zeroth position (`<|endoftext|>`), which we already know is an outlier.
 
-# %% Now let's plot how the steering vector magnitudes change with layer [markdown]
+# %% [markdown]
+# Now let's plot how the steering vector magnitudes change with layer
 # number. These magnitudes are the L2 norms of the net activation
 # vectors (adding one residual stream for "Anger" and subtracting the
 # residual streams for "Calm"). Let's sanity-check that the magnitudes
 # look reasonable, given what we just learned about the usual distribution of
 # residual stream magnitudes.
-#
-# def steering_magnitudes_dataframe(model: HookedTransformer, act_adds: List[RichPrompt], locations: List[int]) -> pd.DataFrame:
-#     """ Compute the relative magnitudes of the steering vectors at the
-#     locations in the model. """
-#     steering_df = pd.DataFrame(
-#         columns=DF_COLS
-#     )
-#
-#     for act_loc in locations:
-#         relocated_adds: List[RichPrompt] = [
-#             RichPrompt(prompt=act_add.prompt, coeff=act_add.coeff, act_name=act_loc) for act_add in act_adds
-#         ]
-#         mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
-#             model=model, act_adds=relocated_adds
-#         ).cpu()
-#
-#         prompt1_toks, prompt2_toks = [model.to_str_tokens(addition.prompt) for addition in relocated_adds]
-#
-#         for pos, mag in enumerate(mags):    
-#             tok1, tok2 = prompt1_toks[pos], prompt2_toks[pos]    
-#             row = pd.DataFrame(
-#                 {
-#                     "Prompt": [f"{tok1}-{tok2}, pos {pos}"],
-#                     "Activation Location": [act_loc],
-#                     "Magnitude": [mag],
-#                 }
-#             )
-#
-#             # Append the new row to the dataframe
-#             steering_df = pd.concat([steering_df, row], ignore_index=True)
-#
-#     return steering_df
+
+
+def steering_magnitudes_dataframe(
+    model: HookedTransformer, act_adds: List[RichPrompt], locations: List[int]
+) -> pd.DataFrame:
+    """Compute the relative magnitudes of the steering vectors at the
+    locations in the model."""
+    steering_df = pd.DataFrame(columns=DF_COLS)
+
+    for act_loc in locations:
+        relocated_adds: List[RichPrompt] = [
+            RichPrompt(
+                prompt=act_add.prompt, coeff=act_add.coeff, act_name=act_loc
+            )
+            for act_add in act_adds
+        ]
+        mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
+            model=model, act_adds=relocated_adds
+        ).cpu()
+
+        prompt1_toks, prompt2_toks = [
+            model.to_str_tokens(addition.prompt) for addition in relocated_adds
+        ]
+
+        for pos, mag in enumerate(mags):
+            tok1, tok2 = prompt1_toks[pos], prompt2_toks[pos]
+            row = pd.DataFrame(
+                {
+                    "Prompt": [f"{tok1}-{tok2}, pos {pos}"],
+                    "Activation Location": [act_loc],
+                    "Magnitude": [mag],
+                }
+            )
+
+            # Append the new row to the dataframe
+            steering_df = pd.concat([steering_df, row], ignore_index=True)
+
+    return steering_df
+
 
 # %% Make a plotly line plot of the steering vector magnitudes
 anger_calm_additions: List[RichPrompt] = [
@@ -563,7 +583,8 @@ fig: go.Figure = line_plot(steering_df)
 fig.show()
 
 # %% [markdown]
-# These steering vector magnitudes 
+# These steering vector magnitudes
+
 
 # %% Let's plot the steering vector magnitudes against the prompt
 # magnitudes
@@ -579,7 +600,9 @@ def relative_magnitudes_dataframe(
 
     for act_loc in locations:
         relocated_adds: List[RichPrompt] = [
-            RichPrompt(prompt=act_add.prompt, coeff=act_add.coeff, act_name=act_loc)
+            RichPrompt(
+                prompt=act_add.prompt, coeff=act_add.coeff, act_name=act_loc
+            )
             for act_add in act_adds
         ]
         mags: torch.Tensor = hook_utils.steering_magnitudes_relative_to_prompt(
@@ -646,7 +669,7 @@ fig.show()
 
 # %% [markdown]
 # We don't know why the relative magnitude decreases during the forward
-# pass. 
+# pass.
 #
 # (The `<|endoftext|>` - `<|endoftext|>` magnitude is always 0,
 # because
@@ -697,7 +720,7 @@ fig.show()
 
 
 # %% [markdown]
-# Nope, that's not the explanation. 
+# Nope, that's not the explanation.
 
 # %% [markdown]
 # ## Injecting similar-magnitude random vectors
@@ -706,10 +729,10 @@ fig.show()
 # suggests the presence of lots of tolerance to noise, and seems like
 # _very slight_ evidence of superposition (since a bunch of
 # not-quite-orthogonal features will noisily unembed, and the model has
-# to be performant in the face of this). 
+# to be performant in the face of this).
 #
 # But mostly, it just seems like a
-# good additional data point to have. 
+# good additional data point to have.
 
 # %%
 # Get the steering vector magnitudes for the anger-calm steering vector
@@ -719,9 +742,10 @@ anger_calm_additions: List[RichPrompt] = [
     RichPrompt(prompt="Calm", coeff=-10, act_name=20),
 ]
 num_anger_completions: int = 5
-anger_vec: Float[torch.Tensor, "batch seq d_model"] = hook_utils.get_prompt_activations(
-    model, anger_calm_additions[0]
-) + hook_utils.get_prompt_activations(model, anger_calm_additions[1])
+anger_vec: Float[torch.Tensor, "batch seq d_model"] = (
+    hook_utils.get_prompt_activations(model, anger_calm_additions[0])
+    + hook_utils.get_prompt_activations(model, anger_calm_additions[1])
+)
 
 # %%
 # For reference, here are the effects of this steering vector on two
@@ -750,7 +774,9 @@ mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
 
 # Make normally drawn random vector with about the same magnitude as the steering
 # vector (dmodel is 1600 for GPT2XL)
-rand_act: Float[torch.Tensor, "seq d_model"] = torch.randn(size=[len(mags), 1600])
+rand_act: Float[torch.Tensor, "seq d_model"] = torch.randn(
+    size=[len(mags), 1600]
+)
 
 # Rescale appropriately
 scaling_factors: torch.Tensor = mags / rand_act.norm(dim=1)
@@ -786,7 +812,7 @@ for prompt in anger_prompts:
         hook_fns=hooks,
         tokens_to_generate=60,
         seed=1,
-        **sampling_kwargs
+        **sampling_kwargs,
     )
     completion_utils.pretty_print_completions(rand_df)
 
@@ -796,7 +822,7 @@ for prompt in anger_prompts:
 # similar magnitudes. We tentatively infer that GPT-2-XL is not easy to
 # break/modify via generic random intervention,
 # and is instead controllable through consistent feature directions
-# which are added to its forward pass by steering vectors. 
+# which are added to its forward pass by steering vectors.
 #
 # Let's also measure the KL between the logits output by the model with
 # and without the random vector. This will give us a sense of how much
@@ -816,12 +842,16 @@ for prompt in anger_prompts:
     )  # Slice off the first 3 tokens, whose outputs will be messed up by the ActivationAddition
     logit_indexing: Tuple[slice, slice] = (slice(None), seq_slice)
 
-    anger_logits: Float[torch.Tensor, "batch seq vocab"] = model.run_with_hooks(
-        prompt, fwd_hooks=list(anger_hooks.items())
-    )[logit_indexing]
+    anger_logits: Float[torch.Tensor, "batch seq vocab"] = (
+        model.run_with_hooks(prompt, fwd_hooks=list(anger_hooks.items()))[
+            logit_indexing
+        ]
+    )
 
     model.add_hook(name=act_name, hook=hook)
-    rand_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[logit_indexing]
+    rand_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[
+        logit_indexing
+    ]
     model.remove_all_hook_fns()
 
     normal_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[
@@ -845,8 +875,10 @@ for prompt in anger_prompts:
     print(completion_utils.bold_text(f"Prompt: {prompt}"))
     print(f"KL between probs with and without random vector: {kl_rand:.5f}")
     print(f"KL between probs with and without anger vector: {kl_anger:.5f}")
-    print("KL(normal || anger) - KL(normal || rand) =" f" {kl_anger - kl_rand:.5f}\n")
-
+    print(
+        "KL(normal || anger) - KL(normal || rand) ="
+        f" {kl_anger - kl_rand:.5f}\n"
+    )
 
 
 # %% [markdown]
@@ -860,7 +892,7 @@ for prompt in anger_prompts:
 # directions we could add to the forward pass.
 #
 # Lastly, we see that a "random text vector" indeed produces strange
-# results. However, the results are still syntactically coherent. 
+# results. However, the results are still syntactically coherent.
 
 # %%
 nonsense_vector: List[RichPrompt] = [
@@ -885,7 +917,9 @@ nonsense_mags: torch.Tensor = hook_utils.steering_vec_magnitudes(
 ).cpu()
 
 # Get average ratio between non-EOS anger and nonsense tokens
-scaling_factor: float = anger_mags[1:].mean().item() / nonsense_mags[1:].mean().item()
+scaling_factor: float = (
+    anger_mags[1:].mean().item() / nonsense_mags[1:].mean().item()
+)
 
 rescaled_nonsense_vector: List[RichPrompt] = [
     *prompt_utils.get_x_vector(
@@ -905,7 +939,7 @@ completion_utils.print_n_comparisons(
     prompt="I went up to my friend and said",
     rich_prompts=rescaled_nonsense_vector,
     num_comparisons=5,
-    **sampling_kwargs
+    **sampling_kwargs,
 )
 
 
@@ -931,7 +965,7 @@ completion_utils.print_n_comparisons(
     prompt="I went up to my friend and said",
     rich_prompts=large_nonsense_vector,
     num_comparisons=5,
-    **sampling_kwargs
+    **sampling_kwargs,
 )
 
 # %% [markdown]
@@ -940,13 +974,13 @@ completion_utils.print_n_comparisons(
 # extra tokens into the forward pass. In some situations, this makes
 # sense. Given prompt "I love you because", if we inject a `_wedding` token at position 1 with large
 # coefficient, perhaps the model just "sees" the sentence "_wedding love
-# you because". 
+# you because".
 #
 # However, in general, it's not clear what this hypothesis means. Tokens
 # are a discrete quantity. You can't have more than one in a single
 # position. You can't have three times `_wedding` and then negative
 # three times `_` (space), on top of `I`. That's just not a thing which
-# can be done using "just tokens." 
+# can be done using "just tokens."
 #
 # Even though this hypothesis isn't strictly true, there are still
 # interesting versions to investigate. For example, consider the
@@ -965,6 +999,7 @@ completion_utils.print_n_comparisons(
 # steering vector's effect from the embedding vector, and not from the
 # other "cognitive work" done by blocks 0–19.
 
+
 # %%
 def hooks_source_to_target(
     model: HookedTransformer,
@@ -981,7 +1016,9 @@ def hooks_source_to_target(
         ), f"block_num must be between 0 and {model.n_layers}, inclusive."
 
     source_adds: List[RichPrompt] = [
-        RichPrompt(prompt=act_add.prompt, coeff=act_add.coeff, act_name=source_block)
+        RichPrompt(
+            prompt=act_add.prompt, coeff=act_add.coeff, act_name=source_block
+        )
         for act_add in act_adds
     ]
 
@@ -1013,7 +1050,7 @@ transplant_df_0, normal_df = [
         prompt_batch=["I think you're a"] * 15,
         hook_fns=hooks,
         seed=0,
-        **sampling_kwargs
+        **sampling_kwargs,
     )
     for hooks in (transplant_hooks_0, anger_hooks)
 ]
@@ -1055,7 +1092,7 @@ transplant_df_2: pd.DataFrame = completion_utils.gen_using_hooks(
     prompt_batch=["I think you're a"] * 15,
     hook_fns=transplant_hooks_2,
     seed=0,
-    **sampling_kwargs
+    **sampling_kwargs,
 )
 
 df_2: pd.DataFrame = pd.concat([normal_df, transplant_df_2], ignore_index=True)
@@ -1067,7 +1104,7 @@ completion_utils.pretty_print_completions(
 )
 
 # %% [markdown]
-# This is a much larger effect than we saw before. It's not as large as 
+# This is a much larger effect than we saw before. It's not as large as
 # the effect of adding the normal steering vector, but still -- layers 0
 # and 1 are apparently doing substantial steering-relevant cognitive work!
 #
@@ -1080,7 +1117,8 @@ completion_utils.pretty_print_completions(
 # Now let's try rescaling this steering vector further, and see if we
 # can't norm-adjust it to be as effective as the normal steering vector.
 # We can in fact compute how the norm of the vector changes over this
-# part of the model, and rescale appropriately! 
+# part of the model, and rescale appropriately!
+
 
 # %%
 def anger_calm_block_n(block_num: int) -> Tuple[RichPrompt, RichPrompt]:
@@ -1133,7 +1171,7 @@ rescaled_df_2: pd.DataFrame = completion_utils.gen_using_hooks(
     prompt_batch=["I think you're a"] * 15,
     hook_fns=rescaled_hooks_2,
     seed=0,
-    **sampling_kwargs
+    **sampling_kwargs,
 )
 
 combined_rescaled_df: pd.DataFrame = pd.concat(
@@ -1147,8 +1185,8 @@ completion_utils.pretty_print_completions(
 )
 
 # %% [markdown]
-# Even after rescaling by the appropriate amount, the steering vector 
-# sourced from layer 2 is still not as effective as the normal steering 
+# Even after rescaling by the appropriate amount, the steering vector
+# sourced from layer 2 is still not as effective as the normal steering
 # vector. This suggests that the embedding / early-steering (pre-layer 2) vector is not just getting
 # amplified by layers 2–19. Instead, useful computational work is being
 # done by these layers, which then can be added to forward passes in
@@ -1158,17 +1196,17 @@ completion_utils.pretty_print_completions(
 # ## Only adding in a slice of the steering vector
 # GPT-2-XL has a 1,600-dimensional residual stream (i.e.
 # `d_model=1600`). Alex was curious about whether we could get some steering
-# effect by only 
+# effect by only
 # adding in certain dimensions of the residual stream (e.g. dimensions
 # 0–799). He thought this probably (75%) wouldn't work, but the
-# experiment was cheap and interesting and so he ran it. 
+# experiment was cheap and interesting and so he ran it.
 #
 # More precisely, suppose we add in the first _n_% of the residual
 # stream dimensions for the `_wedding`-`_` vector. To what extent will
 # the prompts be about weddings, as opposed to garbage or unrelated
 # topics? Will lopping off part of the vector To [his
 # surprise](https://predictionbook.com/predictions/211472),* the
-# "weddingness" of the completions smoothly increases with _n_! 
+# "weddingness" of the completions smoothly increases with _n_!
 #
 # To illustrate this, we'll run 100 completions for 10 _n_ values, and
 # plot the average number of wedding words there are per completion.
@@ -1213,7 +1251,7 @@ for frac in [num / 10.0 for num in range(11)]:
         rich_prompts=wedding_additions,
         res_stream_slice=slice_to_add,
         seed=0,
-        **sampling_kwargs
+        **sampling_kwargs,
     )
 
     # Store the fraction of dims we modified
@@ -1242,7 +1280,9 @@ fig: go.Figure = px.line(
         " dimensions affected by steering vector)"
     ),
     labels={
-        "frac_dims_added": ("Fraction of dimensions affected by steering vector"),
+        "frac_dims_added": (
+            "Fraction of dimensions affected by steering vector"
+        ),
         "wedding_words_count": "Avg. # of wedding words",
     },
 )
@@ -1259,7 +1299,6 @@ fig.update_traces(mode="markers+lines")
 fig.show()
 
 
-
 # %% [markdown]
 # Shockingly, for the `frac=0.7` setting, adding in the first 1,120 (out of 1,600) dimensions of the
 # residual stream is enough to make the completions _more_ about
@@ -1267,7 +1306,9 @@ fig.show()
 # some of these completions and see if they make sense:
 
 # %%
-df_head: pd.DataFrame = merged_df.loc[merged_df["frac_dims_added"] == 0.7].head()
+df_head: pd.DataFrame = merged_df.loc[
+    merged_df["frac_dims_added"] == 0.7
+].head()
 completion_utils.pretty_print_completions(
     results=df_head,
     mod_title=f"Adding wedding vector, first 70% of dimensions",
