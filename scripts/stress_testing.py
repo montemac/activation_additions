@@ -901,7 +901,14 @@ anger_hooks: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
     model=model, rich_prompts=anger_calm_additions
 )
 
-for prompt in anger_prompts:
+# Store the KL divergences in a dataframe, noting both the random and
+# anger KLs, as well as the entropy of each prompt
+KL_df: pd.DataFrame = pd.DataFrame(
+    columns=["Prompt", "Random KL", "Anger KL", "Normal output entropy"]
+)
+
+verbose: bool = False
+for prompt in prompts:
     seq_slice: slice = slice(
         3, None
     )  # Slice off the first 3 tokens, whose outputs will be messed up by the ActivationAddition
@@ -937,13 +944,79 @@ for prompt in anger_prompts:
         for probs in [rand_probs, anger_probs]
     ]
 
-    print(completion_utils.bold_text(f"Prompt: {prompt}"))
-    print(f"KL between probs with and without random vector: {kl_rand:.5f}")
-    print(f"KL between probs with and without anger vector: {kl_anger:.5f}")
-    print(
-        "KL(normal || anger) - KL(normal || rand) ="
-        f" {kl_anger - kl_rand:.5f}\n"
-    )  # TODO not within .1 of each other, why?
+    # Compute the standard probability entropies
+    entropies: torch.Tensor = -(normal_probs * torch.log(normal_probs)).sum(
+        dim=-1
+    )
+    avg_entropy: torch.Tensor = entropies.mean().item()
+
+    if verbose:
+        print(completion_utils.bold_text(f"Prompt: {prompt}"))
+        print(
+            "Average logit entropy in the normal distribution:"
+            f" {avg_entropy:.5f}"
+        )
+        print(
+            "KL between probs with and without random vector:"
+            f" {kl_rand/avg_entropy:.5f}"
+        )
+        print(
+            "KL between probs with and without anger vector:"
+            f" {kl_anger/avg_entropy:.5f}"
+        )
+        print(
+            "KL(normal || rand) - KL(normal || anger) ="
+            f" {(kl_rand - kl_anger)/avg_entropy:.5f}\n"
+        )
+
+    new_row: pd.DataFrame = pd.DataFrame(
+        {
+            "Prompt": prompt,
+            "Random KL": kl_rand.item(),
+            "Random KL (normalized)": kl_rand.item() / avg_entropy,
+            "Anger KL": kl_anger.item(),
+            "Anger KL (normalized)": kl_anger.item() / avg_entropy,
+            "Normal output entropy": avg_entropy,
+        },
+        index=[0],
+    )
+    KL_df = pd.concat([KL_df, new_row], ignore_index=True)
+
+
+# %%
+# Show a plotly scatterplot of the KL divergences
+kl_fig = px.scatter(
+    KL_df,
+    x="Random KL (normalized)",
+    y="Anger KL (normalized)",
+    hover_name="Prompt",
+    hover_data=["Normal output entropy"],
+)
+
+kl_fig.update_layout(
+    title="Normalized KL divergences induced by anger and random vectors",
+    xaxis_title="KL(normal || random vector) / H(normal)",
+    yaxis_title="KL(normal || anger steering vector) / H(normal)",
+)
+
+# Update x and y ranges to be equal
+kl_fig.update_xaxes(range=[0, 5])
+kl_fig.update_yaxes(range=[0, 5])
+
+# Plot a line where the two KLs are equal
+kl_fig.add_shape(
+    type="line",
+    x0=0,
+    y0=0,
+    x1=12,
+    y1=12,
+    line=dict(color="Gray", width=3, dash="dash"),
+)
+
+kl_fig.show()
+
+# TODO fix analysis - WHY are these numbers so large? Should be more
+# like .001 nats
 
 
 # %% [markdown]
