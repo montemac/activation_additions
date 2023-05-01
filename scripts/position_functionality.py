@@ -1,5 +1,5 @@
-""" This script demonstrates how to use the algebraic_value_editing library to generate comparisons
-between two prompts. """
+""" Compare different settings for where we add the steering vector, in
+terms of the residual streams to which activations are added. """
 # %% 
 %load_ext autoreload
 %autoreload 2
@@ -19,7 +19,7 @@ model: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="gpt2-xl",
     device="cpu",
 )
-_ = model.to("cuda:4")
+_ = model.to("cuda")
 _ = torch.set_grad_enabled(False)
 
 # %%
