@@ -179,7 +179,7 @@ def hook_fn_from_activations(
         the activations to. If `res_stream_slice` is `slice(None)`,
         then the activations are applied to all dimensions.
     """
-    if addition_location not in ["front", 'mid', "back"]:
+    if addition_location not in ["front", "mid", "back"]:
         raise ValueError(
             "Invalid addition_location. Must be 'front' or 'mid' or 'back'."
         )
@@ -222,13 +222,18 @@ def hook_fn_from_activations(
             else slice(-activations_seq_len, None)
         )
 
-        if addition_location == "front":
-            sequence_slice = slice(0, activations_seq_len)
-        elif addition_location == "mid":
-            middle = resid_pre.shape[1] // 2
-            sequence_slice = slice(middle - (activations_seq_len // 2), middle + (activations_seq_len - activations_seq_len // 2 ))
-        else: #case 'back'
-            sequence_slice = slice(-activations_seq_len, None)
+        match addition_location:
+            case "front":
+                sequence_slice = slice(0, activations_seq_len)
+            case "mid":
+                middle_prompt_ind: int = prompt_seq_len // 2
+                half_act_len: int = activations_seq_len // 2
+                sequence_slice = slice(
+                    middle_prompt_ind - half_act_len,
+                    middle_prompt_ind + (activations_seq_len - half_act_len),
+                )
+            case "back":
+                sequence_slice = slice(-activations_seq_len, None)
 
         indexing_operation: Tuple[slice, slice, slice] = (
             slice(None),  # Apply to all batches
@@ -237,9 +242,9 @@ def hook_fn_from_activations(
         )
 
         # NOTE if caching old QKV results, this hook does nothing when
-        # the context window starts rolling over
+        # the context window sta rts rolling over
         resid_pre[indexing_operation] = (
-            activations[indexing_operation] + resid_pre[indexing_operation]
+            activations[:, :, res_stream_slice] + resid_pre[indexing_operation]
         )
         return resid_pre
 
