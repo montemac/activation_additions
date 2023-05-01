@@ -81,9 +81,7 @@ def gen_using_hooks(
                     any hook functions.
     """
     if seed is not None:
-        t.manual_seed(
-            seed
-        )  # TODO this is causing an error when print_n_comparisons is called twice in a row
+        t.manual_seed(seed)
 
     tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(
         prompt_batch
