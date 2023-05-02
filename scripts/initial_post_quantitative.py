@@ -27,6 +27,7 @@ from algebraic_value_editing import (
     metrics,
     sweeps,
     experiments,
+    logits,
 )
 
 utils.enable_ipython_reload()
@@ -335,104 +336,40 @@ rich_prompts = list(
     ),
 )
 
-
-def logits_to_probs_numpy(
-    logits: torch.Tensor,
-) -> Tuple[np.ndarray, np.ndarray]:
-    dist = torch.distributions.Categorical(logits=logits)
-    return (
-        dist.probs.detach().cpu().numpy(),
-        dist.logits.detach().cpu().numpy(),
-    )
-
-
-tokens = MODEL.to_tokens(text).squeeze(0)
-tokens_np = tokens.detach().cpu().numpy()
-tokens_str = np.array(MODEL.to_str_tokens(text))
-logits_norm = MODEL.forward(
-    input=torch.unsqueeze(tokens, 0), return_type="logits"
-).squeeze(0)
-logits_mod = hook_utils.forward_with_rich_prompts(
-    model=MODEL, rich_prompts=rich_prompts, input=tokens, return_type="logits"
-).squeeze(0)
-probs_norm, logprobs_norm = logits_to_probs_numpy(logits_norm)
-probs_mod, logprobs_mod = logits_to_probs_numpy(logits_mod)
-probs_diff = probs_mod - probs_norm
-logprobs_diff = logprobs_mod - logprobs_norm
-
-# Calculate the different things
-# Logprobs diff for the actual tokens
-probs_diff_actual_tokens = np.concatenate(
-    [
-        [0],
-        np.take_along_axis(
-            probs_diff[:-1, :], tokens_np[1:, None], axis=1
-        ).squeeze(),
-    ]
+probs = logits.get_normal_and_modified_token_probs(
+    model=MODEL,
+    prompts=text,
+    rich_prompts=rich_prompts,
+    return_positions_above=0,
 )
-logprobs_diff_actual_tokens = np.take_along_axis(
-    probs_diff[:-1, :], tokens_np[1:, None], axis=1
-).squeeze()
 
-
-# Effectiveness and focus for each sub-string
-def renorm_probs(probs):
-    return probs / probs.sum()
-
-
-def effectiveness(
-    probs_mod: np.ndarray,
-    logprobs_diff: np.ndarray,
-    is_steering_aligned: np.ndarray,
-):
-    """Function to calculate effectiveness given modified probabilities
-    and logprob differences.  Also requires an is_steering_aligned
-    boolnea array used to select which tokens to include in the
-    calculation."""
-    if not np.any(is_steering_aligned):
-        return np.zeros(probs_mod.shape[:-1])
-    return (
-        probs_mod[..., is_steering_aligned]
-        * logprobs_diff[..., is_steering_aligned]
-    ).sum(axis=-1)
-
-
-def focus(
-    probs_norm: np.ndarray,
-    probs_mod: np.ndarray,
-    is_steering_aligned: np.ndarray,
-):
-    """Function calculate focus given normal and modified probabilities,
-    and is_steering_aligned boolean array."""
-    probs_norm_normed = renorm_probs(probs_norm[..., ~is_steering_aligned])
-    probs_mod_normed = renorm_probs(probs_mod[..., ~is_steering_aligned])
-    return (
-        probs_mod_normed
-        * (np.log(probs_mod_normed) - np.log(probs_norm_normed))
-    ).sum(axis=-1)
+tokens_np = MODEL.to_tokens(text)[0, :].detach().cpu().numpy()
+tokens_str = MODEL.to_str_tokens(text)
+probs_diff_actual_tokens = logits.get_for_tokens(
+    probs["mod", "probs"] - probs["normal", "probs"], tokens_np
+)
+logprobs_diff_actual_tokens = logits.get_for_tokens(
+    probs["mod", "logprobs"] - probs["normal", "logprobs"], tokens_np
+)
 
 
 eff_list = []
 foc_list = []
 ent_list = []
-for pos in np.arange(probs_mod.shape[0]):
-    is_steering_aligned = np.zeros(probs_mod.shape[1], dtype=bool)
+for pos in np.arange(probs.shape[0]):
+    is_steering_aligned = np.zeros(
+        probs["normal", "probs"].shape[1], dtype=bool
+    )
     is_steering_aligned[steering_aligned_tokens.get(pos, [])] = True
     # Effectiveness
-    eff_list.append(
-        effectiveness(
-            probs_mod[pos, :], logprobs_diff[pos, :], is_steering_aligned
-        )
-    )
+    eff_list.append(logits.effectiveness(probs, [pos], is_steering_aligned))
     # Focus
-    foc_list.append(
-        focus(probs_norm[pos, :], probs_mod[pos, :], is_steering_aligned)
-    )
+    foc_list.append(logits.focus(probs, [pos], is_steering_aligned))
     # Entropy
     # ent_list.append((-probs_mod_normed * np.log(probs_mod_normed)).sum())
 
-eff = np.array(eff_list)
-foc = np.array(foc_list)
+eff = pd.concat(eff_list)
+foc = pd.concat(foc_list)
 # ent = np.array(ent_list)
 
 eff[: rich_prompts[0].tokens.shape[0]] = np.nan
@@ -441,13 +378,6 @@ foc[: rich_prompts[0].tokens.shape[0]] = np.nan
 # Plot!
 plot_df = pd.concat(
     [
-        # pd.DataFrame(
-        #     {
-        #         "tokens_str": tokens_str[:-1],
-        #         "value": logprobs_diff_actual_tokens,
-        #         "quantity": "log-prob increase<br>(actual next token)",
-        #     }
-        # ),
         pd.DataFrame(
             {
                 "tokens_str": tokens_str,
@@ -486,19 +416,19 @@ fig.update_layout(showlegend=False, height=600)
 fig.show()
 fig.write_image("images/zoom_in1.png", width=png_width, height=png_height)
 
-# Show some details at specific locations
-NUM_TO_SHOW = 100
-for pos in detail_positions:
-    # Get most increased and most decreased tokens at this position
-    logprobs_diff_argsort = np.argsort(logprobs_diff[pos])
-    incr_tokens = MODEL.to_string(
-        logprobs_diff_argsort[::-1][:NUM_TO_SHOW, None].copy()
-    )
-    decr_tokens = MODEL.to_string(
-        logprobs_diff_argsort[:NUM_TO_SHOW, None].copy()
-    )
-    print(incr_tokens)
-    print(decr_tokens)
+# # Show some details at specific locations
+# NUM_TO_SHOW = 100
+# for pos in detail_positions:
+#     # Get most increased and most decreased tokens at this position
+#     logprobs_diff_argsort = np.argsort(logprobs_diff[pos])
+#     incr_tokens = MODEL.to_string(
+#         logprobs_diff_argsort[::-1][:NUM_TO_SHOW, None].copy()
+#     )
+#     decr_tokens = MODEL.to_string(
+#         logprobs_diff_argsort[:NUM_TO_SHOW, None].copy()
+#     )
+#     print(incr_tokens)
+#     print(decr_tokens)
 
 
 # Effectiveness scaling
@@ -679,6 +609,13 @@ fig.write_image(
 
 # %%
 # Sweep effectiveness and focus over hyperparams
+text = "I'm excited because I'm going to a"
+
+is_steering_aligned = np.zeros(MODEL.cfg.d_vocab_out, dtype=bool)
+is_steering_aligned[MODEL.to_single_token(" wedding")] = True
+
+# %%
+# Sweep over layers
 rich_prompts_df = sweeps.make_rich_prompts(
     phrases=[[(" weddings", 1.0), ("", -1.0)]],
     act_names=list(range(0, 48, 1)),
@@ -687,5 +624,98 @@ rich_prompts_df = sweeps.make_rich_prompts(
     model=MODEL,
 )
 
-for rich_prompt in rich_prompts_df['rich_prompts']:
-    
+results_list = []
+for idx, row in tqdm(list(rich_prompts_df.iterrows())):
+    probs = logits.get_normal_and_modified_token_probs(
+        model=MODEL,
+        prompts=[text],
+        rich_prompts=row["rich_prompts"],
+    )
+    results_list.append(
+        {
+            "effectiveness": logits.effectiveness(
+                probs, [text], is_steering_aligned
+            ).iloc[0],
+            "focus": logits.focus(probs, [text], is_steering_aligned).iloc[0],
+            "act_name": row["act_name"],
+        }
+    )
+results_df = pd.DataFrame(results_list)
+
+# %%
+# Plot results
+plot_df = (
+    results_df.set_index("act_name")
+    .stack()
+    .reset_index()
+    .rename(
+        {"level_1": "quantity", 0: "value"},
+        axis="columns",
+    )
+)
+fig = px.line(
+    plot_df,
+    x="act_name",
+    y="value",
+    color="quantity",
+    labels={"act_name": "injection layer"},
+    title="Effectiveness and focus over injection layers, weddings example",
+)
+fig.show()
+fig.write_image(
+    "images/zoom_in_layers.png", width=png_width, height=png_height
+)
+
+# %%
+# Sweep over coeffs
+rich_prompts_df = sweeps.make_rich_prompts(
+    phrases=[[(" weddings", 1.0), ("", -1.0)]],
+    act_names=[16],
+    coeffs=np.linspace(-1, 4, 51),
+    pad=True,
+    model=MODEL,
+)
+
+results_list = []
+for idx, row in tqdm(list(rich_prompts_df.iterrows())):
+    probs = logits.get_normal_and_modified_token_probs(
+        model=MODEL,
+        prompts=[text],
+        rich_prompts=row["rich_prompts"],
+    )
+    results_list.append(
+        {
+            "effectiveness": logits.effectiveness(
+                probs, [text], is_steering_aligned
+            ).iloc[0],
+            "focus": logits.focus(probs, [text], is_steering_aligned).iloc[0],
+            "coeff": row["coeff"],
+        }
+    )
+results_df = pd.DataFrame(results_list)
+
+# %%
+# Plot results
+plot_df = (
+    results_df.set_index("coeff")
+    .stack()
+    .reset_index()
+    .rename(
+        {"level_1": "quantity", 0: "value"},
+        axis="columns",
+    )
+)
+fig = px.line(
+    plot_df,
+    x="coeff",
+    y="value",
+    color="quantity",
+    labels={"coeff": "coefficient"},
+    title="Effectiveness and focus over coefficient, weddings example",
+)
+fig.show()
+fig.write_image(
+    "images/zoom_in_coeffs.png", width=png_width, height=png_height
+)
+
+# %%
