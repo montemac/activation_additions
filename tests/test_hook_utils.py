@@ -61,8 +61,8 @@ def test_hook_fn_from_activations():
     assert torch.eq(result, front_target).all(), "xvec = front test failed, incorrect changes were made to the input tensor"
 
 
-def test_hook_fn_from_activations_mid():
-    """Testing the front and back modifiers of the xvec_position"""
+def test_hook_fn_from_activations_mid_even():
+    """Testing the mid modifiers of the xvec_position"""
     #both even
     input_tensor: torch.Tensor = torch.ones((1, 10, 1))
     activations: torch.Tensor = 2 * torch.ones((1, 4, 1))
@@ -75,12 +75,14 @@ def test_hook_fn_from_activations_mid():
 
     assert torch.eq(result, mid_target).all(), "xvec = mid test failed (case input and activations both even length), incorrect changes were made to the input tensor"
 
+def test_hook_fn_from_activations_mid_odd_in():
+    """Testing the mid modifiers of the xvec_position"""
 
     #one odd (input)
     input_tensor: torch.Tensor = torch.ones((1, 9, 1))
     activations: torch.Tensor = 2 * torch.ones((1, 4, 1))
 
-    mid_target: torch.Tensor = torch.tensor([[1, 1, 3, 3, 3, 3, 3, 1, 1, 1]])
+    mid_target: torch.Tensor = torch.tensor([[1, 1, 3, 3, 3, 3, 1, 1, 1]])
     mid_target: torch.Tensor = mid_target.unsqueeze(0).unsqueeze(-1)
 
     hook_fxn: Callable = hook_utils.hook_fn_from_activations(activations=activations, addition_location="mid")
@@ -88,12 +90,14 @@ def test_hook_fn_from_activations_mid():
 
     assert torch.eq(result, mid_target).all(), "xvec = mid test failed (case input len odd and activations len even), incorrect changes were made to the input tensor"
 
+def test_hook_fn_from_activations_mid_odd_act():
+    """Testing the mid modifiers of the xvec_position"""
 
     #one odd (activations)
     input_tensor: torch.Tensor = torch.ones((1, 10, 1))
     activations: torch.Tensor = 2 * torch.ones((1, 3, 1))
 
-    mid_target: torch.Tensor = torch.tensor([[1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1]])
+    mid_target: torch.Tensor = torch.tensor([[1, 1, 1, 1, 3, 3, 3, 1, 1, 1]])
     mid_target: torch.Tensor = mid_target.unsqueeze(0).unsqueeze(-1)
 
     hook_fxn: Callable = hook_utils.hook_fn_from_activations(activations=activations, addition_location="mid")
@@ -101,6 +105,9 @@ def test_hook_fn_from_activations_mid():
 
     assert torch.eq(result, mid_target).all(), "xvec = mid test failed (case input len even and activations len odd), incorrect changes were made to the input tensor"
 
+
+def test_hook_fn_from_activations_mid_both_odd():
+    """Testing the mid modifiers of the xvec_position"""
     #both odd
     input_tensor: torch.Tensor = torch.ones((1, 9, 1))
     activations: torch.Tensor = 2 * torch.ones((1, 3, 1))
