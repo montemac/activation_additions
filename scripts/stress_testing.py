@@ -72,7 +72,7 @@ torch.manual_seed(0)  # For reproducibility
 import requests
 
 # Replace the URL with the actual raw content URL of your text file
-url = "https://raw.githubusercontent.com/username/repository_name/branch_name/strings_list.txt"
+url = "https://raw.githubusercontent.com/montemac/algebraic_value_editing/Alex/scripts/prompts.txt"
 
 response = requests.get(url)
 
