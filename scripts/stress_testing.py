@@ -38,8 +38,13 @@ except ImportError:
 # %%
 import torch
 import pandas as pd
-from typing import List, Callable, Dict, Tuple, Union
+from typing import List, Callable, Dict, Tuple
 from jaxtyping import Float
+
+import plotly.express as px
+import plotly.graph_objects as go
+import numpy as np
+
 
 from transformer_lens.HookedTransformer import HookedTransformer
 
@@ -311,9 +316,6 @@ num_layers: int = model.cfg.n_layers
 #
 # \* Stefan Heimersheim previously noticed this phenomenon in GPT2-small.
 # %%
-import plotly.express as px
-import plotly.graph_objects as go
-import numpy as np
 
 
 def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
@@ -349,8 +351,6 @@ def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
 # %%
 # Create an empty dataframe with the required columns
 prompt_df = pd.DataFrame(columns=DF_COLS)
-
-from algebraic_value_editing import prompt_utils
 
 # Loop through activation locations and prompts
 activation_locations_6: List[int] = torch.arange(0, num_layers, 6).tolist()
@@ -802,8 +802,8 @@ fig.show()
 # Get the steering vector magnitudes for the anger-calm steering vector
 # at layer 6
 anger_calm_additions: List[RichPrompt] = [
-    RichPrompt(prompt="Anger", coeff=10, act_name=20),
-    RichPrompt(prompt="Calm", coeff=-10, act_name=20),
+    RichPrompt(prompt="Anger", coeff=1, act_name=20),
+    RichPrompt(prompt="Calm", coeff=-1, act_name=20),
 ]
 num_anger_completions: int = 5
 anger_vec: Float[torch.Tensor, "batch seq d_model"] = (
@@ -846,11 +846,11 @@ rand_act = rand_act.unsqueeze(0)  # Add a batch dimension
 # Get the model device so we can move rand_act off of the cpu
 model_device: torch.device = next(model.parameters()).device
 # Get the hook function
-hook: Callable = hook_utils.hook_fn_from_activations(
+rand_hook: Callable = hook_utils.hook_fn_from_activations(
     activations=rand_act.to(model_device)
 )
 act_name: str = prompt_utils.get_block_name(block_num=20)
-hooks: Dict[str, Callable] = {act_name: hook}
+hooks: Dict[str, Callable] = {act_name: rand_hook}
 
 normal_df = completion_utils.gen_using_hooks(
     model=model,
@@ -898,6 +898,7 @@ for prompt in anger_prompts:
 # %%
 # Get the logits with and without the random vector, and with/without
 # the anger steering vector.
+
 anger_hooks: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
     model=model, rich_prompts=anger_calm_additions
 )
@@ -921,7 +922,7 @@ for prompt in prompts:
         ]
     )
 
-    model.add_hook(name=act_name, hook=hook)
+    model.add_hook(name=act_name, hook=rand_hook)
     rand_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[
         logit_indexing
     ]
@@ -939,12 +940,12 @@ for prompt in prompts:
 
     # Compute KL between the two, negating because kl_div computes negation of KL
     kl_rand, kl_anger = [
-        torch.nn.functional.kl_div(
-            input=probs.log(), target=normal_probs, reduction="batchmean"
-        )  # KL(rand_probs || normal_probs)
         # torch.nn.functional.kl_div(
-        #     input=normal_probs.log(), target=probs, reduction="batchmean"
-        # ) # KL(normal_probs || rand_probs)
+        #     input=probs.log(), target=normal_probs, reduction="batchmean"
+        # )  # KL(rand_probs || normal_probs)
+        torch.nn.functional.kl_div(
+            input=normal_probs.log(), target=probs, reduction="batchmean"
+        )  # KL(normal_probs || rand_probs)
         for probs in [rand_probs, anger_probs]
     ]
 
@@ -1003,9 +1004,13 @@ kl_fig.update_layout(
     yaxis_title="KL(normal || anger steering vector) / H(normal)",
 )
 
-# Update x and y ranges to be equal
-kl_fig.update_xaxes(range=[0, 5])
-kl_fig.update_yaxes(range=[0, 5])
+# Update x and y ranges to be equal to the max KL
+max_kl: float = (
+    KL_df[["Random KL (normalized)", "Anger KL (normalized)"]].max().max()
+)
+upper_bound: float = max_kl * 1.1
+kl_fig.update_xaxes(range=[0, upper_bound])
+kl_fig.update_yaxes(range=[0, upper_bound])
 
 # Plot a line where the two KLs are equal
 kl_fig.add_shape(
