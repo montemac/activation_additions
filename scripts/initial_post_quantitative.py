@@ -3,7 +3,7 @@
 import pickle
 import textwrap
 import os
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -380,6 +380,38 @@ def renorm_probs(probs):
     return probs / probs.sum()
 
 
+def effectiveness(
+    probs_mod: np.ndarray,
+    logprobs_diff: np.ndarray,
+    is_steering_aligned: np.ndarray,
+):
+    """Function to calculate effectiveness given modified probabilities
+    and logprob differences.  Also requires an is_steering_aligned
+    boolnea array used to select which tokens to include in the
+    calculation."""
+    if not np.any(is_steering_aligned):
+        return np.zeros(probs_mod.shape[:-1])
+    return (
+        probs_mod[..., is_steering_aligned]
+        * logprobs_diff[..., is_steering_aligned]
+    ).sum(axis=-1)
+
+
+def focus(
+    probs_norm: np.ndarray,
+    probs_mod: np.ndarray,
+    is_steering_aligned: np.ndarray,
+):
+    """Function calculate focus given normal and modified probabilities,
+    and is_steering_aligned boolean array."""
+    probs_norm_normed = renorm_probs(probs_norm[..., ~is_steering_aligned])
+    probs_mod_normed = renorm_probs(probs_mod[..., ~is_steering_aligned])
+    return (
+        probs_mod_normed
+        * (np.log(probs_mod_normed) - np.log(probs_norm_normed))
+    ).sum(axis=-1)
+
+
 eff_list = []
 foc_list = []
 ent_list = []
@@ -387,29 +419,21 @@ for pos in np.arange(probs_mod.shape[0]):
     is_steering_aligned = np.zeros(probs_mod.shape[1], dtype=bool)
     is_steering_aligned[steering_aligned_tokens.get(pos, [])] = True
     # Effectiveness
-    if np.any(is_steering_aligned):
-        eff_list.append(
-            (
-                probs_mod[pos, is_steering_aligned]
-                * logprobs_diff[pos, is_steering_aligned]
-            ).sum()
+    eff_list.append(
+        effectiveness(
+            probs_mod[pos, :], logprobs_diff[pos, :], is_steering_aligned
         )
-    else:
-        eff_list.append(0.0)
-    # Focus
-    probs_norm_normed = renorm_probs(probs_norm[pos, ~is_steering_aligned])
-    probs_mod_normed = renorm_probs(probs_mod[pos, ~is_steering_aligned])
-    foc_list.append(
-        (
-            probs_mod_normed
-            * (np.log(probs_mod_normed) - np.log(probs_norm_normed))
-        ).sum()
     )
-    ent_list.append((-probs_mod_normed * np.log(probs_mod_normed)).sum())
+    # Focus
+    foc_list.append(
+        focus(probs_norm[pos, :], probs_mod[pos, :], is_steering_aligned)
+    )
+    # Entropy
+    # ent_list.append((-probs_mod_normed * np.log(probs_mod_normed)).sum())
 
 eff = np.array(eff_list)
 foc = np.array(foc_list)
-ent = np.array(ent_list)
+# ent = np.array(ent_list)
 
 eff[: rich_prompts[0].tokens.shape[0]] = np.nan
 foc[: rich_prompts[0].tokens.shape[0]] = np.nan
@@ -478,21 +502,190 @@ for pos in detail_positions:
 
 
 # Effectiveness scaling
-pnorm = np.concatenate([np.logspace(-2, -1, 2), [probs_norm[9, 10614]]])[
-    None, :
-]
-pmod = np.logspace(-3, 0, 301)[:, None]
-eff = pmod * np.log(pmod / pnorm)
-df = (
-    pd.DataFrame(eff, index=pmod.squeeze(), columns=pnorm.squeeze())
-    .rename_axis(index="pmod")
-    .rename_axis(columns="pnorm")
-    .stack()
-    .reset_index()
-    .rename({0: "eff"}, axis="columns")
+# pnorm = np.concatenate([np.logspace(-2, -1, 2), [probs_norm[9, 10614]]])[
+#     None, :
+# ]
+# pmod = np.logspace(-3, 0, 301)[:, None]
+# eff = pmod * np.log(pmod / pnorm)
+# df = (
+#     pd.DataFrame(eff, index=pmod.squeeze(), columns=pnorm.squeeze())
+#     .rename_axis(index="pmod")
+#     .rename_axis(columns="pnorm")
+#     .stack()
+#     .reset_index()
+#     .rename({0: "eff"}, axis="columns")
+# )
+# fig = px.line(df, x="pmod", y="eff", color="pnorm", log_x=True)
+# fig.show()
+# fig.write_image(
+#     "images/zoom_in_eff_scale.png", width=png_width, height=png_height
+# )
+
+
+# %%
+# Scatter plots of top-K next-token probs in normal and modified models.
+def show_token_probs(
+    model: HookedTransformer,
+    probs_norm: np.ndarray,
+    probs_mod: np.ndarray,
+    pos: int,
+    top_k: int,
+    sort_mode: str = "prob",
+    token_strs_to_ignore: Union[list, np.ndarray] = None,
+):
+    """Print probability changes of top-K tokens for a specific input
+    sequence, sorted using a specific sorting mode."""
+    assert sort_mode in ["prob", "kl_div"]
+    # Pick out the provided position for convenience
+    probs_norm = probs_norm[pos, :]
+    probs_mod = probs_mod[pos, :]
+    # Set probs to zero and renormalize for tokens to ignore
+    keep_mask = np.ones_like(probs_norm, dtype=bool)
+    if token_strs_to_ignore is not None:
+        tokens_to_ignore = np.array(
+            [
+                MODEL.to_single_token(token_str)
+                for token_str in token_strs_to_ignore
+            ]
+        )
+        keep_mask[tokens_to_ignore] = False
+        probs_norm[~keep_mask] = 0.0
+        probs_norm /= probs_norm[keep_mask].sum()
+        probs_mod[~keep_mask] = 0.0
+        probs_mod /= probs_mod[keep_mask].sum()
+    # Sort
+    if sort_mode == "prob":
+        norm_top_k = np.argsort(probs_norm)[::-1][:top_k]
+        mod_top_k = np.argsort(probs_mod)[::-1][:top_k]
+        top_k_tokens = np.array(list(set(norm_top_k).union(set(mod_top_k))))
+    elif sort_mode == "kl_div":
+        kl_contrib = np.ones_like(probs_mod)
+        kl_contrib[keep_mask] = probs_mod[keep_mask] * np.log(
+            probs_mod[keep_mask] / probs_norm[keep_mask]
+        )
+        top_k_tokens = np.argsort(kl_contrib)[::-1][
+            :top_k
+        ].copy()  # Copy to avoid negative stride
+        print(top_k_tokens)
+
+    plot_df = pd.DataFrame(
+        {
+            "probs_norm": probs_norm[top_k_tokens],
+            "probs_mod": probs_mod[top_k_tokens],
+            "probs_ratio": probs_mod[top_k_tokens] / probs_norm[top_k_tokens],
+            "text": model.to_string(top_k_tokens[:, None]),
+        }
+    )
+    fig = py.subplots.make_subplots(
+        rows=1,
+        cols=2,
+        shared_xaxes=True,
+        subplot_titles=[
+            "Modified vs normal probabilities",
+            "Probability ratio vs normal probabilities",
+        ],
+    )
+    # Both probs
+    fig.add_trace(
+        go.Scatter(
+            x=plot_df["probs_norm"],
+            y=plot_df["probs_mod"],
+            text=plot_df["text"],
+            textposition="top center",
+            mode="markers+text",
+            marker_color=px.colors.qualitative.Plotly[0],
+            showlegend=False,
+        ),
+        row=1,
+        col=1,
+    )
+    min_prob = plot_df["probs_norm"].values.min()
+    max_prob = plot_df["probs_norm"].values.max()
+    unit_line_x = np.array([min_prob, max_prob])
+    unit_line_y = unit_line_x
+    fig.add_trace(
+        go.Scatter(
+            x=unit_line_x,
+            y=unit_line_y,
+            mode="lines",
+            line=dict(dash="dot"),
+            name="modified = normal",
+            line_color=px.colors.qualitative.Plotly[1],
+        ),
+        row=1,
+        col=1,
+    )
+    # Ratio
+    fig.add_trace(
+        go.Scatter(
+            x=plot_df["probs_norm"],
+            y=plot_df["probs_ratio"],
+            text=plot_df["text"],
+            textposition="top center",
+            mode="markers+text",
+            marker_color=px.colors.qualitative.Plotly[0],
+            showlegend=False,
+        ),
+        row=1,
+        col=2,
+    )
+    unit_line_x = np.array([min_prob, max_prob])
+    unit_line_y = np.array([1, 1])
+    fig.add_trace(
+        go.Scatter(
+            x=unit_line_x,
+            y=unit_line_y,
+            mode="lines",
+            line=dict(dash="dot"),
+            name="modified = normal",
+            line_color=px.colors.qualitative.Plotly[1],
+            showlegend=False,
+        ),
+        row=1,
+        col=2,
+    )
+    # Figure tweaking
+    fig.update_yaxes(type="log")
+    fig.update_xaxes(type="log")
+    fig.update_layout(
+        title_text=f"Change in probability of top-{top_k} next tokens, "
+        + f'sorted by {sort_mode}, for input: "{model.to_string(tokens[1:(pos+1)])}"',
+        xaxis_title="Normal model token probability",
+        yaxis_title="Modified model token probability",
+        xaxis2_title="Normal model token probability",
+        yaxis2_title="Modified/normal token probability ratio",
+    )
+    fig.update_traces(textposition="top center")
+    return fig
+
+
+# fig = show_token_probs(MODEL, probs_norm, probs_mod, 9, 10)
+# fig.show()
+# fig.write_image("images/zoom_in_top_k.png", width=png_width, height=png_height)
+
+fig = show_token_probs(
+    MODEL,
+    probs_norm,
+    probs_mod,
+    9,
+    10,
+    sort_mode="kl_div",
+    token_strs_to_ignore=[" wedding"],
 )
-fig = px.line(df, x="pmod", y="eff", color="pnorm", log_x=True)
 fig.show()
 fig.write_image(
-    "images/zoom_in_eff_scale.png", width=png_width, height=png_height
+    "images/zoom_in_top_k_kl_div.png", width=png_width, height=png_height
 )
+
+# %%
+# Sweep effectiveness and focus over hyperparams
+rich_prompts_df = sweeps.make_rich_prompts(
+    phrases=[[(" weddings", 1.0), ("", -1.0)]],
+    act_names=list(range(0, 48, 1)),
+    coeffs=[1],
+    pad=True,
+    model=MODEL,
+)
+
+for rich_prompt in rich_prompts_df['rich_prompts']:
+    
