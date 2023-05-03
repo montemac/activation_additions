@@ -173,7 +173,7 @@ def pad_tokens_to_match_rich_prompts(
     model: HookedTransformer,
     tokens: Int[torch.Tensor, "batch pos"],
     rich_prompts: List[RichPrompt],
-) -> Int[torch.Tensor, "batch pos"]:
+) -> Tuple[Int[torch.Tensor, "batch pos"], int]:
     """Tokenize and space-pad the front of the provided string so that
     none of the RichPrompts will overlap with the unpadded text,
     returning the padded tokens and the index at which the tokens from

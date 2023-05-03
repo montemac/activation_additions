@@ -17,15 +17,24 @@ import torch
 import torch.nn.functional as F
 from transformers import pipeline
 import openai
+from jaxtyping import Float, Int
 from transformer_lens import HookedTransformer
 from transformer_lens.utils import lm_cross_entropy_loss
 
-TextMetricFunc = Callable[[Iterable[str], bool], pd.DataFrame]
+TextMetricFunc = Callable[
+    [Iterable[str], bool, Optional[pd.Index]], pd.DataFrame
+]
+TokensMetricFunc = Callable[
+    [Iterable[Int[torch.Tensor, "batch pos"]], bool, Optional[pd.Index]],
+    pd.DataFrame,
+]
 
 
 def add_metric_cols(
     data: pd.DataFrame,
-    metrics_dict: Dict[str, TextMetricFunc],
+    metrics_dict: Union[
+        Dict[str, TextMetricFunc], Dict[str, TokensMetricFunc]
+    ],
     cols_to_use: Union[str, List[str]] = ["prompts", "completions"],
     show_progress: bool = False,
     prefix_cols: bool = True,
@@ -37,14 +46,27 @@ def add_metric_cols(
     """
     if not isinstance(cols_to_use, list):
         cols_to_use = [cols_to_use]
-    for metric_name, metric_func in metrics_dict.items():
+    # Join input columns data if needed
+    if len(cols_to_use) > 1:
         data["metric_inputs"] = data[cols_to_use].agg("".join, axis=1)
+    else:
+        data["metric_inputs"] = data[cols_to_use[0]]
+    # Apply each metric and store the results as one or more columns
+    for metric_name, metric_func in metrics_dict.items():
+        # Apply the metric
         metric_df = metric_func(
-            data["metric_inputs"].unique(), show_progress=show_progress
+            data["metric_inputs"],
+            show_progress=show_progress,
+            index=data.index,
         )
+        # Prefix returned names if needed to ensure uniqueness
         if prefix_cols:
             metric_df = metric_df.add_prefix(f"{metric_name}_")
-        data = data.join(metric_df, on="metric_inputs")
+        # Concatenate over columns with the existing DataFrame
+        assert data.index.equals(
+            metric_df.index
+        ), f"metric func {metric_name} failed to set index properly"
+        data = pd.concat((data, metric_df), axis="columns")
     return data
 
 
@@ -63,7 +85,9 @@ def get_loss_metric(
     ), "Invalid agg mode"
 
     def metric_func(
-        strs: Iterable[str], show_progress: bool = False
+        strs: Iterable[str],
+        show_progress: bool = False,
+        index: Optional[pd.Index] = None,
     ) -> pd.DataFrame:
         loss_list = []
         for text in tqdm(strs, disable=not show_progress):
@@ -84,7 +108,7 @@ def get_loss_metric(
             if "full" in agg_mode:
                 loss_values[f"loss_full"] = loss
             loss_list.append(loss_values)
-        return pd.DataFrame(loss_list, index=strs)
+        return pd.DataFrame(loss_list, index=index)
 
     return metric_func
 
@@ -113,7 +137,7 @@ def get_logprob_metric(
     q_model: Optional[HookedTransformer] = None,
     p_funcs: Optional[Tuple[Optional[Callable], Optional[Callable]]] = None,
     q_funcs: Optional[Tuple[Optional[Callable], Optional[Callable]]] = None,
-) -> TextMetricFunc:
+) -> TokensMetricFunc:
     """Create a model-log-prob metric using a provided HookedTransformer.
     The metric function returns the log-probs of the provided input text on
     the provided model, aggregated according to `agg_mode`, which must
@@ -145,11 +169,12 @@ def get_logprob_metric(
     ), "Q model must be provided when using kl_div agg mode"
 
     def metric_func(
-        strs: Iterable[str], show_progress: bool = False
+        tokens_list: Iterable[Int[torch.Tensor, "batch pos"]],
+        show_progress: bool = False,
+        index: Optional[pd.Index] = None,
     ) -> pd.DataFrame:
         values_list = []
-        for text in tqdm(strs, disable=not show_progress):
-            tokens = model.to_tokens(text)
+        for tokens in tqdm(tokens_list, disable=not show_progress):
             # Run the forward call on the (p) model
             logits = forward_with_funcs(
                 model, p_funcs, input=tokens, return_type="logits"
@@ -198,7 +223,7 @@ def get_logprob_metric(
                     .squeeze()
                 )
             values_list.append(values)
-        return pd.DataFrame(values_list, index=strs)
+        return pd.DataFrame(values_list, index=index)
 
     return metric_func
 
@@ -214,11 +239,13 @@ def get_sentiment_metric(
     sentiment_pipeline = pipeline(model=sentiment_model_name)
 
     def metric_func(
-        strs: Iterable[str], show_progress: bool = False
+        strs: Iterable[str],
+        show_progress: bool = False,
+        index: Optional[pd.Index] = None,
     ) -> pd.DataFrame:
         strs = list(strs)
         metric_results: pd.DataFrame = pd.DataFrame(
-            sentiment_pipeline(strs), index=strs
+            sentiment_pipeline(strs), index=index
         )
         if positive_labels is not None:
             metric_results["is_positive"] = metric_results["label"].isin(
@@ -243,7 +270,9 @@ def get_word_count_metric(
         words = [word.lower() for word in words]
 
     def metric_func(
-        strs: Iterable[str], show_progress: bool = False
+        strs: Iterable[str],
+        show_progress: bool = False,
+        index: Optional[pd.Index] = None,
     ) -> pd.DataFrame:
         if not case_sensitive:
             strs_cmp = [ss.lower() for ss in strs]
@@ -258,7 +287,7 @@ def get_word_count_metric(
             toks = str_this.split()
             # Get total count for this input string
             counts.append(sum((toks.count(word) for word in words)))
-        return pd.Series(counts, index=strs, name="count").to_frame()
+        return pd.Series(counts, index=index, name="count").to_frame()
 
     return metric_func
 
@@ -282,7 +311,9 @@ def get_openai_metric(
             return None
 
     def metric_func(
-        strs: Iterable[str], show_progress: bool = False
+        strs: Iterable[str],
+        show_progress: bool = False,
+        index: Optional[pd.Index] = None,
     ) -> pd.DataFrame:
         prompts = [
             f"How {criterion} is this text? Give reasoning in 1-3 sentences. Text:\n{s}\nReasoning:\n"
@@ -310,7 +341,7 @@ def get_openai_metric(
 
         # Return dataframe with ratings and reasoning
         return pd.DataFrame(
-            {"rating": ratings, "reasoning": reasoning}, index=strs
+            {"rating": ratings, "reasoning": reasoning}, index=index
         )
 
     return metric_func

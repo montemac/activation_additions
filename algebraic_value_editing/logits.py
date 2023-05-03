@@ -1,7 +1,7 @@
 """Functions for extracting and evaluating probability distributions
 over next tokens with and without activation injections."""
 
-from typing import List, Optional, Iterable, Union, Tuple, Any
+from typing import List, Optional, Iterable, Union, Tuple, Any, Dict
 
 import torch
 import numpy as np
@@ -66,6 +66,89 @@ def focus(
         probs_mod_normed
         * (np.log(probs_mod_normed) - np.log(probs_norm_normed))
     ).sum(axis="columns")
+
+
+def get_effectiveness_and_focus(
+    probs: pd.DataFrame,
+    rich_prompts: List[prompt_utils.RichPrompt],
+    steering_aligned_tokens: Dict[int, np.array],
+    mode: str = "mask_injection_pos",
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Calculate effectiveness and focus of an activation injection
+    defined by a model, input text, list of RichPrompts, and a dict
+    specifying the steering-aligned next tokens at any token position in
+    the input text for which the set should be non-null.
+
+    Argument mode can be `all` to include metrics for every position
+    (effectively every input subsequence), or `mask_injection_pos` to
+    set these values to NaN at positions that overlap the activation
+    injection position(s)."""
+    assert mode in ["all", "mask_injection_pos"], "Invalid mode"
+
+    eff_list = []
+    foc_list = []
+    for pos in np.arange(probs.shape[0]):
+        is_steering_aligned = np.zeros(
+            probs["normal", "probs"].shape[1], dtype=bool
+        )
+        is_steering_aligned[steering_aligned_tokens.get(pos, [])] = True
+        # Effectiveness
+        eff_list.append(effectiveness(probs, [pos], is_steering_aligned))
+        # Focus
+        foc_list.append(focus(probs, [pos], is_steering_aligned))
+
+    eff = pd.concat(eff_list)
+    foc = pd.concat(foc_list)
+
+    if mode == "mask_injection_pos":
+        mask_pos = max(
+            [rich_prompt.tokens.shape[0] for rich_prompt in rich_prompts]
+        )
+        eff[:mask_pos] = np.nan
+        foc[:mask_pos] = np.nan
+    return eff, foc
+
+
+def plot_effectiveness_and_focus(
+    tokens_str: list[str], eff: np.ndarray, foc: np.ndarray
+):
+    plot_df = pd.concat(
+        [
+            pd.DataFrame(
+                {
+                    "tokens_str": tokens_str,
+                    "value": eff,
+                    "quantity": "effectiveness",
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "tokens_str": tokens_str,
+                    "value": foc,
+                    "quantity": "focus",
+                }
+            ),
+        ]
+    ).reset_index(names="pos")
+    plot_df["pos_label"] = (
+        plot_df["tokens_str"] + " : " + plot_df["pos"].astype(str)
+    )
+
+    fig = px.bar(
+        plot_df,
+        x="pos_label",
+        y="value",
+        color="quantity",
+        facet_row="quantity",
+        title="Effectiveness and Focus over input sub-sequences",
+    )
+    quantities = plot_df["quantity"].unique()[::-1]
+    fig.update_xaxes(tickangle=-90, title="")
+    fig.layout["yaxis"]["title"] = quantities[0]
+    fig.layout["yaxis2"]["title"] = quantities[1]
+    fig.layout["annotations"] = []
+    fig.update_layout(showlegend=False)
+    return fig
 
 
 def get_token_probs(

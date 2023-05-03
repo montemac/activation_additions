@@ -1,15 +1,7 @@
 """ Functions for performing automated sweeps of algebraic value editing
 over layers, coeffs, etc. """
 
-from typing import (
-    Iterable,
-    Optional,
-    List,
-    Tuple,
-    Union,
-    Dict,
-    Callable,
-)
+from typing import Iterable, Optional, List, Tuple, Union, Dict, Callable, Any
 
 import numpy as np
 import pandas as pd
@@ -210,7 +202,7 @@ def sweep_over_prompts(
 @logging.loggable
 def sweep_over_metrics(
     model: HookedTransformer,
-    texts: Union[Iterable[str], pd.Series],
+    inputs: Union[Iterable[Any], pd.Series],
     rich_prompts: Iterable[List[RichPrompt]],
     metrics_dict: Dict[str, Callable[[Iterable[str]], pd.DataFrame]],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
@@ -230,7 +222,7 @@ def sweep_over_metrics(
     args:
         model: The model to apply RichPrompts to.
 
-        texts: The input texts to apply the metrics to. Can be an
+        inputs: The inputs to apply the metrics to. Can be an
         iterable or a Series.
 
         rich_prompts: An iterable of RichPrompt lists to patch into the
@@ -243,12 +235,10 @@ def sweep_over_metrics(
         pass these keys to the wandb init call.  False to disable logging.
 
     returns:
-        A tuple of DataFrames, one containing normal, unpatched
-        completions for each prompt, the other containing patched
-        completions.
+        A DataFrame of metric outputs
     """
     # Create the input text DataFrame
-    texts_df = pd.DataFrame({"text": texts})
+    inputs_df = pd.DataFrame({"input": inputs})
     # Iterate over RichPrompts
     patched_list = []
     for index, rich_prompts_this in enumerate(tqdm(rich_prompts)):
@@ -261,14 +251,14 @@ def sweep_over_metrics(
         for act_name, hook_fn in hook_fns.items():
             model.add_hook(act_name, hook_fn)
         patched_df = metrics.add_metric_cols(
-            texts_df, metrics_dict, cols_to_use="text", **metric_args
+            inputs_df, metrics_dict, cols_to_use="input", **metric_args
         )
         patched_df["rich_prompt_index"] = index
         patched_list.append(patched_df)
         model.remove_all_hook_fns()
 
     # Create the final patched df and return both
-    patched_all = pd.concat(patched_list).reset_index(names="text_index")
+    patched_all = pd.concat(patched_list).reset_index(names="input_index")
     return patched_all
 
 
