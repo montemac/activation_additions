@@ -30,7 +30,6 @@ except ImportError:
         ),
     )
 
-
 # %%
 import torch
 import pandas as pd
@@ -41,16 +40,16 @@ from transformer_lens.HookedTransformer import HookedTransformer
 from algebraic_value_editing import hook_utils, prompt_utils
 from algebraic_value_editing.prompt_utils import RichPrompt
 
-
 # %%
 device: str = "cpu"
 model_name = "gpt2-xl"
-model: HookedTransformer = HookedTransformer.from_pretrained(model_name, device="cpu")
+model: HookedTransformer = HookedTransformer.from_pretrained(
+    model_name, device="cpu"
+)
 _ = model.to(device)
 
 _ = torch.set_grad_enabled(False)
 torch.manual_seed(0)  # For reproducibility
-
 
 # %% [markdown]
 # Let's examine what the residual stream magnitudes tend to be, by taking the Frobenius
@@ -71,9 +70,9 @@ if response.status_code == 200:
     print(f"Downloaded {len(prompts)} prompts")
 else:
     raise Exception(
-        f"Failed to download the file: {response.status_code} -" f" {response.reason}"
+        f"Failed to download the file: {response.status_code} -"
+        f" {response.reason}"
     )
-
 
 # %%
 DF_COLS: List[str] = [
@@ -90,7 +89,6 @@ sampling_kwargs: Dict[str, float] = {
 }
 
 num_layers: int = model.cfg.n_layers
-
 
 # %% [markdown]
 # ## Residual stream magnitudes increase exponentially with layer number
@@ -125,9 +123,7 @@ import numpy as np
 def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
     """Plot a histogram of the residual stream magnitudes for each layer
     of the network."""
-    assert (
-        "Magnitude" in df.columns
-    ), "Dataframe must have a 'Magnitude' column"
+    assert "Magnitude" in df.columns, "Dataframe must have a 'Magnitude' column"
 
     df["LogMagnitude"] = np.log10(df["Magnitude"])
 
@@ -135,9 +131,7 @@ def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
     num_unique_activation_locations = df["Activation Location"].nunique()
 
     # Generate a color list that is long enough to accommodate all unique activation locations
-    extended_rainbow = (
-        px.colors.sequential.Rainbow * num_unique_activation_locations
-    )
+    extended_rainbow = px.colors.sequential.Rainbow * num_unique_activation_locations
     color_list = extended_rainbow[:num_unique_activation_locations]
 
     fig = px.histogram(
@@ -160,6 +154,7 @@ def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
     )
 
     return fig
+
 
 
 # %%
@@ -192,11 +187,9 @@ for act_loc in activation_locations_8:
         # Append the new row to the dataframe
         prompt_df = pd.concat([prompt_df, row], ignore_index=True)
 
-
 # %%
 fig: go.Figure = magnitude_histogram(prompt_df)
 fig.show()
-
 
 # %% [markdown]
 # In GPT2-XL, the fast magnitude gain
@@ -230,7 +223,6 @@ for act_loc in activation_locations:
 
 fig: go.Figure = magnitude_histogram(first_7_df)
 fig.show()
-
 
 
 # %% [markdown]
@@ -267,7 +259,9 @@ for layer in range(model.cfg.n_layers):
     )
     random_embed = torch.randn(1000, model.cfg.d_model).to(device)
     random_embed /= random_embed.norm(dim=-1, keepdim=True)
-    OV_output = torch.zeros(1000, model.cfg.n_heads + 1, model.cfg.d_model).to(device)
+    OV_output = torch.zeros(1000, model.cfg.n_heads + 1, model.cfg.d_model).to(
+        device
+    )
     OV_output[:, : model.cfg.n_heads, :] = einsum(
         "batch embed, head embed embedout -> batch head embedout",
         random_embed,
@@ -325,11 +319,11 @@ fig = px.scatter(
     color="Head",
     log_y=True,
     title=(
-        "How much the W_OV matrices increase the norm of the input by layer" " and head"
+        "How much the W_OV matrices increase the norm of the input by layer"
+        " and head"
     ),
 )
 fig.show()
-
 
 
 # %% [markdown]
@@ -371,7 +365,6 @@ plt.scatter(
 plt.xlabel("layer")
 plt.ylabel("Std of random OV-output")
 plt.title(model_name)
-
 
 
 # %% [markdown]
@@ -419,7 +412,6 @@ fig = px.scatter(
     title="Frobenius norms",
 )
 fig.show()
-
 
 
 # %% [markdown]
@@ -485,7 +477,6 @@ fig = px.scatter(
     title="How much the MLP increase the norm of the input, by layer",
 )
 fig.show()
-
 
 
 # %% [markdown]
@@ -598,7 +589,10 @@ for layer in range(model.cfg.n_layers):
                         layer,
                         (
                             ReLU_zero_rate
-                            * (Winout_mean_norm_increase + bin_mean_norm_increase)
+                            * (
+                                Winout_mean_norm_increase
+                                + bin_mean_norm_increase
+                            )
                             + bout_mean_norm_increase
                         ).item(),
                         "Naive total",
@@ -611,7 +605,7 @@ for layer in range(model.cfg.n_layers):
     )
 
 # Scatter Layer scale, log scale
-fig = px.scatter(
+fig = px.line(
     df_MLP_scale,
     x="Layer",
     y="Norm increase",
@@ -620,7 +614,6 @@ fig = px.scatter(
     title="MLP components",
 )
 fig.show()
-
 
 
 # %% [markdown]
@@ -668,11 +661,11 @@ for act_loc in all_resid_pre_locations:
 def line_plot(
     df: pd.DataFrame,
     log_y: bool = True,
-    title: str = "Residual Stream Magnitude by Layer Number",
+    title: str = "Residual Stream Norm by Layer Number",
     legend_title_text: str = "Prompt",
 ) -> go.Figure:
-    """Make a line plot of the RichPrompt magnitudes. If log_y is True,
-    adds a column to the dataframe with the log10 of the magnitude."""
+    """Make a line plot of the RichPrompt norm. If log_y is True,
+    adds a column to the dataframe with the log10 of the norm."""
     for col in ["Prompt", "Activation Location", "Magnitude"]:
         assert col in df.columns, f"Column {col} not in dataframe"
 
@@ -691,11 +684,10 @@ def line_plot(
         legend_title_text=legend_title_text,
         title=title,
         xaxis_title="Layer Number",
-        yaxis_title=f"Magnitude{' (log 10)' if log_y else ''}",
+        yaxis_title=f"Norm{' (log 10)' if log_y else ''}",
     )
 
     return fig
-
 
 
 # %%
@@ -704,7 +696,6 @@ log_fig.show()
 
 normal_fig = line_plot(addition_df, log_y=False)
 normal_fig.show()
-
 
 # %% [markdown]
 # To confirm the exponential increase in magnitude, let's plot the
@@ -761,7 +752,7 @@ relative_fig = line_plot(
 relative_fig.update_yaxes(title_text="Magnitude growth rate")
 
 # Set y bounds to [.9, 1.5]
-# relative_fig.update_yaxes(range=[0.9, 1.5])
+relative_fig.update_yaxes(range=[0.9, 1.5])
 
 # Plot a horizontal line at y=1
 relative_fig.add_hline(y=1, line_dash="dash", line_color="black")
@@ -778,7 +769,6 @@ for pos in range(6):
         f"The `{tokens[pos]}` token (position {pos}) has an average growth"
         f" rate of {geom_avg:.3f}"
     )
-
 
 # %% [markdown]
 # The exponential increase in magnitude is confirmed, with tokens having
