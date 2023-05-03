@@ -695,12 +695,14 @@ for act_loc in all_resid_pre_locations:
 
 
 # %%
-log_fig = line_plot(addition_df, log_y=True)
-log_fig.show()
-
-normal_fig = line_plot(addition_df, log_y=False)
-normal_fig.show()
-
+for use_log in (True, False):
+    fig = line_plot(
+        addition_df,
+        log_y=use_log,
+        title=f"Residual Stream Norm by Layer Number in {model_name}",
+    )
+    fig.update_layout(width=600)
+    fig.show()
 
 # %% [markdown]
 # To confirm the exponential increase in magnitude, let's plot the
@@ -751,7 +753,7 @@ for act_loc in all_resid_pre_locations:
 relative_fig = line_plot(
     relative_df,
     log_y=False,
-    title="Norm(n)/Norm(n-1) across layers n",
+    title=f"Norm(n)/Norm(n-1) across layers n in {model_name}",
     legend_title_text="Token",
 )
 
@@ -763,9 +765,7 @@ relative_fig.update_yaxes(range=[0.9, 1.5])
 
 # Plot a horizontal line at y=1
 relative_fig.add_hline(y=1, line_dash="dash", line_color="black")
-
-# Set the width to 1000
-relative_fig.update_layout(width=1000)
+relative_fig.update_layout(width=600)
 
 relative_fig.show()
 
