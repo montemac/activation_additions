@@ -461,6 +461,7 @@ def show_token_probs(
     pos: int,
     top_k: int,
     sort_mode: str = "prob",
+    extra_title: str = "",
     token_strs_to_ignore: Union[list, np.ndarray] = None,
 ):
     """Print probability changes of top-K tokens for a specific input
@@ -496,7 +497,6 @@ def show_token_probs(
         top_k_tokens = np.argsort(kl_contrib)[::-1][
             :top_k
         ].copy()  # Copy to avoid negative stride
-        print(top_k_tokens)
 
     plot_df = pd.DataFrame(
         {
@@ -579,7 +579,7 @@ def show_token_probs(
     fig.update_xaxes(type="log")
     fig.update_layout(
         title_text=f"Change in probability of top-{top_k} next tokens, "
-        + f'sorted by {sort_mode}, for input: "{model.to_string(tokens[1:(pos+1)])}"',
+        + f"sorted by {sort_mode}, {extra_title}",
         xaxis_title="Normal model token probability",
         yaxis_title="Modified model token probability",
         xaxis2_title="Normal model token probability",
@@ -719,3 +719,213 @@ fig.write_image(
 )
 
 # %%
+# Connection to prompting
+# For a given sentence, look at probs and KL divergence with:
+# - Original model
+# - Injected model, overlaid
+# - Injected model, space-padded
+# - Injected model, space-padded, middle layer
+# - Prompted original model
+
+
+def compare_with_prompting(
+    text, phrases, methods_to_compare, pos, save_prefix
+):
+    probs_dict = {}
+
+    # Normal
+    probs_dict["normal"] = logits.get_token_probs(
+        model=MODEL,
+        prompts=text,
+        return_positions_above=0,
+    )
+    probs_normal = probs_dict["normal"]
+    len_normal = probs_normal.shape[0]
+    tokens_str_normal = MODEL.to_str_tokens(text)
+
+    # Injected, layer 0, overlaid
+    probs_dict["mod_over_0"] = (
+        logits.get_token_probs(
+            model=MODEL,
+            prompts=text,
+            return_positions_above=0,
+            rich_prompts=list(
+                prompt_utils.get_x_vector(
+                    prompt1=phrases[0],
+                    prompt2=phrases[1],
+                    coeff=1.0,
+                    act_name=0,
+                    model=MODEL,
+                    pad_method="tokens_right",
+                    custom_pad_id=MODEL.to_single_token(" "),
+                )
+            ),
+        )
+        .iloc[-len_normal:]
+        .reset_index(drop=True)
+    )
+
+    # Injected, layer 16, overlaid
+    probs_dict["mod_over_16"] = (
+        logits.get_token_probs(
+            model=MODEL,
+            prompts=text,
+            return_positions_above=0,
+            rich_prompts=list(
+                prompt_utils.get_x_vector(
+                    prompt1=phrases[0],
+                    prompt2=phrases[1],
+                    coeff=1.0,
+                    act_name=16,
+                    model=MODEL,
+                    pad_method="tokens_right",
+                    custom_pad_id=MODEL.to_single_token(" "),
+                )
+            ),
+        )
+        .iloc[-len_normal:]
+        .reset_index(drop=True)
+    )
+
+    tokens_padded = MODEL.to_tokens(text, prepend_bos=False)
+    text_tokens_len = tokens_padded.shape[-1]
+    rich_prompt_tokens_len = MODEL.to_tokens(
+        phrases[0], prepend_bos=False
+    ).shape[-1]
+    while tokens_padded.shape[-1] < text_tokens_len + rich_prompt_tokens_len:
+        tokens_padded = torch.concat(
+            (MODEL.to_tokens(" ", prepend_bos=False), tokens_padded), axis=-1
+        )
+    tokens_padded = torch.concat((MODEL.to_tokens(""), tokens_padded), axis=-1)
+
+    # Injected, layer 0, space-padded
+    probs_dict["mod_pad_0"] = (
+        logits.get_token_probs(
+            model=MODEL,
+            prompts=tokens_padded,
+            return_positions_above=0,
+            rich_prompts=list(
+                prompt_utils.get_x_vector(
+                    prompt1=phrases[0],
+                    prompt2=phrases[1],
+                    coeff=1.0,
+                    act_name=0,
+                    model=MODEL,
+                    pad_method="tokens_right",
+                    custom_pad_id=MODEL.to_single_token(" "),
+                )
+            ),
+        )
+        .iloc[-len_normal:]
+        .reset_index(drop=True)
+    )
+
+    # Injected, layer 16, space-padded
+    probs_dict["mod_pad_16"] = (
+        logits.get_token_probs(
+            model=MODEL,
+            prompts=tokens_padded,
+            return_positions_above=0,
+            rich_prompts=list(
+                prompt_utils.get_x_vector(
+                    prompt1=phrases[0],
+                    prompt2=phrases[1],
+                    coeff=1.0,
+                    act_name=16,
+                    model=MODEL,
+                    pad_method="tokens_right",
+                    custom_pad_id=MODEL.to_single_token(" "),
+                )
+            ),
+        )
+        .iloc[-len_normal:]
+        .reset_index(drop=True)
+    )
+
+    # Prompted
+    tokens_prompted = torch.concat(
+        (
+            MODEL.to_tokens(phrases[0]),
+            MODEL.to_tokens(text, prepend_bos=False),
+        ),
+        axis=1,
+    )
+    probs_dict["prompted"] = (
+        logits.get_token_probs(
+            model=MODEL,
+            prompts=tokens_prompted,
+            return_positions_above=0,
+        )
+        .iloc[-len_normal:]
+        .reset_index(drop=True)
+    )
+
+    # Compare them all to the normal probs
+    fig = go.Figure()
+    for name, probs in probs_dict.items():
+        # if name != "normal":
+        if name in methods_to_compare:
+            kl_div = (
+                probs["probs"] * (probs["logprobs"] - probs_normal["logprobs"])
+            ).sum(axis="columns")
+            fig.add_trace(
+                go.Scatter(
+                    x=[
+                        f"{pp}: {tok_str}"
+                        for pp, tok_str in enumerate(tokens_str_normal)
+                        if pp >= 1
+                    ],
+                    y=kl_div.iloc[1:],
+                    name=name,
+                )
+            )
+    fig.update_layout(
+        title_text="KL divergence over input for different steering methods"
+    )
+    fig.show()
+    fig.write_image(
+        f"images/{save_prefix}_kl.png", width=png_width, height=png_height
+    )
+
+    if pos is None:
+        pos = probs_normal.shape[0] - 1
+
+    def show_by_name(name):
+        fig = show_token_probs(
+            MODEL,
+            probs_normal["probs"].values,
+            probs_dict[name]["probs"].values,
+            pos,
+            10,
+            sort_mode="kl_div",
+            extra_title=f'<br>Input: "{"".join(tokens_str_normal[1 : (pos + 1)])}", method: {name}',
+        )
+        fig.show()
+        fig.write_image(
+            f"images/{save_prefix}_kl_{name}.png",
+            width=png_width,
+            height=png_height,
+        )
+
+    for name in methods_to_compare:
+        show_by_name(name)
+
+
+phrases = (" weddings", "")
+methods_to_compare = ["prompted", "mod_pad_16"]
+
+compare_with_prompting(
+    "I'm excited because I'm going to a",
+    phrases,
+    methods_to_compare,
+    pos=None,
+    save_prefix="prompt_cmp_excited_",
+)
+
+compare_with_prompting(
+    "The GDP of Australia has recently begun to decline",
+    phrases,
+    methods_to_compare,
+    pos=2,
+    save_prefix="prompt_cmp_GDP_",
+)

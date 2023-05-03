@@ -97,7 +97,10 @@ def get_token_probs(
     # Try-except-finally to ensure hooks are cleaned up
     try:
         if return_positions_above is not None:
-            tokens = model.to_tokens(prompts)[0, ...]
+            if isinstance(prompts, str):
+                tokens = model.to_tokens(prompts).squeeze()
+            else:
+                tokens = prompts.squeeze()
             probs_all, logprobs_all = logits_to_probs_numpy(
                 model.forward(tokens)[0, return_positions_above:, :]
             )
@@ -113,7 +116,13 @@ def get_token_probs(
                     probs_all[idx, :],
                     logprobs_all[idx, :],
                 ) = logits_to_probs_numpy(model.forward(prompt)[0, -1, :])
-            index = pd.Index(prompts, name="prompt")
+            try:
+                index = pd.Index(prompts, name="prompt")
+            except TypeError:
+                index = pd.Index(
+                    [prompt.detach().cpu().numpy() for prompt in prompts],
+                    name="prompt",
+                )
     except Exception as ex:
         raise ex
     finally:
