@@ -17,12 +17,11 @@ except ImportError:
 # %%
 import torch
 import pandas as pd
-from typing import List, Callable, Dict, Tuple, Union
-from jaxtyping import Float
+from typing import List, Dict
 
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import hook_utils, prompt_utils, completion_utils
+from algebraic_value_editing import hook_utils, prompt_utils
 from algebraic_value_editing.prompt_utils import RichPrompt
 
 # %%
@@ -703,7 +702,7 @@ for act_loc in all_resid_pre_locations:
         model=model, prompt=MATS_prompt, act_name=act_name
     ).cpu()
 
-    tokens: torch.Tensor = model.to_str_tokens(MATS_prompt)
+    tokens: List[str] = model.to_str_tokens(MATS_prompt)
     for pos, mag in enumerate(mags):
         # Create a new dataframe row with the current data
         row = pd.DataFrame(
