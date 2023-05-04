@@ -37,16 +37,24 @@ def effectiveness(
 ):
     """Function to calculate effectiveness given modified probabilities
     and logprob differences.  Also requires an is_steering_aligned
-    boolnea array used to select which tokens to include in the
-    calculation."""
+    bool array used to select which tokens to include in the
+    calculation.
+
+    Effectiveness is defined as the difference in total log-probs of all
+    tokens in the steering set from the normal and modified
+    distributions, i.e. log(sum_(T_A)(P_mod(t))) - log(sum_(T_A)(P_norm(t)))"""
     if not np.any(is_steering_aligned):
+        # Return the right shaped zeros object
         return 0.0 * probs["mod", "probs"].loc[index, 0]
-    return (
-        probs["mod", "probs"].loc[index, is_steering_aligned]
-        * (probs["mod", "logprobs"] - probs["normal", "logprobs"]).loc[
-            index, is_steering_aligned
-        ]
-    ).sum(axis="columns")
+    return np.log(
+        probs["mod", "probs"]
+        .loc[index, is_steering_aligned]
+        .sum(axis="columns")
+    ) - np.log(
+        probs["normal", "probs"]
+        .loc[index, is_steering_aligned]
+        .sum(axis="columns")
+    )
 
 
 def focus(
@@ -55,17 +63,47 @@ def focus(
     is_steering_aligned: np.ndarray,
 ):
     """Function calculate focus given normal and modified probabilities,
-    and is_steering_aligned boolean array."""
-    probs_norm_normed = renorm_probs(
+    and is_steering_aligned boolean array.
+
+    Focus is defined as the expectation of the within-set KL divergence
+    over the steering-aligned and not-steering-aligned tokens."""
+    # Probability a random token in within the steering-aligned set or not
+    prob_mod_is_steering_aligned = (
+        probs["mod", "probs"]
+        .loc[index, is_steering_aligned]
+        .sum(axis="columns")
+    )
+    prob_mod_not_steering_aligned = 1.0 - prob_mod_is_steering_aligned
+    # Token distributions conditional on sampling from a specific set
+    # (steering-aligned or not)
+    probs_norm_normed_is_steering_aligned = renorm_probs(
+        probs["normal", "probs"].loc[index, is_steering_aligned]
+    )
+    probs_norm_normed_not_steering_aligned = renorm_probs(
         probs["normal", "probs"].loc[index, ~is_steering_aligned]
     )
-    probs_mod_normed = renorm_probs(
+    probs_mod_normed_is_steering_aligned = renorm_probs(
+        probs["mod", "probs"].loc[index, is_steering_aligned]
+    )
+    probs_mod_normed_not_steering_aligned = renorm_probs(
         probs["mod", "probs"].loc[index, ~is_steering_aligned]
     )
-    return (
-        probs_mod_normed
-        * (np.log(probs_mod_normed) - np.log(probs_norm_normed))
+    # Terms in expectation for each token set
+    exp_is_steering_aligned = prob_mod_is_steering_aligned * (
+        probs_mod_normed_is_steering_aligned
+        * (
+            np.log(probs_mod_normed_is_steering_aligned)
+            - np.log(probs_norm_normed_is_steering_aligned)
+        )
     ).sum(axis="columns")
+    exp_not_steering_aligned = prob_mod_not_steering_aligned * (
+        probs_mod_normed_not_steering_aligned
+        * (
+            np.log(probs_mod_normed_not_steering_aligned)
+            - np.log(probs_norm_normed_not_steering_aligned)
+        )
+    ).sum(axis="columns")
+    return exp_is_steering_aligned + exp_not_steering_aligned
 
 
 def get_effectiveness_and_focus(
