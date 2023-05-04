@@ -195,8 +195,8 @@ def _remove_eos(completion: str) -> str:
 
 def pretty_print_completions(
     results: pd.DataFrame,
-    normal_title: str = "Normal completions",
-    mod_title: str = "Modified completions",
+    normal_title: str = "Unsteered completions",
+    mod_title: str = "Steered completions",
     normal_prompt_override: Optional[str] = None,
     mod_prompt_override: Optional[str] = None,
 ) -> None:

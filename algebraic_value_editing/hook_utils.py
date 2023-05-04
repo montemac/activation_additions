@@ -184,7 +184,7 @@ def hook_fn_from_activations(
             "Invalid addition_location. Must be 'front' or 'mid' or 'back'."
         )
     if res_stream_slice != slice(None):  # Check that the slice is valid
-        assert 0 <= res_stream_slice.start < res_stream_slice.stop
+        assert 0 <= res_stream_slice.start <= res_stream_slice.stop
         assert res_stream_slice.stop <= activations.shape[-1], (
             f"res_stream_slice.stop ({res_stream_slice.stop}) must be at most"
             f" dmodel ({activations.shape[-1]})"

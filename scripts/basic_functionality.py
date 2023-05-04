@@ -35,7 +35,6 @@ completion_utils.print_n_comparisons(
         "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling"
     ),
     num_comparisons=5,
-    xvec_position = 'front', #you can also set this to 'back' and it will add the xvec to the end of the resid stream vector
     model=model,
     rich_prompts=rich_prompts,
     seed=0,
