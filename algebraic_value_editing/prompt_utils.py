@@ -10,7 +10,7 @@ from transformer_lens.HookedTransformer import HookedTransformer
 from transformer_lens.utils import get_act_name
 
 
-def get_block_name(block_num: int) -> str:
+def get_block_name(block_num: int) -> str:  # TODO remove
     """Returns the hook name of the block with the given number, at the
     input to the residual stream."""
     return get_act_name(name="resid_pre", layer=block_num)
