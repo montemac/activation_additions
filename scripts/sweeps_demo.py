@@ -7,8 +7,6 @@ import pickle
 import numpy as np
 import torch
 
-import plotly.express as px
-
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import (
@@ -16,24 +14,18 @@ from algebraic_value_editing import (
     metrics,
     prompt_utils,
     completion_utils,
+    utils,
 )
 
-try:
-    from IPython import get_ipython
-
-    get_ipython().run_line_magic("reload_ext", "autoreload")
-    get_ipython().run_line_magic("autoreload", "2")
-except AttributeError:
-    pass
+utils.enable_ipython_reload()
 
 # Disable gradients to save memory during inference
 _ = torch.set_grad_enabled(False)
 
 # %%
 # Load a model
-MODEL = HookedTransformer.from_pretrained(
-    model_name="gpt2-xl", device="cpu"
-).to("cuda:0")
+MODEL = HookedTransformer.from_pretrained(model_name="gpt2-xl", device="cpu")
+_ = MODEL.to("cuda:0")
 
 
 # %%
@@ -47,7 +39,7 @@ weddings_prompts = [
         act_name=6,
         pad_method="tokens_right",
         model=MODEL,
-        custom_pad_id=MODEL.to_single_token(" "),
+        custom_pad_id=int(MODEL.to_single_token(" ")),
     )
 ]
 
@@ -71,15 +63,15 @@ completion_utils.print_n_comparisons(
 rich_prompts_df = sweeps.make_rich_prompts(
     [
         [
-            ("I talk about weddings constantly  ", 1.0),
-            ("I do not talk about weddings constantly", -1.0),
+            ("Anger", 1.0),
+            ("Calm", -1.0),
         ]
     ],
     [
         prompt_utils.get_block_name(block_num=num)
         for num in range(0, len(MODEL.blocks), 4)
     ],
-    np.array([-64, -16, -4, -1, 1, 4, 16, 64]),
+    np.array([-4, -1, 1, 4]),
 )
 
 # %%
@@ -132,35 +124,34 @@ except FileNotFoundError:
 
 # %%
 # Visualize
-reduced_df = patched_df.groupby(["prompts", "rich_prompt_index"]).mean(
-    numeric_only=True
+
+# Reduce data
+reduced_normal_df, reduced_patched_df = sweeps.reduce_sweep_results(
+    normal_df, patched_df, rich_prompts_df
 )
-reduced_joined_df = reduced_df.join(
-    rich_prompts_df, on="rich_prompt_index"
-).reset_index()
 
-
-def plot_col(data, col_to_plot, title):
-    """Plot a column, with colors/facets/x set."""
-    px.line(
-        data,
-        title=title,
-        x="coeff",
-        y=col_to_plot,
-        color="act_name",
-        facet_col="prompts",
-    ).show()
-
-
-plot_col(
-    reduced_joined_df, "wedding_words_count", "Average wedding word count"
-)
-plot_col(reduced_joined_df, "loss", "Average loss")
-
-reduced_joined_filt_df = reduced_joined_df[
-    (reduced_joined_df["coeff"] >= -4) & (reduced_joined_df["coeff"] <= 4)
+# Exlude the extreme coeffs, likely not that interesting
+reduced_patched_filt_df = reduced_patched_df[
+    (reduced_patched_df["coeff"] >= -4) & (reduced_patched_df["coeff"] <= 4)
 ]
-plot_col(
-    reduced_joined_filt_df, "wedding_words_count", "Average wedding word count"
-)
-plot_col(reduced_joined_filt_df, "loss", "Average loss")
+
+# Plot
+
+sweeps.plot_sweep_results(
+    reduced_patched_filt_df,
+    "wedding_words_count",
+    "Average wedding word count",
+    col_x="act_name",
+    col_color="coeff",
+    baseline_data=reduced_normal_df,
+).show()
+sweeps.plot_sweep_results(
+    reduced_patched_filt_df,
+    "loss",
+    "Average loss",
+    col_x="act_name",
+    col_color="coeff",
+    baseline_data=reduced_normal_df,
+).show()
+
+# %%
