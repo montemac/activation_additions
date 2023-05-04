@@ -3,13 +3,14 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     custom_cell_magics: kql
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.14.5
 #   kernelspec:
-#     display_name: AVE
+#     display_name: AlexT_norms
 #     language: python
 #     name: python3
 # ---
@@ -122,7 +123,8 @@ import plotly.graph_objects as go
 import numpy as np
 
 
-def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
+def magnitude_histogram(df: pd.DataFrame, title="Residual Stream Magnitude by Layer Number",
+    xaxis_title="log10 Residual Stream norm", yaxis_title="Percentage of residual streams") -> go.Figure:
     """Plot a histogram of the residual stream magnitudes for each layer
     of the network."""
     assert (
@@ -153,10 +155,10 @@ def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
     )
 
     fig.update_layout(
-        legend_title_text="Layer Number",
-        title="Residual Stream Magnitude by Layer Number",
-        xaxis_title="Magnitude (log 10)",
-        yaxis_title="Percentage of streams",
+        legend_title_text="After Layer Number",
+        title=title,
+        xaxis_title=xaxis_title,
+        yaxis_title=yaxis_title,
     )
 
     return fig
@@ -185,7 +187,7 @@ for act_loc in activation_locations_8:
                 "Prompt": prompt,
                 "Activation Location": act_loc,
                 "Activation Name": act_name,
-                "Magnitude": mags,
+                "Magnitude": mags[1:], #remove BOS
             }
         )
 
@@ -196,7 +198,6 @@ for act_loc in activation_locations_8:
 # %%
 fig: go.Figure = magnitude_histogram(prompt_df)
 fig.show()
-
 
 # %% [markdown]
 # In GPT2-XL, the fast magnitude gain
@@ -221,234 +222,374 @@ for act_loc in activation_locations:
                     "Prompt": prompt,
                     "Activation Location": act_loc + loc_delta,
                     "Activation Name": act_name,
-                    "Magnitude": mags,
+                    "Magnitude": mags[1:],
                 }
             )
 
             # Append the new row to the dataframe
             first_7_df = pd.concat([first_7_df, row], ignore_index=True)
 
+# %%
 fig: go.Figure = magnitude_histogram(first_7_df)
 fig.show()
-
-
 
 # %% [markdown]
 # Most of the jump happens after the 0th layer in the transformer, and
 # a smaller jump happens between the 1st and 2nd layers.
 
 # %% [markdown]
-# ## Attention OV matrices and MLPs
+# ## Test this on other models
+
+# %% [markdown]
+# ### Stefan's original findings
 #
-# Which norm is the correct measure to use? For the residul stream it's just the vector norm of the embedding vector,
-# for attn/MLP blocks we want to know: How much does this module increase the norm of its input. A brute-force way to
-# test this would be feed-in random inputs and see how much their norm changes. I do this here with randn vectors,
-# which technically is not the same distribution but should be fine as we just want to know which matrix norm this
-# corresponds to.
-
-# %% [markdown]
-# ### Attention OV matrices
-
-# %% [markdown]
-# #### Brute-force: feed vectors into OV and see how they change
-
-# %%
-from fancy_einsum import einsum
-
-print("Model name:", model_name)
-
-df_OV_scale = pd.DataFrame(columns=["Layer", "Head", "Norm increase"])
-
-for layer in range(model.cfg.n_layers):
-    W_OVs = einsum(
-        "head hidden embedout, head embed hidden -> head embed embedout",
-        model.blocks[layer].attn.W_O,
-        model.blocks[layer].attn.W_V,
-    )
-    random_embed = torch.randn(1000, model.cfg.d_model).to(device)
-    random_embed /= random_embed.norm(dim=-1, keepdim=True)
-    OV_output = torch.zeros(1000, model.cfg.n_heads + 1, model.cfg.d_model).to(device)
-    OV_output[:, : model.cfg.n_heads, :] = einsum(
-        "batch embed, head embed embedout -> batch head embedout",
-        random_embed,
-        W_OVs,
-    )
-    OV_output[model.cfg.n_heads] = model.blocks[layer].attn.b_O.view(1, 1, -1)
-    norm_increase = OV_output.norm(dim=-1)
-    total_norm_increase = OV_output.sum(dim=1).norm(dim=-1)
-    mean_norm_increase = norm_increase.mean(dim=0)
-    mean_total_norm_increase = total_norm_increase.mean(dim=0)
-    df_OV_scale = pd.concat(
-        [
-            df_OV_scale,
-            pd.DataFrame(
-                [[layer, "Sum", mean_total_norm_increase.item()]],
-                columns=["Layer", "Head", "Norm increase"],
-            ),
-        ],
-        ignore_index=True,
-    )
-    for head in range(model.cfg.n_heads):
-        # print(f"Layer {layer:2d} Head {head:2d} OV matrix increases embedding norm by factor {mean_norm_increase[head]:.2f}")
-        df_OV_scale = pd.concat(
-            [
-                df_OV_scale,
-                pd.DataFrame(
-                    [[layer, head, mean_norm_increase[head].item()]],
-                    columns=["Layer", "Head", "Norm increase"],
-                ),
-            ],
-            ignore_index=True,
-        )
-    df_OV_scale = pd.concat(
-        [
-            df_OV_scale,
-            pd.DataFrame(
-                [
-                    [
-                        layer,
-                        "Bias",
-                        mean_norm_increase[model.cfg.n_heads].item(),
-                    ]
-                ],
-                columns=["Layer", "Head", "Norm increase"],
-            ),
-        ],
-        ignore_index=True,
-    )
-
-# Scatter Layer scale, log scale
-fig = px.scatter(
-    df_OV_scale,
-    x="Layer",
-    y="Norm increase",
-    color="Head",
-    log_y=True,
-    title=(
-        "How much the W_OV matrices increase the norm of the input by layer" " and head"
-    ),
-)
-fig.show()
-
-
-
-# %% [markdown]
-# #### Check results identical to the ones from Slack
-#
-# Last point off because the Slack version forgot biases
 
 # %%
 import matplotlib.pyplot as plt
 
-print("Model name:", model_name)
+cache = model.run_with_cache(prompts)[1]
 stds = []
-norms = []
+meanstds = []
 for layer in range(model.cfg.n_layers):
-    OVs = einsum(
-        "head hidden embedout, head embed hidden -> head embed embedout",
-        model.blocks[layer].attn.W_O,
-        model.blocks[layer].attn.W_V,
-    )
-    random_embed = torch.randn(1000, model.cfg.d_model).to(device)
-    random_OVs = einsum(
-        "batch embed, head embed embedout -> batch head embedout",
-        random_embed,
-        OVs,
-    )
-    std = random_OVs.sum(dim=1).std(dim=-1).mean(dim=0).item()
-    norm = random_OVs.sum(dim=1).norm(dim=-1).mean(dim=0).item()
+    std = cache[f"blocks.{layer}.hook_resid_post"].std(dim=-1)
     stds.append(std)
-    norms.append(norm)
-    print(f"Layer {layer:02d}, random OV output std: {std:.4f}")
-plt.plot(stds)
-plt.plot(np.array(norms) / np.sqrt(model.cfg.d_model), ls=":")
-plt.scatter(
-    range(model.cfg.n_layers),
-    df_OV_scale[df_OV_scale.Head == "Sum"]["Norm increase"],
-    c="r",
-    marker="x",
-)
-plt.xlabel("layer")
-plt.ylabel("Std of random OV-output")
-plt.title(model_name)
+    stds_non_BOS_non_PAD = []
+    for batch in range(len(prompts)):
+        prompt_len = len(model.to_str_tokens(prompts[batch]))
+        #print(prompt_len, model.to_str_tokens(prompts[batch]))
+        for pos in range(1, prompt_len):
+            stds_non_BOS_non_PAD.append(std[batch, pos].item())
+    meanstds.append(torch.tensor(stds_non_BOS_non_PAD).mean().item())
 
-
+plt.figure(figsize=(10,5))
+plt.plot(range(model.cfg.n_layers), meanstds, marker="o", label=model_name)
+plt.title("Mean Standard Deviation of Residual Stream activations after layer $N$")
+plt.xlabel("Layer Index $N$")
+plt.ylabel("Mean Standard Deviation")
+plt.legend()
+plt.savefig(f"stds_{model_name}.png")
+plt.show()
 
 # %% [markdown]
-# #### Frobenius norm
+# ### Version with BOS and Padding
+
+# %%
+import matplotlib.pyplot as plt
+
+cache = model.run_with_cache(prompts)[1]
+stds = []
+meanstds = []
+for layer in range(model.cfg.n_layers):
+    std = cache[f"blocks.{layer}.hook_resid_post"].std(dim=-1)
+    stds.append(std[:, 0:])
+    meanstds.append(std[:, 1:].mean(dim=(0,1)).item())
+
+plt.figure(figsize=(10,5))
+plt.plot(range(model.cfg.n_layers), meanstds, marker="o", label=model_name)
+plt.title("Mean Standard Deviation of Residual Stream activations after layer $N$")
+plt.xlabel("$N$")
+plt.ylabel("Mean Standard Deviation")
+plt.legend()
+plt.savefig(f"stds_{model_name}.png")
+plt.show()
+
+n_batch = len(stds[0])
+n_pos = len(stds[0][0])
+n_layers = len(stds)
+plt.figure(figsize=(10,5))
+for batch in range(n_batch):
+    for pos in range(n_pos):
+        #print(f"Batch {batch}, Position {pos}")
+        color = plt.cm.viridis(pos/n_pos)
+        plt.plot(range(n_layers), [stds[i][batch][pos] for i in range(n_layers)], color=color, label=f"Position {pos}", lw=0.1)
+
+# Colorbar
+sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=0, vmax=n_pos))
+sm.set_array([])
+plt.colorbar(sm, ticks=np.arange(0,n_pos+1,1), label="Position")
+plt.title(f"Standard Deviation of Residual Stream activations after layer $N$ ({model_name})")
+plt.xlabel("$N$")
+plt.semilogy()
+plt.ylabel("Standard Deviation")
+plt.savefig(f"stds_by_pos_{model_name}.png")
+
+# %% [markdown]
+# #### Double check bump coing from paddding tokens
 #
-# `W_OV.norm(dim=(-2,-1))` (used below) is close to the result above and `b_O` is usually negligible. Note: `b_V` is set to zero (folded-in to other weights)
+# The first few prompts have ~6 tokens so we should see exclusively padding later
+
+# %%
+n_pos = len(stds[0][0])
+n_layers = len(stds)
+plt.figure(figsize=(10,5))
+for batch in range(5):
+    for pos in range(n_pos):
+        #print(f"Batch {batch}, Position {pos}")
+        color = plt.cm.viridis(pos/n_pos)
+        plt.plot(range(n_layers), [stds[i][batch][pos] for i in range(n_layers)], color=color, label=f"Position {pos}", lw=0.1)
+
+# Colorbar
+sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=0, vmax=n_pos))
+sm.set_array([])
+plt.colorbar(sm, ticks=np.arange(0,n_pos+1,1), label="Position")
+plt.title(f"Standard Deviation of Residual Stream activations after layer $N$ ({model_name})")
+plt.xlabel("$N$")
+plt.semilogy()
+plt.ylabel("Standard Deviation")
+
+# %% [markdown]
+# ## Compare different models
+#
+# Note that switching between Standard Deviation and Norm shifts models slightly relative to each other, as they all have different residual stream sizes.
+
+# %% [markdown]
+# Norms:
+
+# %%
+# Norms
+import os
+for test_model_name in ["distilgpt2", "gpt2-small", 'gpt2-medium', 'gpt2-large', 'gpt2-xl', \
+                        "opt-125m", "opt-1.3b", "opt-2.7b",\
+                        "gpt-neo-125M", "gpt-neo-1.3B", "gpt-neo-2.7B",\
+                        "pythia-70m", "pythia-160m", "pythia-410m", "pythia-1b", "pythia-1.4b", "pythia-2.8b"]:
+    # Check if file exists
+    if os.path.isfile(f"meannorms_post_{test_model_name}.npy"):
+        continue
+    test_model = HookedTransformer.from_pretrained(
+        test_model_name, device="cpu"
+    )
+    cache = test_model.run_with_cache(prompts)[1]
+    meannorms_pre = []
+    meannorms_mid = []
+    meannorms_post = []
+    for layer in range(test_model.cfg.n_layers):
+        #norm = cache[f"blocks.{layer}.hook_resid_post"].norm(dim=-1)
+        norm_pre = cache[f"blocks.{layer}.hook_resid_pre"].norm(dim=-1)
+        if "pythia" in test_model_name:
+            norm_mid = norm_pre
+        else:
+            norm_mid = cache[f"blocks.{layer}.hook_resid_mid"].norm(dim=-1)
+        norm_post = cache[f"blocks.{layer}.hook_resid_post"].norm(dim=-1)
+        norms_pre_non_BOS_non_PAD = []
+        norms_mid_non_BOS_non_PAD = []
+        norms_post_non_BOS_non_PAD = []
+        for batch in range(len(prompts)):
+            prompt_len = len(test_model.to_str_tokens(prompts[batch]))
+            for pos in range(1, prompt_len):
+                norms_pre_non_BOS_non_PAD.append(norm_pre[batch, pos].item())
+                norms_mid_non_BOS_non_PAD.append(norm_mid[batch, pos].item())
+                norms_post_non_BOS_non_PAD.append(norm_post[batch, pos].item())
+        meannorms_pre.append(torch.tensor(norms_pre_non_BOS_non_PAD).mean().item())
+        meannorms_mid.append(torch.tensor(norms_mid_non_BOS_non_PAD).mean().item())
+        meannorms_post.append(torch.tensor(norms_post_non_BOS_non_PAD).mean().item())
+        #.append(torch.tensor(norms_non_BOS_non_PAD).mean().item())
+    #np.save(f"meannorms_{test_model_name}.npy", meannorms)
+    np.save(f"meannorms_pre_{test_model_name}.npy", meannorms_pre)
+    np.save(f"meannorms_mid_{test_model_name}.npy", meannorms_mid)
+    np.save(f"meannorms_post_{test_model_name}.npy", meannorms_post)
+
+# %%
+fig, [ax1, ax2] = plt.subplots(2, 1, figsize=(6,8), constrained_layout=True, sharey=True)
+for i, test_model_name in enumerate(["distilgpt2", "gpt2-small", 'gpt2-medium', 'gpt2-large', 'gpt2-xl', \
+                                     "opt-125m", "opt-1.3b", "opt-2.7b",\
+                                        "gpt-neo-125M", "gpt-neo-1.3B", "gpt-neo-2.7B",\
+                                            "pythia-70m", "pythia-160m", "pythia-410m", "pythia-1b", "pythia-1.4b", "pythia-2.8b"]):
+    meanstds = np.load(f"meannorms_post_{test_model_name}.npy")
+    ax = ax1 if i < 8 else ax2
+    ax.semilogy(range(len(meanstds)), meanstds, marker="o", label=test_model_name, alpha=0.5)
+    # Fit line (by eye)
+    if test_model_name=="gpt2-xl":
+        min_layer=5
+        max_layer=41
+        slope = (np.log10(meanstds[max_layer])-np.log10(meanstds[min_layer]))/(max_layer-min_layer)
+        print(f"Factor per layer: {10**(slope):.3f}")
+        ax.plot((min_layer, max_layer), [meanstds[i] for i in (min_layer, max_layer)], color="orange", label=f"gpt2-xl slope: {10**slope:.1%}", alpha=1)
+
+fig.suptitle("Norm of Residual Stream activations after layer $N$")
+ax1.set_title("OpenAI and Facebook models")
+ax2.set_title("EleutherAI models")
+ax1.set_xlabel("Layer index $N$")
+ax2.set_xlabel("Layer index $N$")
+ax1.set_ylabel("Residual stream norm")
+ax2.set_ylabel("Residual stream norm")
+ax2.set_xlim(ax1.get_xlim())
+ax1.legend()
+ax2.legend()
+fig.savefig(f"norms_all.png")
+plt.show()
+
+# %% [markdown]
+# Standard Deviations:
+
+# %%
+import os
+for test_model_name in ["distilgpt2", "gpt2-small", 'gpt2-medium', 'gpt2-large', 'gpt2-xl', \
+                        "opt-125m", "opt-1.3b", "opt-2.7b",\
+                        "gpt-neo-125M", "gpt-neo-1.3B", "gpt-neo-2.7B",\
+                        "pythia-70m", "pythia-160m", "pythia-410m", "pythia-1b", "pythia-1.4b", "pythia-2.8b"]:
+    # Check if file exists
+    if os.path.isfile(f"meanstds_post_{test_model_name}.npy"):
+        continue
+    test_model = HookedTransformer.from_pretrained(
+        test_model_name, device="cpu"
+    )
+    cache = test_model.run_with_cache(prompts)[1]
+    meanstds_pre = []
+    meanstds_mid = []
+    meanstds_post = []
+    for layer in range(test_model.cfg.n_layers):
+        #std = cache[f"blocks.{layer}.hook_resid_post"].std(dim=-1)
+        std_pre = cache[f"blocks.{layer}.hook_resid_pre"].std(dim=-1)
+        if "pythia" in test_model_name:
+            std_mid = std_pre
+        else:
+            std_mid = cache[f"blocks.{layer}.hook_resid_mid"].std(dim=-1)
+        std_post = cache[f"blocks.{layer}.hook_resid_post"].std(dim=-1)
+        stds_pre_non_BOS_non_PAD = []
+        stds_mid_non_BOS_non_PAD = []
+        stds_post_non_BOS_non_PAD = []
+        for batch in range(len(prompts)):
+            prompt_len = len(test_model.to_str_tokens(prompts[batch]))
+            for pos in range(1, prompt_len):
+                stds_pre_non_BOS_non_PAD.append(std_pre[batch, pos].item())
+                stds_mid_non_BOS_non_PAD.append(std_mid[batch, pos].item())
+                stds_post_non_BOS_non_PAD.append(std_post[batch, pos].item())
+        meanstds_pre.append(torch.tensor(stds_pre_non_BOS_non_PAD).mean().item())
+        meanstds_mid.append(torch.tensor(stds_mid_non_BOS_non_PAD).mean().item())
+        meanstds_post.append(torch.tensor(stds_post_non_BOS_non_PAD).mean().item())
+        #.append(torch.tensor(stds_non_BOS_non_PAD).mean().item())
+    #np.save(f"meanstds_{test_model_name}.npy", meanstds)
+    np.save(f"meanstds_pre_{test_model_name}.npy", meanstds_pre)
+    np.save(f"meanstds_mid_{test_model_name}.npy", meanstds_mid)
+    np.save(f"meanstds_post_{test_model_name}.npy", meanstds_post)
+
+# %%
+fig, [ax1, ax2] = plt.subplots(1, 2, figsize=(12,5), constrained_layout=True, sharey=True)
+for i, test_model_name in enumerate(["distilgpt2", "gpt2-small", 'gpt2-medium', 'gpt2-large', 'gpt2-xl', \
+                                     "opt-125m", "opt-1.3b", "opt-2.7b",\
+                                        "gpt-neo-125M", "gpt-neo-1.3B", "gpt-neo-2.7B",\
+                                            "pythia-70m", "pythia-160m", "pythia-410m", "pythia-1b", "pythia-1.4b", "pythia-2.8b"]):
+    meanstds = np.load(f"meanstds_post_{test_model_name}.npy")
+    ax = ax1 if i < 8 else ax2
+    ax.semilogy(range(len(meanstds)), meanstds, marker="o", label=test_model_name, alpha=0.5)
+    # Fit line (by eye)
+    if test_model_name=="gpt2-xl":
+        min_layer=5
+        max_layer=41
+        slope = (np.log10(meanstds[max_layer])-np.log10(meanstds[min_layer]))/(max_layer-min_layer)
+        print(f"Factor per layer: {10**(slope):.3f}")
+        # Default color
+        c = ax.lines[-1].get_color()
+        ax.plot((min_layer, max_layer), [meanstds[i] for i in (min_layer, max_layer)], color=c, label=f"gpt2-xl slope: {10**slope:.1%}", alpha=0.5)
+
+fig.suptitle("Mean Standard Deviation of Residual Stream activations after layer $N$")
+ax1.set_title("OpenAI and Facebook models")
+ax2.set_title("EleutherAI models")
+ax1.set_xlabel("Layer index $N$")
+ax2.set_xlabel("Layer index $N$")
+ax1.set_ylabel("Mean Standard Deviation")
+ax2.set_ylabel("Mean Standard Deviation")
+ax2.set_xlim(ax1.get_xlim())
+ax1.legend()
+ax2.legend()
+fig.savefig(f"stds_all.png")
+plt.show()
+
+# %% [markdown]
+# ## Analyze where the growth comes from
+#
+# In particular we can use the `resid_mid` hook to distinguish Attention and MLP
+
+# %%
+for i, test_model_name in enumerate(['gpt2-medium', 'gpt2-large', 'gpt2-xl']):
+    fig, ax = plt.subplots(1, 1, figsize=(5,3), constrained_layout=True)
+    meannorms_pre = np.load(f"meannorms_pre_{test_model_name}.npy")
+    meannorms_mid = np.load(f"meannorms_mid_{test_model_name}.npy")
+    meannorms_post = np.load(f"meannorms_post_{test_model_name}.npy")
+    fig.suptitle("Contributions to residual stream norm growth in "+test_model_name)
+    ax.plot(range(len(meannorms_pre)), (meannorms_mid/meannorms_pre), label="Attention")
+    ax.plot(range(len(meannorms_pre)), (meannorms_post/meannorms_mid), label="MLP")
+    ax.set_xlabel("Layer index $N$")
+    ax.set_ylim(0.98, 1.10)
+    ax.set_ylabel("Relative norm increase")
+    ax.axhline(1, ls="--", color="k")
+    ax.axhline(1.045, ls=":", color="k")
+    fig.savefig(f"contributions_split_{test_model_name}.png")
+    ax.legend()
+plt.show()
+
+# %% [markdown]
+# ### Analyze W_OV matricies
+#
+# We can either
+# 1. Use the Frobenius norm of the W_OV matrices, which is equivalent to "How much would this matrix change the norm of a random input", or
+# 2. Feed-in random actual embeddings to see if their effect on actual embeddings differs from that on random vectors
+#
+# for now try 1:
 
 # %%
 from fancy_einsum import einsum
-
 print("Model name:", model_name)
 
 df_OV_scale = pd.DataFrame(columns=["Layer", "Head", "Norm increase"])
 
 for layer in range(model.cfg.n_layers):
-    assert torch.allclose(
-        torch.zeros(1), model.blocks[layer].attn.b_V
-    ), "b_V should be zero in default TransformerLens"
-    W_OVs = einsum(
-        "head hidden embedout, head embed hidden -> head embed embedout",
-        model.blocks[layer].attn.W_O,
-        model.blocks[layer].attn.W_V,
-    )
-    mean_norm_increase = W_OVs.norm(dim=(-2, -1)) / np.sqrt(model.cfg.d_model)
+    print(f"Layer {layer} of {model.cfg.n_layers}")
+    W_OVs = einsum("head hidden embedout, head embed hidden -> head embed embedout", model.blocks[layer].attn.W_O, model.blocks[layer].attn.W_V)
+    random_embed = torch.randn(1000, model.cfg.d_model).to(device)
+    random_embed /= random_embed.std(dim=-1, keepdim=True)
+    OV_output = torch.zeros(1000, model.cfg.n_heads+1, model.cfg.d_model).to(device)
+    OV_output[:, :model.cfg.n_heads, :] = einsum("batch embed, head embed embedout -> batch head embedout", random_embed, W_OVs)
+    OV_output[model.cfg.n_heads] = model.blocks[layer].attn.b_O.view(1,1,-1)
+    mean_norm_increase = OV_output.std(dim=-1).mean(dim=0)
+    norm_increase_analytic = W_OVs.norm(dim=(-2, -1))/np.sqrt(model.cfg.d_model)
+    # Double check that Frobenius norm == actual random input effect
+    assert torch.allclose(mean_norm_increase[:model.cfg.n_heads], norm_increase_analytic, rtol=0.2), (mean_norm_increase, norm_increase_analytic)
+    total_norm_increase = OV_output.sum(dim=1).norm(dim=0)
+    mean_total_norm_increase = total_norm_increase.mean(dim=0)
+    df_OV_scale = pd.concat([df_OV_scale, pd.DataFrame([[layer, "Sum", mean_total_norm_increase.item()]], columns=["Layer", "Head", "Norm increase"])], ignore_index=True)
+    df_OV_scale = pd.concat([df_OV_scale, pd.DataFrame([[layer, "Bias", mean_norm_increase[model.cfg.n_heads].item()]], columns=["Layer", "Head", "Norm increase"])], ignore_index=True)
     for head in range(model.cfg.n_heads):
-        # print(f"Layer {layer:2d} Head {head:2d} OV matrix increases embedding norm by factor {mean_norm_increase[head]:.2f}")
-        df_OV_scale = pd.concat(
-            [
-                df_OV_scale,
-                pd.DataFrame(
-                    [[layer, head, mean_norm_increase[head].item()]],
-                    columns=["Layer", "Head", "Norm increase"],
-                ),
-            ],
-            ignore_index=True,
-        )
+        df_OV_scale = pd.concat([df_OV_scale, pd.DataFrame([[layer, head, norm_increase_analytic[head].item()]], columns=["Layer", "Head", "Norm increase"])], ignore_index=True)
 
-# Scatter Layer scale, log scale
-fig = px.scatter(
-    df_OV_scale,
-    x="Layer",
-    y="Norm increase",
-    color="Head",
-    log_y=True,
-    title="Frobenius norms",
-)
+fig = px.line(df_OV_scale, x="Layer", y="Norm increase", color="Head", log_y=True, title="Attention W_OV norms")
 fig.show()
-
-
 
 # %% [markdown]
 # ### MLPs
 #
-# Main complication is ReLU. Can try to account for average number of dead neurons per layer but obviously biased and does not work.
+# Norm non-trivial due to ReLU (correlated with a bunch of stuff). Try
+# 1. the "input random vectors" strategy from above, or if that fails
+# 2. the "input actual embeddings" strategy.
 
-# %% [markdown]
-# #### Brute force test: Just throw randn vectors into mlp()
+# %%
 
 # %%
 from fancy_einsum import einsum
 
-print("Model name:", model_name)
+print("Model name:", model.cfg.model_name)
+cache = model.run_with_cache(prompts)[1]
 
 df_MLP_scale = pd.DataFrame(columns=["Layer", "Norm increase", "Source"])
 ReLU_zero_rates = {}
 
 for layer in range(model.cfg.n_layers):
-    random_embed = torch.randn(1000, 1, model.cfg.d_model).to(device)
-    random_embed /= random_embed.norm(dim=-1, keepdim=True)
+    pos = 3
+    random_embed = cache[f"blocks.{layer}.hook_resid_mid"][:, pos:pos+1, :]
+    # Not working with random embed right now
+    #random_embed = torch.randn_like(random_embed)
+    random_embed /= random_embed.std(dim=-1, keepdim=True)
+    assert torch.allclose(torch.tensor(0.), random_embed.mean(dim=-1), atol=1e-5), random_embed
     mlp_out = model.blocks[layer].mlp(random_embed)
-    norm_increase = mlp_out[:, 0, :].norm(dim=-1)
+    mlp_out += random_embed
+    assert torch.allclose(torch.tensor(0.), mlp_out.mean(dim=-1), atol=1e-5), mlp_out
+    norm_increase = mlp_out[:, 0, :].std(dim=-1)
     mean_norm_increase = norm_increase.mean(dim=0)
     df_MLP_scale = pd.concat(
         [
             df_MLP_scale,
             pd.DataFrame(
-                [[layer, mean_norm_increase.item(), "Real"]],
+                [[layer, mean_norm_increase.item(), "Empirical"]],
                 columns=["Layer", "Norm increase", "Source"],
             ),
         ],
@@ -477,150 +618,27 @@ for layer in range(model.cfg.n_layers):
 
 # Scatter Layer scale, log scale
 fig = px.scatter(
-    df_MLP_scale,
+    df_MLP_scale[df_MLP_scale.Source=="Empirical"],
     x="Layer",
     y="Norm increase",
     color="Source",
     log_y=True,
-    title="How much the MLP increase the norm of the input, by layer",
+    title=f"How much the MLP increase the norm of the input, by layer (test with pos={pos})",
 )
 fig.show()
 
-
-
-# %% [markdown]
-# #### Compare to matrices
-#
-# Calculate the following terms:
-# * Norm of W_in * W_out
-# * Norm of b_in * W_out
-# * Norm of b_out
-# * Naive total by summing the three terms, and multiplying the former two with the ReLU dead-rate. This may be inaccurate as the ReLU dead-rate and hidden values are correlated, but what this correlation means to the output is non-trivial to me
+plt.plot(df_MLP_scale[df_MLP_scale.Source=="Empirical"]["Norm increase"], label="Empirical")
 
 # %%
-from fancy_einsum import einsum
+N = len(df_MLP_scale[df_MLP_scale.Source=="Real"]["Norm increase"])
+plt.semilogy(range(N), df_MLP_scale[df_MLP_scale.Source=="Real"]["Norm increase"], label="Real", marker="o")
+# Slope 5 to 41
 
-print("Model name:", model_name)
-
-# Code from above
-df_MLP_scale = pd.DataFrame(columns=["Layer", "Norm increase", "Source"])
-ReLU_zero_rates = {}
-
-for layer in range(model.cfg.n_layers):
-    random_embed = torch.randn(1000, 1, model.cfg.d_model).to(device)
-    random_embed /= random_embed.norm(dim=-1, keepdim=True)
-    mlp_out = model.blocks[layer].mlp(random_embed)
-    norm_increase = mlp_out[:, 0, :].norm(dim=-1)
-    mean_norm_increase = norm_increase.mean(dim=0)
-    df_MLP_scale = pd.concat(
-        [
-            df_MLP_scale,
-            pd.DataFrame(
-                [[layer, mean_norm_increase.item(), "Real"]],
-                columns=["Layer", "Norm increase", "Source"],
-            ),
-        ],
-        ignore_index=True,
-    )
-    hidden = (
-        einsum(
-            "batch pos embed, embed hidden -> batch pos hidden",
-            random_embed,
-            model.blocks[layer].mlp.W_in,
-        )
-        + model.blocks[layer].mlp.b_in
-    )
-    ReLU_zero_rate = (hidden[:, 0, :] < 0).float().mean()
-    ReLU_zero_rates[layer] = ReLU_zero_rate
-    df_MLP_scale = pd.concat(
-        [
-            df_MLP_scale,
-            pd.DataFrame(
-                [[layer, ReLU_zero_rate.item(), "dead-fraction"]],
-                columns=["Layer", "Norm increase", "Source"],
-            ),
-        ],
-        ignore_index=True,
-    )
-
-
-# Matrix based calculation
-for layer in range(model.cfg.n_layers):
-    ReLU_zero_rate = ReLU_zero_rates[layer]
-    Winout = einsum(
-        "d_model_in d_mlp, d_mlp d_model_out -> d_model_in d_model_out",
-        model.blocks[layer].mlp.W_in,
-        model.blocks[layer].mlp.W_out,
-    )
-    Winout_mean_norm_increase = Winout.norm(dim=(-2, -1))
-    bin_mean_norm_increase = einsum(
-        "d_mlp, d_mlp d_model -> d_model",
-        model.blocks[layer].mlp.b_in,
-        model.blocks[layer].mlp.W_out,
-    ).norm(dim=-1)
-    bout_mean_norm_increase = model.blocks[layer].mlp.b_out.norm(dim=-1)
-    df_MLP_scale = pd.concat(
-        [
-            df_MLP_scale,
-            pd.DataFrame(
-                [[layer, Winout_mean_norm_increase.item(), "WinWout"]],
-                columns=["Layer", "Norm increase", "Source"],
-            ),
-        ],
-        ignore_index=True,
-    )
-    df_MLP_scale = pd.concat(
-        [
-            df_MLP_scale,
-            pd.DataFrame(
-                [[layer, bin_mean_norm_increase.item(), "binWout"]],
-                columns=["Layer", "Norm increase", "Source"],
-            ),
-        ],
-        ignore_index=True,
-    )
-    df_MLP_scale = pd.concat(
-        [
-            df_MLP_scale,
-            pd.DataFrame(
-                [[layer, bout_mean_norm_increase.item(), "bout"]],
-                columns=["Layer", "Norm increase", "Source"],
-            ),
-        ],
-        ignore_index=True,
-    )
-    df_MLP_scale = pd.concat(
-        [
-            df_MLP_scale,
-            pd.DataFrame(
-                [
-                    [
-                        layer,
-                        (
-                            ReLU_zero_rate
-                            * (Winout_mean_norm_increase + bin_mean_norm_increase)
-                            + bout_mean_norm_increase
-                        ).item(),
-                        "Naive total",
-                    ]
-                ],
-                columns=["Layer", "Norm increase", "Source"],
-            ),
-        ],
-        ignore_index=True,
-    )
-
-# Scatter Layer scale, log scale
-fig = px.line(
-    df_MLP_scale,
-    x="Layer",
-    y="Norm increase",
-    color="Source",
-    log_y=True,
-    title="MLP components",
-)
-fig.show()
-
+min_layer=5
+max_layer=41
+slope = (np.log10(df_MLP_scale[df_MLP_scale.Source=="Real"]["Norm increase"].iloc[max_layer])-np.log10(df_MLP_scale[df_MLP_scale.Source=="Real"]["Norm increase"].iloc[min_layer]))/(max_layer-min_layer)
+plt.semilogy((min_layer, max_layer), [df_MLP_scale[df_MLP_scale.Source=="Real"]["Norm increase"].iloc[i] for i in (min_layer, max_layer)], label=f"Real slope: {10**slope:.1%}", marker="o")
+plt.legend()
 
 
 # %% [markdown]
@@ -768,18 +786,3 @@ relative_fig.add_hline(y=1, line_dash="dash", line_color="black")
 relative_fig.update_layout(width=600)
 
 relative_fig.show()
-
-# %%
-# Print the geometric mean of the magnitude growth rates
-for pos in range(6):
-    pos_df: pd.DataFrame = relative_df[relative_df["Prompt"] == tokens[pos]]
-    geom_avg: float = pos_df["Magnitude"].prod() ** (1 / len(pos_df))
-    print(
-        f"The `{tokens[pos]}` token (position {pos}) has an average growth"
-        f" rate of {geom_avg:.3f}"
-    )
-
-
-# %% [markdown]
-# The exponential increase in magnitude is confirmed, with tokens having
-# an average growth rate of about 1.12. Once again, the `<|endoftext|>` token is an outlier.
