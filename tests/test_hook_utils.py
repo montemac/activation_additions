@@ -18,6 +18,7 @@ def fixture_model() -> HookedTransformer:
         model_name="attn-only-2l", device="cpu"
     )
 
+
 def test_hook_fn_from_slice():
     """Test that we can selectively modify a portion of the residual stream."""
     input_tensor: torch.Tensor = torch.zeros((1, 2, 4))
@@ -35,15 +36,18 @@ def test_hook_fn_from_slice():
 
     assert torch.eq(result_tens, target_tens).all(), "Slice test failed"
 
+
 def test_hook_fn_from_activations():
-    """Testing the front and back modifiers of the xvec_position"""
+    """Testing the front and back modifiers of the addition_location"""
     input_tensor: torch.Tensor = torch.ones((1, 10, 1))
     activations: torch.Tensor = 2 * torch.ones((1, 4, 1))
 
     back_target: torch.Tensor = torch.tensor([[1, 1, 1, 1, 1, 1, 3, 3, 3, 3]])
     back_target: torch.Tensor = back_target.unsqueeze(0).unsqueeze(-1)
 
-    hook_fxn: Callable = hook_utils.hook_fn_from_activations(activations=activations, addition_location="back")
+    hook_fxn: Callable = hook_utils.hook_fn_from_activations(
+        activations=activations, addition_location="back"
+    )
     result: torch.Tensor = hook_fxn(input_tensor)
 
     assert torch.eq(result, back_target).all(), "xvec = back test failed"
@@ -55,7 +59,9 @@ def test_hook_fn_from_activations():
     front_target: torch.Tensor = torch.tensor([[3, 3, 3, 3, 1, 1, 1, 1, 1, 1]])
     front_target: torch.Tensor = front_target.unsqueeze(0).unsqueeze(-1)
 
-    hook_fxn: Callable = hook_utils.hook_fn_from_activations(activations=activations, addition_location="front")
+    hook_fxn: Callable = hook_utils.hook_fn_from_activations(
+        activations=activations, addition_location="front"
+    )
     result: torch.Tensor = hook_fxn(input_tensor)
 
     assert torch.eq(result, front_target).all(), "xvec = front test failed"

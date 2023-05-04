@@ -1,9 +1,5 @@
 """ This script demonstrates how to use the algebraic_value_editing library to generate comparisons
 between two prompts. """
-# %% 
-%load_ext autoreload
-%autoreload 2
-
 # %%
 from typing import List
 from transformer_lens.HookedTransformer import HookedTransformer
@@ -17,30 +13,22 @@ model: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="gpt2-xl",
     device="cpu",
 )
-_ = model.to("cuda")
+_ = model.to("cuda:5")
 
 # %%
-rich_prompts: List[RichPrompt] = [
-    *get_x_vector(
-        prompt1="Happy",
-        prompt2=" ",
-        coeff=2000,
-        act_name=20,
-        model=model,
-        pad_method="tokens_right",
-    ),
-]
+sampling_kwargs = {
+    "temperature": 0.65,  # Higher is "more random"
+    "freq_penalty": 1.0,  # Higher means less repetition
+    "top_p": 0.5,  # Higher means more diversity, in [0,1]
+}
 completion_utils.print_n_comparisons(
     prompt=(
-        "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling"
+        "I want to thank Obama for his service. He was an interesting"
+        " president because"
     ),
     num_comparisons=5,
     model=model,
-    rich_prompts=rich_prompts,
-    seed=0,
-    temperature=1,
-    freq_penalty=1,
-    top_p=0.3,
+    **sampling_kwargs
 )
 
 # %%
