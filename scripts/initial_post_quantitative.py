@@ -71,7 +71,7 @@ MODEL: HookedTransformer = HookedTransformer.from_pretrained(
 # The input text
 text = (
     "I'm excited because I'm going to a wedding this weekend."
-    + " Two of my old friends from school are getting married."
+    + " Two of my old friends from school are getting married"
 )
 
 # Steering-aligned token sets at specific positions
@@ -117,7 +117,10 @@ eff, foc = logits.get_effectiveness_and_disruption(
 
 # Plot!
 fig = logits.plot_effectiveness_and_disruption(
-    MODEL.to_str_tokens(text), eff, foc
+    tokens_str=MODEL.to_str_tokens(text),
+    eff=eff,
+    foc=foc,
+    title='Effectiveness and disruption scores for the " wedding" vector intervention',
 )
 fig.update_layout(height=600)
 fig.show()

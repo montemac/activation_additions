@@ -148,7 +148,10 @@ def get_effectiveness_and_disruption(
 
 
 def plot_effectiveness_and_disruption(
-    tokens_str: list[str], eff: np.ndarray, foc: np.ndarray
+    tokens_str: list[str],
+    eff: np.ndarray,
+    foc: np.ndarray,
+    title: Optional[str] = None,
 ):
     plot_df = pd.concat(
         [
@@ -180,9 +183,11 @@ def plot_effectiveness_and_disruption(
         color="score",
         # facet_row="score",
         barmode="group",
-        title="Effectiveness-sore and disruption-score over input sub-sequences",
+        title="Effectiveness-sore and disruption-score over input sub-sequences"
+        if title is None
+        else title,
     )
-    fig.update_xaxes(tickangle=-45, title="")
+    fig.update_xaxes(tickangle=-45, title="", tickfont=dict(size=14))
     fig.update_layout(
         xaxis=dict(
             tickmode="array",
@@ -190,7 +195,7 @@ def plot_effectiveness_and_disruption(
             ticktext=plot_df["tokens_str"],
         )
     )
-    fig.layout["yaxis"]["title"] = "value"
+    fig.layout["yaxis"]["title"] = ""
     fig.layout["annotations"] = []
     return fig
 
