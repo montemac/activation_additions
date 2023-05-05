@@ -183,8 +183,9 @@ def get_positional_args(func):
 def _loggable(func: Callable, *args, **kwargs) -> Any:
     """Caller function for loggable decorator, see public decorator
     function for docs."""
-    # Store positional arguments by name
-    pos_args = get_positional_args(func)
+    # Store all args by name (positional and keyword)
+    all_args = dict(zip(get_positional_args(func), args))
+    all_args.update(kwargs)
     # Get log argument from function call, default to false if not present
     log = kwargs.get("log", False)
     # Check if we should log
@@ -199,7 +200,7 @@ def _loggable(func: Callable, *args, **kwargs) -> Any:
             log_args = log
         # Set up the config for this logging call: just store the
         # keyword args, converted as needed for storage on wandb
-        config = convert_dict_items_to_wandb_config(kwargs)
+        config = convert_dict_items_to_wandb_config(all_args)
         # Get the wandb run
         run, manager = get_or_init_run(
             job_type=func.__name__,
@@ -211,7 +212,7 @@ def _loggable(func: Callable, *args, **kwargs) -> Any:
         # Use provided context manager to wrap the underlying function call
         with manager:
             # Call the wrapped function
-            func_return = func(**kwargs)
+            func_return = func(*args, **kwargs)
             # Log returned objects, splitting up tuple if needed
             if isinstance(func_return, tuple):
                 objects_to_log = {
