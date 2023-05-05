@@ -57,15 +57,15 @@ def effectiveness(
     )
 
 
-def focus(
+def disruption(
     probs: pd.DataFrame,
     index: Any,
     is_steering_aligned: np.ndarray,
 ):
-    """Function calculate focus given normal and modified probabilities,
+    """Function calculate disruption given normal and modified probabilities,
     and is_steering_aligned boolean array.
 
-    Focus is defined as the expectation of the within-set KL divergence
+    disruption is defined as the expectation of the within-set KL divergence
     over the steering-aligned and not-steering-aligned tokens."""
     # Probability a random token in within the steering-aligned set or not
     prob_mod_is_steering_aligned = (
@@ -106,13 +106,13 @@ def focus(
     return exp_is_steering_aligned + exp_not_steering_aligned
 
 
-def get_effectiveness_and_focus(
+def get_effectiveness_and_disruption(
     probs: pd.DataFrame,
     rich_prompts: List[prompt_utils.RichPrompt],
     steering_aligned_tokens: Dict[int, np.array],
     mode: str = "mask_injection_pos",
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Calculate effectiveness and focus of an activation injection
+    """Calculate effectiveness and disruption of an activation injection
     defined by a model, input text, list of RichPrompts, and a dict
     specifying the steering-aligned next tokens at any token position in
     the input text for which the set should be non-null.
@@ -132,8 +132,8 @@ def get_effectiveness_and_focus(
         is_steering_aligned[steering_aligned_tokens.get(pos, [])] = True
         # Effectiveness
         eff_list.append(effectiveness(probs, [pos], is_steering_aligned))
-        # Focus
-        foc_list.append(focus(probs, [pos], is_steering_aligned))
+        # Disruption
+        foc_list.append(disruption(probs, [pos], is_steering_aligned))
 
     eff = pd.concat(eff_list)
     foc = pd.concat(foc_list)
@@ -147,7 +147,7 @@ def get_effectiveness_and_focus(
     return eff, foc
 
 
-def plot_effectiveness_and_focus(
+def plot_effectiveness_and_disruption(
     tokens_str: list[str], eff: np.ndarray, foc: np.ndarray
 ):
     plot_df = pd.concat(
@@ -156,36 +156,42 @@ def plot_effectiveness_and_focus(
                 {
                     "tokens_str": tokens_str,
                     "value": eff,
-                    "quantity": "effectiveness",
+                    "score": "effectiveness",
                 }
             ),
             pd.DataFrame(
                 {
                     "tokens_str": tokens_str,
                     "value": foc,
-                    "quantity": "focus",
+                    "score": "disruption",
                 }
             ),
         ]
     ).reset_index(names="pos")
     plot_df["pos_label"] = (
-        plot_df["tokens_str"] + " : " + plot_df["pos"].astype(str)
+        # plot_df["tokens_str"] + " : " + plot_df["pos"].astype(str)
+        plot_df["pos"]
     )
 
     fig = px.bar(
         plot_df,
         x="pos_label",
         y="value",
-        color="quantity",
-        facet_row="quantity",
-        title="Effectiveness and Focus over input sub-sequences",
+        color="score",
+        # facet_row="score",
+        barmode="group",
+        title="Effectiveness-sore and disruption-score over input sub-sequences",
     )
-    quantities = plot_df["quantity"].unique()[::-1]
-    fig.update_xaxes(tickangle=-90, title="")
-    fig.layout["yaxis"]["title"] = quantities[0]
-    fig.layout["yaxis2"]["title"] = quantities[1]
+    fig.update_xaxes(tickangle=-45, title="")
+    fig.update_layout(
+        xaxis=dict(
+            tickmode="array",
+            tickvals=plot_df["pos"],
+            ticktext=plot_df["tokens_str"],
+        )
+    )
+    fig.layout["yaxis"]["title"] = "value"
     fig.layout["annotations"] = []
-    fig.update_layout(showlegend=False)
     return fig
 
 

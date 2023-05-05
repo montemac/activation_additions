@@ -65,7 +65,7 @@ MODEL: HookedTransformer = HookedTransformer.from_pretrained(
 #
 # Start by defining the text to be investigated, the activation
 # injection parameters, along with some supporting constants, then
-# calculate effectiveness and focus for this configuration.
+# calculate effectiveness and disruption for this configuration.
 
 # %%
 # The input text
@@ -107,8 +107,8 @@ probs = logits.get_normal_and_modified_token_probs(
     return_positions_above=0,
 )
 
-# Calculate effectiveness and focus
-eff, foc = logits.get_effectiveness_and_focus(
+# Calculate effectiveness and disruption
+eff, foc = logits.get_effectiveness_and_disruption(
     probs=probs,
     rich_prompts=rich_prompts,
     steering_aligned_tokens=steering_aligned_tokens,
@@ -116,7 +116,9 @@ eff, foc = logits.get_effectiveness_and_focus(
 )
 
 # Plot!
-fig = logits.plot_effectiveness_and_focus(MODEL.to_str_tokens(text), eff, foc)
+fig = logits.plot_effectiveness_and_disruption(
+    MODEL.to_str_tokens(text), eff, foc
+)
 fig.update_layout(height=600)
 fig.show()
 fig.write_image("images/zoom_in1.png", width=png_width, height=png_height)
@@ -157,11 +159,11 @@ fig.write_image(
 )
 
 # %%[markdown]
-# We then explore how the effectiveness and focus metrics change over
+# We then explore how the effectiveness and disruption metrics change over
 # different injection hyperparameters
 
 # %%
-# Sweep effectiveness and focus over hyperparams
+# Sweep effectiveness and disruption over hyperparams
 text = "I'm excited because I'm going to a"
 
 is_steering_aligned = np.zeros(MODEL.cfg.d_vocab_out, dtype=bool)
@@ -189,7 +191,9 @@ for idx, row in tqdm(list(rich_prompts_df.iterrows())):
             "effectiveness": logits.effectiveness(
                 probs, [text], is_steering_aligned
             ).iloc[0],
-            "focus": logits.focus(probs, [text], is_steering_aligned).iloc[0],
+            "disruption": logits.disruption(
+                probs, [text], is_steering_aligned
+            ).iloc[0],
             "act_name": row["act_name"],
         }
     )
@@ -212,7 +216,7 @@ fig = px.line(
     y="value",
     color="quantity",
     labels={"act_name": "injection layer"},
-    title="Effectiveness and focus over injection layers, weddings example",
+    title="Effectiveness and disruption over injection layers, weddings example",
 )
 fig.show()
 fig.write_image(
@@ -241,7 +245,9 @@ for idx, row in tqdm(list(rich_prompts_df.iterrows())):
             "effectiveness": logits.effectiveness(
                 probs, [text], is_steering_aligned
             ).iloc[0],
-            "focus": logits.focus(probs, [text], is_steering_aligned).iloc[0],
+            "disruption": logits.disruption(
+                probs, [text], is_steering_aligned
+            ).iloc[0],
             "coeff": row["coeff"],
         }
     )
@@ -264,7 +270,7 @@ fig = px.line(
     y="value",
     color="quantity",
     labels={"coeff": "coefficient"},
-    title="Effectiveness and focus over coefficient, weddings example",
+    title="Effectiveness and disruption over coefficient, weddings example",
 )
 fig.show()
 fig.write_image(
