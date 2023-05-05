@@ -24,6 +24,7 @@ setup(
         "wandb==0.13.5",  # transformer_lens 0.0.0 requires <0.14.0, >=0.13.5
         "openai>=0.27.2",
         "nltk>=3.8.1",
+        "kaleido>=0.2.1",
     ],
     extras_require={
         "dev": [
