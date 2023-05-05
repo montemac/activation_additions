@@ -5,6 +5,7 @@ from contextlib import nullcontext
 from warnings import warn
 import os
 import datetime
+import inspect
 
 import pandas as pd
 from decorator import decorate
@@ -164,15 +165,31 @@ def convert_dict_items_to_wandb_config(
     }
 
 
+def get_positional_args(func):
+    signature = inspect.signature(func)
+    return [
+        param.name
+        for param in signature.parameters.values()
+        if param.default == inspect.Parameter.empty
+        and param.kind
+        not in (
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        )
+    ]
+
+
 # Uses decorator module: https://github.com/micheles/decorator/blob/master/docs/documentation.md
-def _loggable(func: Callable, **kwargs) -> Any:
+def _loggable(func: Callable, *args, **kwargs) -> Any:
     """Caller function for loggable decorator, see public decorator
     function for docs."""
+    # Store positional arguments by name
+    pos_args = get_positional_args(func)
     # Get log argument from function call, default to false if not present
     log = kwargs.get("log", False)
     # Check if we should log
     if log is False:
-        func_return = func(**kwargs)
+        func_return = func(*args, **kwargs)
     else:
         # Process the log argument, extract logging-related arguments if
         # provided
@@ -218,13 +235,8 @@ def loggable(func):
     function to wandb.  The decorated function must include a keyword
     argument named `log` with a type signature `Union[bool, dict[str,
     str]]` for logging to be used.
-
-    Note that the decorated function will only accept keyword arguments
-    so that they can be stored in the logging config object with proper names.
     """
-    return decorate(
-        func, _loggable, kwsyntax=True  # type: ignore
-    )  # kwsyntax=True required to pass named positional args in kwargs
+    return decorate(func, _loggable)  # type: ignore
 
 
 def get_objects_from_run(run_path: str, flatten: bool = False):
