@@ -6,7 +6,7 @@ def enable_ipython_reload():
     enable hot-reloading of modified imported modules."""
     try:
         from IPython import (
-            get_ipython,
+            get_ipython,  # type: ignore
         )  # pylint: disable=import-outside-toplevel
 
         get_ipython().run_line_magic("reload_ext", "autoreload")  # type: ignore

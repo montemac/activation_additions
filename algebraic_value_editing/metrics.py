@@ -135,7 +135,7 @@ def get_openai_metric(
                 max_tokens=max_reasoning_tokens,
             )
             chunk_reasoning: List[str] = [
-                choice["text"] for choice in response.choices
+                choice["text"] for choice in response.choices  # type: ignore
             ]
             contexts: List[str] = [
                 prompt + reasoning
@@ -152,14 +152,14 @@ def get_openai_metric(
             )
 
             chunk_ratings: List[Optional[int]] = [
-                _intify(r["text"].strip()) for r in response["choices"]
+                _intify(r["text"].strip()) for r in response["choices"]  # type: ignore
             ]
             ratings.extend(chunk_ratings)
             reasoning.extend(chunk_reasoning)
 
         # Return dataframe with ratings and reasoning
         return pd.DataFrame(
-            {"rating": ratings, "reasoning": reasoning}, index=strs
+            {"rating": ratings, "reasoning": reasoning}, index=list(strs)
         )
 
     return metric_func
