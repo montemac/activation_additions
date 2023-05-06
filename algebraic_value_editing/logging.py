@@ -1,6 +1,6 @@
 """Functions to support logging of data to wandb"""
 
-from typing import Optional, Dict, Tuple, Any, Callable
+from typing import Optional, Dict, Tuple, Any, Callable, List
 from contextlib import nullcontext
 from warnings import warn
 import os
@@ -165,13 +165,15 @@ def convert_dict_items_to_wandb_config(
     }
 
 
-def get_positional_args(func):
+def get_function_args(func: Callable) -> List[str]:
+    """Return names of function arguments that aren't *args or **kwargs."""
     signature = inspect.signature(func)
     return [
         param.name
         for param in signature.parameters.values()
-        if param.default == inspect.Parameter.empty
-        and param.kind
+        # if param.default == inspect.Parameter.empty
+        # and param.kind
+        if param.kind
         not in (
             inspect.Parameter.VAR_POSITIONAL,
             inspect.Parameter.VAR_KEYWORD,
@@ -184,10 +186,11 @@ def _loggable(func: Callable, *args, **kwargs) -> Any:
     """Caller function for loggable decorator, see public decorator
     function for docs."""
     # Store all args by name (positional and keyword)
-    all_args = dict(zip(get_positional_args(func), args))
+    all_args = dict(zip(get_function_args(func), args))
     all_args.update(kwargs)
     # Get log argument from function call, default to false if not present
-    log = kwargs.get("log", False)
+    log = all_args.get("log", False)
+    print(all_args.keys())
     # Check if we should log
     if log is False:
         func_return = func(*args, **kwargs)

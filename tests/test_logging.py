@@ -1,3 +1,4 @@
+# %%
 """ Test suite for logging.py """
 # %%
 import pytest
@@ -57,3 +58,16 @@ def test_logging(model):
     results_logged["loss"] = results_logged["loss"].astype(np.float32)
     # Compare with the reference DataFrame
     pd.testing.assert_frame_equal(results, results_logged)
+
+
+def test_positional_args(model):
+    """Function test a call to a loggable function using positional
+    arguments, which were initially not supported by the loggable
+    decorator."""
+    completion_utils.print_n_comparisons(
+        "I think you're ",
+        model,
+        num_comparisons=5,
+        rich_prompts=[],
+        seed=0,
+    )
