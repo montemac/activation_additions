@@ -190,7 +190,6 @@ def _loggable(func: Callable, *args, **kwargs) -> Any:
     all_args.update(kwargs)
     # Get log argument from function call, default to false if not present
     log = all_args.get("log", False)
-    print(all_args.keys())
     # Check if we should log
     if log is False:
         func_return = func(*args, **kwargs)
