@@ -16,8 +16,8 @@ from transformers import pipeline
 import openai
 
 
-# pylint: disable=dangerous-default-value (False positive since we don't
-# mutate the default value)
+# pylint: disable=dangerous-default-value
+# (False positive since we don't mutate the default value)
 def add_metric_cols(
     data: pd.DataFrame,
     metrics_dict: Dict[str, Callable[[Iterable[str]], pd.DataFrame]],
@@ -103,11 +103,18 @@ def get_openai_metric(
     chunk_size: int = 19,  # max chunk size passed to openai (limit is 19 for text-davinci-003)
     max_reasoning_tokens: int = 100,  # max tokens to use for reasoning
 ):
-    """Create a metric using an OpenAI model. and chain-of-thought. The model is called twice, first to get a reasoning for the rating, then to get the rating itself (from 1-10). The metric function returns a dataframe with two columns: "rating" and "reasoning"
+    """Create a metric using an OpenAI model. and chain-of-thought. The
+    model is called twice, first to get a reasoning for the rating, then
+    to get the rating itself (from 1-10). The metric function returns a
+    dataframe with two columns: "rating" and "reasoning"
 
     Considerations:
-    - Cost: Chain of thought is only effective for the most capable model (text-davinci-003) which is quite expensive; 0.02$ per 1k tokens, so on the order of 0.01$ per str passed to metric_func.
-    - Bias: RLHF models are very biased towards giving moderate ratings like 7. In future we may want to consider normalizing the ratings to be more centered around 5. (And doing this for humans as well.)
+    - Cost: Chain of thought is only effective for the most capable
+    model (text-davinci-003) which is quite expensive; 0.02$ per 1k
+    tokens, so on the order of 0.01$ per str passed to metric_func.
+    - Bias: RLHF models are very biased towards giving moderate ratings
+    like 7. In future we may want to consider normalizing the ratings to
+    be more centered around 5. (And doing this for humans as well.)
     """
 
     def chunks(lst: List[str], size: int):
