@@ -149,7 +149,7 @@ def test_plot_sweep_results():
         reduced_normal_df,
         reduced_patched_df,
     ) = load_cached_sweep_over_prompts()
-    
+
     fig = sweeps.plot_sweep_results(
         data=reduced_patched_df,
         col_to_plot="loss",
