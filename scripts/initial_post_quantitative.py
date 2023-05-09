@@ -46,8 +46,9 @@ if not os.path.exists("images"):
     os.mkdir("images")
 
 # Plotting constants
-png_width = 1000
-png_height = 450
+png_width = 750
+png_height = 400
+png_scale = 2.0
 
 
 # %%
@@ -124,7 +125,9 @@ fig = logits.plot_effectiveness_and_disruption(
 )
 fig.update_layout(height=600)
 fig.show()
-fig.write_image("images/zoom_in1.png", width=png_width, height=png_height)
+fig.write_image(
+    "images/zoom_in1.png", width=png_width, height=png_height, scale=png_scale
+)
 
 
 # %%[markdown]
@@ -158,7 +161,10 @@ fig = experiments.show_token_probs(
 )
 fig.show()
 fig.write_image(
-    "images/zoom_in_top_k_kl_div.png", width=png_width, height=png_height
+    "images/zoom_in_top_k_kl_div.png",
+    width=png_width,
+    height=png_height,
+    scale=png_scale,
 )
 
 # %%[markdown]
@@ -218,12 +224,15 @@ fig = px.line(
     x="act_name",
     y="value",
     color="quantity",
-    labels={"act_name": "injection layer"},
+    labels={"coeff": "coefficient", "value": "nats"},
     title="Effectiveness and disruption over injection layers, weddings example",
 )
 fig.show()
 fig.write_image(
-    "images/zoom_in_layers.png", width=png_width, height=png_height
+    "images/zoom_in_layers.png",
+    width=png_width,
+    height=png_height,
+    scale=png_scale,
 )
 
 # %%
@@ -272,12 +281,15 @@ fig = px.line(
     x="coeff",
     y="value",
     color="quantity",
-    labels={"coeff": "coefficient"},
+    labels={"coeff": "coefficient", "value": "nats"},
     title="Effectiveness and disruption over coefficient, weddings example",
 )
 fig.show()
 fig.write_image(
-    "images/zoom_in_coeffs.png", width=png_width, height=png_height
+    "images/zoom_in_coeffs.png",
+    width=png_width,
+    height=png_height,
+    scale=png_scale,
 )
 
 # %%[markdown]
@@ -293,7 +305,9 @@ fig.write_image(
 # Perform the weddings experiment
 FILENAMES = {
     "weddings": "../data/chatgpt_wedding_essay_20230423.txt",
-    "not-weddings": "../data/chatgpt_shipping_essay_20230423.txt",
+    "shipping": "../data/chatgpt_shipping_essay_20230423.txt",
+    # "macedonia": "../data/wikipedia_macedonia.txt",
+    # "banana_bread": "../data/vegan_banana_bread.txt",
 }
 
 # Set up the tokenizer
@@ -317,14 +331,12 @@ USE_CACHE = True
 CACHE_FN = "weddings_essays_layers_cache.pkl"
 if USE_CACHE:
     with open(CACHE_FN, "rb") as file:
-        fig, mod_df, results_grouped_df = pickle.load(file)
+        mod_df, results_grouped_df = pickle.load(file)
 else:
     (
-        fig,
         mod_df,
         results_grouped_df,
     ) = experiments.run_corpus_logprob_experiment(
-        corpus_name="weddings/shipping essays",
         model=MODEL,
         labeled_texts=texts_df[["text", "topic"]],
         x_vector_phrases=(" weddings", ""),
@@ -332,21 +344,28 @@ else:
         coeffs=[1],
         method="mask_injection_logprob",
         label_col="topic",
-        x_qty="act_name",
-        x_name="Injection layer",
-        color_qty="topic",
-        facet_col_qty=None,
     )
+fig = experiments.plot_corpus_logprob_experiment(
+    results_grouped_df=results_grouped_df,
+    corpus_name="weddings/shipping essays",
+    x_qty="act_name",
+    x_name="Injection layer",
+    color_qty="topic",
+    facet_col_qty=None,
+)
 fig.show()
 fig.write_image(
-    "images/weddings_essays_layers.png", width=png_width, height=png_height
+    "images/weddings_essays_layers.png",
+    width=png_width,
+    height=png_height,
+    scale=png_scale,
 )
 
 # %%
 # Cache results
 # TODO: use wandb instead of local caching
 with open(CACHE_FN, "wb") as file:
-    pickle.dump((fig, mod_df, results_grouped_df), file)
+    pickle.dump((mod_df, results_grouped_df), file)
 
 
 # %%
@@ -355,38 +374,45 @@ USE_CACHE = True
 CACHE_FN = "weddings_essays_coeffs_cache.pkl"
 if USE_CACHE:
     with open(CACHE_FN, "rb") as file:
-        fig, mod_df, results_grouped_df = pickle.load(file)
+        mod_df, results_grouped_df = pickle.load(file)
 else:
     (
-        fig,
         mod_df,
         results_grouped_df,
     ) = experiments.run_corpus_logprob_experiment(
-        corpus_name="weddings/shipping essays",
         model=MODEL,
         labeled_texts=texts_df[["text", "topic"]],
         x_vector_phrases=(" weddings", ""),
-        act_names=[6, 10, 16],
+        act_names=[6, 16],
         # act_names=[6],
-        coeffs=np.linspace(-2, 2, 101),
+        coeffs=np.linspace(-1, 4, 101),
         # coeffs=np.linspace(-2, 2, 11),
         # coeffs=[0, 1],
         method="mask_injection_logprob",
         label_col="topic",
-        x_qty="coeff",
-        x_name="Injection coefficient",
-        color_qty="topic",
     )
+fig = experiments.plot_corpus_logprob_experiment(
+    results_grouped_df=results_grouped_df,
+    corpus_name="weddings/shipping essays",
+    x_qty="coeff",
+    x_name="Injection coefficient",
+    color_qty="topic",
+    facet_col_qty="act_name",
+    facet_col_name="layer",
+)
 fig.show()
 fig.write_image(
-    "images/weddings_essays_coeffs.png", width=png_width, height=png_height
+    "images/weddings_essays_coeffs.png",
+    width=png_width,
+    height=png_height,
+    scale=png_scale,
 )
 
 # %%
 # Cache results
 # TODO: use wandb instead of local caching
 with open(CACHE_FN, "wb") as file:
-    pickle.dump((fig, mod_df, results_grouped_df), file)
+    pickle.dump((mod_df, results_grouped_df), file)
 
 
 # %%[markdown]
@@ -465,14 +491,12 @@ USE_CACHE = True
 CACHE_FN = "yelp_reviews_layers_cache.pkl"
 if USE_CACHE:
     with open(CACHE_FN, "rb") as file:
-        fig, mod_df, results_grouped_df = pickle.load(file)
+        mod_df, results_grouped_df = pickle.load(file)
 else:
     (
-        fig,
         mod_df,
         results_grouped_df,
     ) = experiments.run_corpus_logprob_experiment(
-        corpus_name="Yelp reviews",
         model=MODEL,
         # labeled_texts=yelp_sample[["text", "sentiment"]],
         labeled_texts=yelp_sample_sentences[["text", "sentiment"]],
@@ -481,14 +505,21 @@ else:
         coeffs=[1],
         method="mask_injection_logprob",
         label_col="sentiment",
-        x_qty="act_name",
-        x_name="Injection layer",
-        color_qty="sentiment",
-        facet_col_qty=None,
     )
+fig = experiments.plot_corpus_logprob_experiment(
+    results_grouped_df=results_grouped_df,
+    corpus_name="Yelp reviews",
+    x_qty="act_name",
+    x_name="Injection layer",
+    color_qty="sentiment",
+    facet_col_qty=None,
+)
 fig.show()
 fig.write_image(
-    "images/yelp_reviews_layers.png", width=png_width, height=png_height
+    "images/yelp_reviews_layers.png",
+    width=png_width,
+    height=png_height,
+    scale=png_scale,
 )
 
 
@@ -496,42 +527,50 @@ fig.write_image(
 # Cache results
 # TODO: use logging
 with open(CACHE_FN, "wb") as file:
-    pickle.dump((fig, mod_df, results_grouped_df), file)
+    pickle.dump((mod_df, results_grouped_df), file)
 
 
+# %%
 # Run a coefficients-dense sweep and show results
-USE_CACHE = True
+USE_CACHE = False
 CACHE_FN = "yelp_reviews_coeffs_cache.pkl"
 if USE_CACHE:
     with open(CACHE_FN, "rb") as file:
-        fig, mod_df, results_grouped_df = pickle.load(file)
+        mod_df, results_grouped_df = pickle.load(file)
 else:
     (
-        fig,
         mod_df,
         results_grouped_df,
     ) = experiments.run_corpus_logprob_experiment(
-        corpus_name="Yelp reviews",
         model=MODEL,
         # labeled_texts=yelp_sample[["text", "sentiment"]],
         labeled_texts=yelp_sample_sentences[["text", "sentiment"]],
         x_vector_phrases=(" worst", ""),
-        act_names=[6, 10, 16],
+        act_names=[6, 16],
         # act_names=[6],
-        coeffs=np.linspace(-2, 2, 21),
+        coeffs=np.linspace(-1, 3, 41),
         # coeffs=[-1, 0, 1],
         # coeffs=[0],
         method="mask_injection_logprob",
         # method="normal",
         # facet_col_qty=None,
         label_col="sentiment",
-        x_qty="coeff",
-        x_name="Injection coefficient",
-        color_qty="sentiment",
     )
+fig = experiments.plot_corpus_logprob_experiment(
+    results_grouped_df=results_grouped_df,
+    corpus_name="Yelp reviews",
+    x_qty="coeff",
+    x_name="Injection coefficient",
+    color_qty="sentiment",
+    facet_col_qty="act_name",
+    facet_col_name="layer",
+)
 fig.show()
 fig.write_image(
-    "images/yelp_reviews_coeffs.png", width=png_width, height=png_height
+    "images/yelp_reviews_coeffs.png",
+    width=png_width,
+    height=png_height,
+    scale=png_scale,
 )
 
 
@@ -539,7 +578,7 @@ fig.write_image(
 # Cache results
 # TODO: use logging
 with open(CACHE_FN, "wb") as file:
-    pickle.dump((fig, mod_df, results_grouped_df), file)
+    pickle.dump((mod_df, results_grouped_df), file)
 
 
 # %%[markdown]
@@ -568,6 +607,7 @@ for name, fig in figs.items():
         f"images/prompt_cmp_excited_{name}.png",
         width=png_width,
         height=png_height,
+        scale=png_scale,
     )
 
 figs = experiments.compare_with_prompting(
@@ -584,6 +624,7 @@ for name, fig in figs.items():
         f"images/prompt_cmp_GDP_{name}.png",
         width=png_width,
         height=png_height,
+        scale=png_scale,
     )
 
 
@@ -598,24 +639,19 @@ for name, fig in figs.items():
 
 # %%
 # Try comparing prompting to injection over weddings dataset
+# (Use the experiment function even though we're only running a single
+# experimenint this case )
 (
-    fig,
     mod_df,
     results_grouped_df,
 ) = experiments.run_corpus_logprob_experiment(
-    corpus_name="weddings/shipping essays",
     model=MODEL,
     labeled_texts=texts_df[["text", "topic"]],
     x_vector_phrases=(" weddings", ""),
-    act_names=[0, 16],
-    # act_names=[6],
-    coeffs=np.linspace(-2, 2, 41),
-    # coeffs=[0, 1],
+    act_names=[16],
+    coeffs=[1],
     method="pad",
     label_col="topic",
-    x_qty="coeff",
-    x_name="Injection coefficient",
-    color_qty="topic",
 )
 
 # Explicitly calculate for prompted version
@@ -651,29 +687,43 @@ prompted_comp_df["mean_logprob_diff"] = (
     prompted_comp_df["prompted_logprobs"] - prompted_comp_df["normal_logprobs"]
 ).apply(lambda inp: inp[2:].mean())
 prompted_comp_df["topic"] = texts_df["topic"]
-prompted_comp_results_df = prompted_comp_df.groupby(["topic"]).mean(
-    numeric_only=True
+prompted_comp_results_df = (
+    prompted_comp_df.groupby(["topic"]).mean(numeric_only=True).reset_index()
 )
 
-# Add as additional line to figure
-fig.add_hline(
-    y=prompted_comp_results_df.loc["not-weddings"].iloc[0],
-    row=1,
-    col=1,
-    annotation_text='prompted, topic="not-weddings"',
-    annotation_position="top left",
-)
-fig.add_hline(
-    y=prompted_comp_results_df.loc["weddings"].iloc[0],
-    row=1,
-    col=1,
-    annotation_text='prompted, topic="weddings"',
-    annotation_position="top left",
-)
-fig.show()
-fig.write_image(
-    "images/prompt_cmp_weddings.png", width=png_width, height=png_height
-)
+plot_df = pd.concat(
+    [
+        pd.DataFrame(
+            {
+                "mean_logprob_diff": results_grouped_df[
+                    "logprob_actual_next_token_diff_mean"
+                ],
+                "topic": results_grouped_df["topic"],
+                "method": "activation injection",
+            }
+        ),
+        pd.DataFrame(
+            {
+                "mean_logprob_diff": prompted_comp_results_df[
+                    "mean_logprob_diff"
+                ],
+                "topic": prompted_comp_results_df["topic"],
+                "method": "prompting",
+            }
+        ),
+    ]
+).reset_index(drop=True)
+
+plot_df
+
+# Plot a simple bar chart of the results
+# fig.show()
+# fig.write_image(
+#     "images/prompt_cmp_weddings.png",
+#     width=png_width,
+#     height=png_height,
+#     scale=png_scale,
+# )
 
 # %%
 # TEMP: kl debugging

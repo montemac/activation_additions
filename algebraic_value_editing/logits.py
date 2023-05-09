@@ -187,7 +187,8 @@ def plot_effectiveness_and_disruption(
         if title is None
         else title,
     )
-    fig.update_xaxes(tickangle=-45, title="", tickfont=dict(size=14))
+    # fig.update_xaxes(tickangle=-45, title="", tickfont=dict(size=14))
+    fig.update_xaxes(tickangle=-45, title="")
     fig.update_layout(
         xaxis=dict(
             tickmode="array",
@@ -195,7 +196,7 @@ def plot_effectiveness_and_disruption(
             ticktext=plot_df["tokens_str"],
         )
     )
-    fig.layout["yaxis"]["title"] = ""
+    fig.layout["yaxis"]["title"] = "nats"
     fig.layout["annotations"] = []
     return fig
 

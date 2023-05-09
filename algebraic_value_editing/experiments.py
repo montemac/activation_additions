@@ -27,7 +27,6 @@ from algebraic_value_editing import (
 
 
 def run_corpus_logprob_experiment(
-    corpus_name: str,
     model: HookedTransformer,
     labeled_texts: pd.DataFrame,
     x_vector_phrases: Tuple[str, str],
@@ -36,12 +35,6 @@ def run_corpus_logprob_experiment(
     method: str = "mask_injection_logprob",
     text_col: str = "text",
     label_col: str = "label",
-    x_qty: Optional[str] = "coeff",
-    x_name: Optional[str] = None,
-    color_qty: Optional[str] = "label",
-    color_name: Optional[str] = None,
-    facet_col_qty: Optional[str] = "act_name",
-    facet_col_name: Optional[str] = None,
 ):
     """Function to evaluate log-prob on a set of input texts for both the
     original model and a model with various activation injections.  The
@@ -144,29 +137,38 @@ def run_corpus_logprob_experiment(
         .mean(numeric_only=True)
         .reset_index()
     )
-    # Plot the results
-    labels = {"logprob_actual_next_token_diff_mean": "Mean log-prob change"}
+    # Return the results
+    return mod_df, results_grouped_df
+
+
+def plot_corpus_logprob_experiment(
+    results_grouped_df: pd.DataFrame,
+    corpus_name: str,
+    x_qty: Optional[str] = "coeff",
+    x_name: Optional[str] = None,
+    color_qty: Optional[str] = "label",
+    color_name: Optional[str] = None,
+    facet_col_qty: Optional[str] = "act_name",
+    facet_col_name: Optional[str] = None,
+):
+    """Plot the results of a previously run corpus experiment"""
+    labels = {
+        "logprob_actual_next_token_diff_mean": "Mean change in log-probs"
+    }
     if x_name is not None:
         labels[x_qty] = x_name
     if color_name is not None:
         labels[color_qty] = color_name
     if facet_col_name is not None:
         labels[facet_col_qty] = facet_col_name
-    return (
-        px.line(
-            results_grouped_df,
-            y="logprob_actual_next_token_diff_mean",
-            x=x_qty,
-            color=color_qty,
-            facet_col=facet_col_qty,
-            labels=labels,
-            title=f"Increase in next-token log-prob for {corpus_name} over injection params, by {label_col}<br>"
-            + f"method: {method}, phrases: "
-            + f"{model.to_str_tokens(x_vector_phrases[0])} - "
-            + f"{model.to_str_tokens(x_vector_phrases[1])}",
-        ),
-        mod_df,
+    return px.line(
         results_grouped_df,
+        y="logprob_actual_next_token_diff_mean",
+        x=x_qty,
+        color=color_qty,
+        facet_col=facet_col_qty,
+        labels=labels,
+        title=f"Mean change in log-probabilities for actual next tokens for {corpus_name}",
     )
 
 
@@ -229,46 +231,7 @@ def show_token_probs(
             "text": model.to_string(top_k_tokens[:, None]),
         }
     )
-    fig = py.subplots.make_subplots(
-        rows=1,
-        cols=2,
-        shared_xaxes=True,
-        subplot_titles=[
-            "Modified vs normal probabilities",
-            "Probability ratio vs normal probabilities",
-        ],
-    )
-    # Both probs
-    fig.add_trace(
-        go.Scatter(
-            x=plot_df["probs_norm"],
-            y=plot_df["probs_mod"],
-            text=plot_df["text"],
-            textposition="top center",
-            mode="markers+text",
-            marker_color=px.colors.qualitative.Plotly[0],
-            showlegend=False,
-        ),
-        row=1,
-        col=1,
-    )
-    min_prob = plot_df["probs_norm"].values.min()
-    max_prob = plot_df["probs_norm"].values.max()
-    unit_line_x = np.array([min_prob, max_prob])
-    unit_line_y = unit_line_x
-    fig.add_trace(
-        go.Scatter(
-            x=unit_line_x,
-            y=unit_line_y,
-            mode="lines",
-            line=dict(dash="dot"),
-            name="modified = normal",
-            line_color=px.colors.qualitative.Plotly[1],
-        ),
-        row=1,
-        col=1,
-    )
-    # Ratio
+    fig = go.Figure()
     fig.add_trace(
         go.Scatter(
             x=plot_df["probs_norm"],
@@ -278,10 +241,10 @@ def show_token_probs(
             mode="markers+text",
             marker_color=px.colors.qualitative.Plotly[0],
             showlegend=False,
-        ),
-        row=1,
-        col=2,
+        )
     )
+    min_prob = plot_df["probs_norm"].values.min()
+    max_prob = plot_df["probs_norm"].values.max()
     unit_line_x = np.array([min_prob, max_prob])
     unit_line_y = np.array([1, 1])
     fig.add_trace(
@@ -293,20 +256,15 @@ def show_token_probs(
             name="modified = normal",
             line_color=px.colors.qualitative.Plotly[1],
             showlegend=False,
-        ),
-        row=1,
-        col=2,
+        )
     )
     # Figure tweaking
     fig.update_yaxes(type="log")
     fig.update_xaxes(type="log")
     fig.update_layout(
-        title_text=f"Change in probability of top-{top_k} next tokens, "
-        + f"sorted by {sort_mode}, {extra_title}",
+        title_text=f"Probability ratio vs normal-model probabilities",
         xaxis_title="Normal model token probability",
-        yaxis_title="Modified model token probability",
-        xaxis2_title="Normal model token probability",
-        yaxis2_title="Modified/normal token probability ratio",
+        yaxis_title="Modified/normal token probability ratio",
     )
     fig.update_traces(textposition="top center")
     return fig
