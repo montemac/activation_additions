@@ -150,6 +150,7 @@ def plot_corpus_logprob_experiment(
     color_name: Optional[str] = None,
     facet_col_qty: Optional[str] = "act_name",
     facet_col_name: Optional[str] = None,
+    **plot_kwargs,
 ):
     """Plot the results of a previously run corpus experiment"""
     labels = {
@@ -168,7 +169,8 @@ def plot_corpus_logprob_experiment(
         color=color_qty,
         facet_col=facet_col_qty,
         labels=labels,
-        title=f"Mean change in log-probabilities for actual next tokens for {corpus_name}",
+        title=f"Average change in log-probabilities of tokens in {corpus_name}",
+        **plot_kwargs,
     )
 
 
@@ -214,6 +216,11 @@ def show_token_probs(
         norm_top_k = np.argsort(probs_norm)[::-1][:top_k]
         mod_top_k = np.argsort(probs_mod)[::-1][:top_k]
         top_k_tokens = np.array(list(set(norm_top_k).union(set(mod_top_k))))
+        y_values = probs_mod[top_k_tokens] / probs_norm[top_k_tokens]
+        y_title = "Modified/normal token probability ratio"
+        title = (
+            f"Probability ratio vs normal-model probabilities {extra_title}"
+        )
     elif sort_mode == "kl_div":
         kl_contrib = np.ones_like(probs_mod)
         kl_contrib[keep_mask] = probs_mod[keep_mask] * np.log(
@@ -222,12 +229,14 @@ def show_token_probs(
         top_k_tokens = np.argsort(kl_contrib)[::-1][
             :top_k
         ].copy()  # Copy to avoid negative stride
+        y_values = kl_contrib[top_k_tokens]
+        y_title = "Contribution to KL divergence (nats)"
+        title = f"Contribution to KL divergence vs normal-model probabilities {extra_title}"
 
     plot_df = pd.DataFrame(
         {
             "probs_norm": probs_norm[top_k_tokens],
-            "probs_mod": probs_mod[top_k_tokens],
-            "probs_ratio": probs_mod[top_k_tokens] / probs_norm[top_k_tokens],
+            "y_values": y_values,
             "text": model.to_string(top_k_tokens[:, None]),
         }
     )
@@ -235,7 +244,7 @@ def show_token_probs(
     fig.add_trace(
         go.Scatter(
             x=plot_df["probs_norm"],
-            y=plot_df["probs_ratio"],
+            y=plot_df["y_values"],
             text=plot_df["text"],
             textposition="top center",
             mode="markers+text",
@@ -243,31 +252,33 @@ def show_token_probs(
             showlegend=False,
         )
     )
-    min_prob = plot_df["probs_norm"].values.min()
-    max_prob = plot_df["probs_norm"].values.max()
-    unit_line_x = np.array([min_prob, max_prob])
-    unit_line_y = np.array([1, 1])
-    fig.add_trace(
-        go.Scatter(
-            x=unit_line_x,
-            y=unit_line_y,
-            mode="lines",
-            line=dict(dash="dot"),
-            name="modified = normal",
-            line_color=px.colors.qualitative.Plotly[1],
-            showlegend=False,
+    if sort_mode == "prob":
+        min_prob = plot_df["probs_norm"].values.min()
+        max_prob = plot_df["probs_norm"].values.max()
+        unit_line_x = np.array([min_prob, max_prob])
+        unit_line_y = np.array([1, 1])
+        fig.add_trace(
+            go.Scatter(
+                x=unit_line_x,
+                y=unit_line_y,
+                mode="lines",
+                line=dict(dash="dot"),
+                name="modified = normal",
+                line_color=px.colors.qualitative.Plotly[1],
+                showlegend=False,
+            )
         )
-    )
     # Figure tweaking
-    fig.update_yaxes(type="log")
+    if sort_mode == "prob":
+        fig.update_yaxes(type="log")
     fig.update_xaxes(type="log")
     fig.update_layout(
-        title_text=f"Probability ratio vs normal-model probabilities",
+        title_text=title,
         xaxis_title="Normal model token probability",
-        yaxis_title="Modified/normal token probability ratio",
+        yaxis_title=y_title,
     )
     fig.update_traces(textposition="top center")
-    return fig
+    return fig, plot_df
 
 
 def compare_with_prompting(
@@ -372,7 +383,7 @@ def compare_with_prompting(
         pos = probs_normal.shape[0] - 1
 
     def show_by_name(name):
-        fig = show_token_probs(
+        fig, _ = show_token_probs(
             model,
             probs_normal["probs"].values,
             probs_dict[name]["probs"].values,

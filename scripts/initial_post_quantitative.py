@@ -142,22 +142,27 @@ TOP_K = 10
 
 # Sort by absolute probability, show how the most probable tokens change
 # as a result of the intervention.
-fig = experiments.show_token_probs(
+fig, probs_plot_df = experiments.show_token_probs(
     MODEL, probs["normal", "probs"], probs["mod", "probs"], POS, TOP_K
 )
 fig.show()
-fig.write_image("images/zoom_in_top_k.png", width=png_width, height=png_height)
+fig.write_image(
+    "images/zoom_in_top_k.png",
+    width=png_width,
+    height=png_height,
+    scale=png_scale,
+)
 
 # Sort by contribution to KL divergence, shows which tokens are
 # responsible for the most expected change in log-prob
-fig = experiments.show_token_probs(
+fig, kl_div_plot_df = experiments.show_token_probs(
     MODEL,
     probs["normal", "probs"],
     probs["mod", "probs"],
     POS,
     TOP_K,
     sort_mode="kl_div",
-    token_strs_to_ignore=[" wedding"],
+    # token_strs_to_ignore=[" wedding"],
 )
 fig.show()
 fig.write_image(
@@ -166,6 +171,9 @@ fig.write_image(
     height=png_height,
     scale=png_scale,
 )
+
+for idx, row in kl_div_plot_df.iterrows():
+    print(row["text"], f'{row["y_values"]:.4f}')
 
 # %%[markdown]
 # We then explore how the effectiveness and disruption metrics change over
@@ -305,7 +313,7 @@ fig.write_image(
 # Perform the weddings experiment
 FILENAMES = {
     "weddings": "../data/chatgpt_wedding_essay_20230423.txt",
-    "shipping": "../data/chatgpt_shipping_essay_20230423.txt",
+    "not-weddings": "../data/chatgpt_shipping_essay_20230423.txt",
     # "macedonia": "../data/wikipedia_macedonia.txt",
     # "banana_bread": "../data/vegan_banana_bread.txt",
 }
@@ -345,6 +353,9 @@ else:
         method="mask_injection_logprob",
         label_col="topic",
     )
+results_grouped_df = results_grouped_df.sort_values(
+    ["act_name", "topic"], ascending=False
+)
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
     corpus_name="weddings/shipping essays",
@@ -391,6 +402,9 @@ else:
         method="mask_injection_logprob",
         label_col="topic",
     )
+results_grouped_df = results_grouped_df.sort_values(
+    ["act_name", "topic"], ascending=False
+)
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
     corpus_name="weddings/shipping essays",
@@ -399,6 +413,14 @@ fig = experiments.plot_corpus_logprob_experiment(
     color_qty="topic",
     facet_col_qty="act_name",
     facet_col_name="layer",
+    facet_col_spacing=0.05,
+)
+# Manually set ticks
+fig.update_xaxes(
+    dict(
+        tickmode="array",
+        tickvals=[-1, 0, 1, 2, 3, 4],
+    )
 )
 fig.show()
 fig.write_image(
@@ -514,6 +536,7 @@ fig = experiments.plot_corpus_logprob_experiment(
     color_qty="sentiment",
     facet_col_qty=None,
 )
+fig.update_layout(yaxis_range=[-0.2, 0.1])
 fig.show()
 fig.write_image(
     "images/yelp_reviews_layers.png",
@@ -532,7 +555,7 @@ with open(CACHE_FN, "wb") as file:
 
 # %%
 # Run a coefficients-dense sweep and show results
-USE_CACHE = False
+USE_CACHE = True
 CACHE_FN = "yelp_reviews_coeffs_cache.pkl"
 if USE_CACHE:
     with open(CACHE_FN, "rb") as file:
@@ -564,6 +587,14 @@ fig = experiments.plot_corpus_logprob_experiment(
     color_qty="sentiment",
     facet_col_qty="act_name",
     facet_col_name="layer",
+    facet_col_spacing=0.05,
+)
+# Manually set ticks
+fig.update_xaxes(
+    dict(
+        tickmode="array",
+        tickvals=[-1, 0, 1, 2, 3],
+    )
 )
 fig.show()
 fig.write_image(
