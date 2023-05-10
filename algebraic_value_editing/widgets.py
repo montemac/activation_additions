@@ -108,6 +108,7 @@ def make_widget(
         fig, _ = experiments.show_token_probs(
             model, probs["normal", "probs"], probs["mod", "probs"], -1, TOP_K
         )
+        fig.update_layout(width=1000)
         fig_widget = go.FigureWidget(fig)
         # Show the token probability changes
         display(fig_widget)
