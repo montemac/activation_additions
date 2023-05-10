@@ -25,7 +25,7 @@ import pandas as pd
 model_name = 'gpt2-xl'
 
 if torch.has_cuda:  device = torch.device('cuda', 1)
-elif torch.has_mps: device = torch.device('mps')
+elif torch.has_mps: device = torch.device('cpu') # mps not working yet
 else: device = torch.device('cpu')
 
 torch.set_grad_enabled(False)
@@ -46,15 +46,17 @@ model.eval()
 
 # %%
 
+# NOTE: Hash mismatch on latest tuned lens. Seems fine to ignore, see issue:
+# https://github.com/AlignmentResearch/tuned-lens/issues/89
 tuned_lens = TunedLens.from_model_and_pretrained(hf_model, lens_resource_id=model_name).to(device)
 
 # %%
 # Library helpers
 
+# NOTE: We want 'resid_pre', see image in readme: github.com/AlignmentResearch/tuned-lens
 
 def prediction_traj_from_outputs(logits, cache, prompt):
-    # FIXME(BROKEN!!): Is it resid_pre that we want? or resid_mid? or post?
-    stream = [resid for name, resid in cache.items() if 'resid_pre' in name]
+    stream = [resid for name, resid in cache.items() if name.endswith('resid_pre')]
     traj_log_probs = [tuned_lens.forward(x, i).log_softmax(dim=-1).squeeze().detach().cpu().numpy() for i,x in enumerate(stream)]
 
     # Handle the case where the model has more/less tokens than the lens
@@ -74,25 +76,12 @@ def prediction_traj_from_outputs(logits, cache, prompt):
 
 
 def get_prediction_trajectories(caches, dataframes):
-    # FIXME: Not real logits. Last layer of resid_pre. Getting real were annoying so I'm postponing (required for shapes to match)
-    fake_logits_list = [
-        tuned_lens(list(cache.values())[-1], get_layer_num(list(cache.keys())[-1]))
-        for cache in caches
-    ]
-
+    logits_list = [torch.tensor(df['logits']) for df in dataframes]
     full_prompts = [df['prompts'][0] + df['completions'][0] for df in dataframes]
     return [
         prediction_traj_from_outputs(logits, cache, full_prompt)
-        for full_prompt, logits, cache in zip(full_prompts, fake_logits_list, caches)
+        for full_prompt, logits, cache in zip(full_prompts, logits_list, caches)
     ]
-
-
-def get_layer_num(name):
-    """
-    >>> get_layer_num('blocks.47.hook_resid_pre')
-    47
-    """
-    return int(name.split('.')[1])
 
 
 def fwd_hooks_from_activ_hooks(activ_hooks):
@@ -176,7 +165,6 @@ def plot_lens_diff(
     return fig
 
 
-# %%
 # Main playground for lenses. Run with ctrl+enter
 
 prompt = "I hate you because"
