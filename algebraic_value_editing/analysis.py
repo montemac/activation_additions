@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import html
 from ipywidgets import widgets
-from IPython.display import display
+from IPython.display import display, clear_output
 
 def rate_completions(
     data_frame: pd.DataFrame,
@@ -34,7 +34,7 @@ def rate_completions(
     perm_idx = 0
     data_idx = perm[perm_idx]
 
-    # Show preamble
+    # Show preamble TODO type-hint all of this
     prompt: str = data_frame["prompts"].tolist()[0]
     preamble = widgets.HTML()
     def update_preamble():
@@ -57,6 +57,7 @@ def rate_completions(
         tooltips=["1", "2", "3", "4", "5"],
         value=None,
     )
+    display(completion_box)
 
     # On rating button click, update the data frame and show the next completion
     def on_rating_button_clicked(b):

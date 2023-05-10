@@ -10,7 +10,7 @@ from transformer_lens.HookedTransformer import HookedTransformer
 from transformer_lens.utils import get_act_name
 
 
-def get_block_name(block_num: int) -> str:
+def get_block_name(block_num: int) -> str:  # TODO remove
     """Returns the hook name of the block with the given number, at the
     input to the residual stream."""
     return get_act_name(name="resid_pre", layer=block_num)
@@ -48,8 +48,6 @@ class RichPrompt:
             that block number.
             `prompt`: The prompt to use to compute the activations.
             `tokens`: The tokens to use to compute the activations.
-            `model`: The model which tokenizes the prompt, or which
-            converts the tokens to text.
         """
         assert (prompt is not None) ^ (
             tokens is not None
@@ -76,8 +74,16 @@ class RichPrompt:
         return f"RichPrompt({self.tokens}, {self.coeff}, {self.act_name})"
 
     def __eq__(self, other) -> bool:
-        return (
+        # If they don't both have prompt or tokens attribute
+        if hasattr(self, "prompt") ^ hasattr(other, "prompt"):
+            return False
+        prompt_eq: bool = (
             self.prompt == other.prompt
+            if hasattr(self, "prompt")
+            else torch.equal(self.tokens, other.tokens)
+        )
+        return (
+            prompt_eq
             and self.coeff == other.coeff
             and self.act_name == other.act_name
         )

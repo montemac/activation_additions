@@ -1,6 +1,5 @@
 """ Test suite for sweeps.py """
 
-# %%
 import pickle
 from typing import Tuple
 import os
@@ -129,6 +128,7 @@ def test_reduce_sweep_results():
         reduced_normal_target,
         reduced_patched_target,
     ) = load_cached_sweep_over_prompts()
+
     # Reduce DataFrames and compare reductions to target
     reduced_normal_df, reduced_patched_df = sweeps.reduce_sweep_results(
         normal_df, patched_df, rich_prompts_df
@@ -149,6 +149,7 @@ def test_plot_sweep_results():
         reduced_normal_df,
         reduced_patched_df,
     ) = load_cached_sweep_over_prompts()
+
     fig = sweeps.plot_sweep_results(
         data=reduced_patched_df,
         col_to_plot="loss",

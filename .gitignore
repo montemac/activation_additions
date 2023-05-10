@@ -134,6 +134,7 @@ dmypy.json
 # Misc
 *.pkl
 .vscode
+results*
 *~
 *prof
 *old_ave*
@@ -141,3 +142,6 @@ wandb
 results
 *playground*
 artifacts
+*png
+*html
+scripts/KL_bug.py

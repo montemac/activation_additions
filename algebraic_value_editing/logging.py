@@ -1,10 +1,11 @@
 """Functions to support logging of data to wandb"""
 
-from typing import Optional, Dict, Tuple, Any, Callable
+from typing import Optional, Dict, Tuple, Any, Callable, List
 from contextlib import nullcontext
 from warnings import warn
 import os
 import datetime
+import inspect
 
 import pandas as pd
 from decorator import decorate
@@ -164,15 +165,34 @@ def convert_dict_items_to_wandb_config(
     }
 
 
+def get_function_args(func: Callable) -> List[str]:
+    """Return names of function arguments that aren't *args or **kwargs."""
+    signature = inspect.signature(func)
+    return [
+        param.name
+        for param in signature.parameters.values()
+        # if param.default == inspect.Parameter.empty
+        # and param.kind
+        if param.kind
+        not in (
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        )
+    ]
+
+
 # Uses decorator module: https://github.com/micheles/decorator/blob/master/docs/documentation.md
-def _loggable(func: Callable, **kwargs) -> Any:
+def _loggable(func: Callable, *args, **kwargs) -> Any:
     """Caller function for loggable decorator, see public decorator
     function for docs."""
+    # Store all args by name (positional and keyword)
+    all_args = dict(zip(get_function_args(func), args))
+    all_args.update(kwargs)
     # Get log argument from function call, default to false if not present
-    log = kwargs.get("log", False)
+    log = all_args.get("log", False)
     # Check if we should log
     if log is False:
-        func_return = func(**kwargs)
+        func_return = func(*args, **kwargs)
     else:
         # Process the log argument, extract logging-related arguments if
         # provided
@@ -182,7 +202,7 @@ def _loggable(func: Callable, **kwargs) -> Any:
             log_args = log
         # Set up the config for this logging call: just store the
         # keyword args, converted as needed for storage on wandb
-        config = convert_dict_items_to_wandb_config(kwargs)
+        config = convert_dict_items_to_wandb_config(all_args)
         # Get the wandb run
         run, manager = get_or_init_run(
             job_type=func.__name__,
@@ -194,7 +214,7 @@ def _loggable(func: Callable, **kwargs) -> Any:
         # Use provided context manager to wrap the underlying function call
         with manager:
             # Call the wrapped function
-            func_return = func(**kwargs)
+            func_return = func(*args, **kwargs)
             # Log returned objects, splitting up tuple if needed
             if isinstance(func_return, tuple):
                 objects_to_log = {
@@ -218,13 +238,8 @@ def loggable(func):
     function to wandb.  The decorated function must include a keyword
     argument named `log` with a type signature `Union[bool, dict[str,
     str]]` for logging to be used.
-
-    Note that the decorated function will only accept keyword arguments
-    so that they can be stored in the logging config object with proper names.
     """
-    return decorate(
-        func, _loggable, kwsyntax=True  # type: ignore
-    )  # kwsyntax=True required to pass named positional args in kwargs
+    return decorate(func, _loggable)  # type: ignore
 
 
 def get_objects_from_run(run_path: str, flatten: bool = False):

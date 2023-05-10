@@ -22,11 +22,16 @@ setup(
         "prettytable>=3.6.0",
         "wandb==0.13.5",  # transformer_lens 0.0.0 requires <0.14.0, >=0.13.5
         "openai>=0.27.2",
+        "pytest",
+        "plotly",
+        "nbformat",
+        "Ipython",
+        "ipywidgets",
     ],
     extras_require={
         "dev": [
             "pytest",
-            "notebook", # liked by vscode
+            "notebook",  # liked by vscode
         ]
-    }
+    },
 )

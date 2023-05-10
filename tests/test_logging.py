@@ -1,10 +1,10 @@
-""" Test suite for logging.py """
 # %%
+""" Test suite for logging.py """
+
 import pytest
 
 import numpy as np
 import pandas as pd
-import pandas.testing
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import (
@@ -26,11 +26,13 @@ def fixture_model() -> HookedTransformer:
     )
 
 
+# In order for these tests to work, you must have a wandb account and
+# have set up your wandb API key.  See https://docs.wandb.ai/quickstart
 def test_logging(model):
     """Tests a sweep over prompts with logging enabled.  Verifies that
     the correct data is uploaded to a new wandb run."""
     # Perform a completion test
-    results = completion_utils.gen_using_rich_prompts(
+    results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
         model=model,
         rich_prompts=[
             prompt_utils.RichPrompt(
@@ -51,9 +53,24 @@ def test_logging(model):
     results_logged = logging.get_objects_from_run(
         logging.last_run_info["path"], flatten=True
     )[0]
+
     # Change the dtype of the loss column; seems that wandb doesn't
     # track dtypes in uploaded tables, which likely doesn't matter but
     # is annoying for perfect round-trip reproduction.
     results_logged["loss"] = results_logged["loss"].astype(np.float32)
+
     # Compare with the reference DataFrame
     pd.testing.assert_frame_equal(results, results_logged)
+
+
+def test_positional_args(model):
+    """Function test a call to a loggable function using positional
+    arguments, which were initially not supported by the loggable
+    decorator."""
+    completion_utils.print_n_comparisons(
+        "I think you're ",
+        model,
+        num_comparisons=5,
+        rich_prompts=[],
+        seed=0,
+    )

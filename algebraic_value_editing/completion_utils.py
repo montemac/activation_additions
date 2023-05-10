@@ -60,7 +60,8 @@ def gen_using_model(
 
         `log`: To enable logging of this call to wandb, pass either
         True, or a dict contining any of ('tags', 'group', 'notes') to
-        pass these keys to the wandb init call.  False to disable logging.
+        pass these keys to the wandb init call.  False to disable
+        logging.
 
         `sampling_kwargs`: Keyword arguments to pass to the model's
         `generate` function.
@@ -175,7 +176,8 @@ def gen_using_rich_prompts(
     model: HookedTransformer,
     rich_prompts: List[RichPrompt],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
-    xvec_position: str = "front",
+    addition_location: str = "front",
+    res_stream_slice: slice = slice(None),
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given rich prompts.
@@ -185,13 +187,16 @@ def gen_using_rich_prompts(
 
         `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
 
-        `log`: To enable logging of this call to wandb, pass either
-        True, or a dict contining any of ('tags', 'group', 'notes') to
-        pass these keys to the wandb init call.  False to disable
+        `log`: To enable logging of this call to `wandb`, pass either
+        `True`, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the `wandb.init` call. `False` to disable
         logging.
 
-        `xvec_position`: The position at which to add the xvec into
+        `addition_location`: The position at which to add the activations into
         the residual stream. Can be 'front' or 'back'.
+
+        `res_stream_slice`: A slice specifying which parts of the
+        residual stream to add to.
 
         `kwargs`: Keyword arguments to pass to `gen_using_hooks`.
 
@@ -206,80 +211,11 @@ def gen_using_rich_prompts(
     hook_fns: Dict[str, List[Callable]] = hook_utils.hook_fns_from_rich_prompts(
         model=model,
         rich_prompts=rich_prompts,
-        xvec_position=xvec_position,
+        addition_location=addition_location,
+        res_stream_slice=res_stream_slice,
     )
 
     return gen_using_hooks(model=model, hook_fns=hook_fns, log=False, **kwargs)
-
-
-@logging.loggable
-def gen_normal_and_modified(
-    model: HookedTransformer,
-    rich_prompts: Optional[List[RichPrompt]] = None,
-    include_normal: bool = True,
-    include_modified: bool = True,
-    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
-    **kwargs,
-) -> pd.DataFrame:
-    """Generate completions using the given rich prompts, and without.
-
-    args:
-        `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
-
-        `kwargs`: Keyword arguments to pass to `gen_using_rich_prompts`.
-
-        `include_normal`: Whether to include completions generated
-        without the rich prompts.
-
-        `include_modified`: Whether to include completions generated
-        using the rich prompts.
-
-        `log`: To enable logging of this call to wandb, pass either
-        True, or a dict contining any of ('tags', 'group', 'notes') to
-        pass these keys to the wandb init call.  False to disable logging.
-
-    returns:
-        A `DataFrame` with the completions and losses. The `DataFrame`
-        will have the following columns:
-            - `prompts`: The prompts used to generate the completions.
-            - `completions`: The generated completions.
-            - `is_modified`: Whether the completion was generated using
-                the rich prompts.
-            - `loss`: The average loss per token of the completions.
-    """
-    if not include_normal and not include_modified:
-        raise ValueError(
-            "At least one of `include_normal` and `include_modified` "
-            "must be True."
-        )
-
-    data_frames: List[pd.DataFrame] = []
-
-    if include_modified:
-        if rich_prompts is None:
-            raise ValueError(
-                "rich_prompts must be specified if include_modified is True"
-            )
-
-        # Create the hook functions
-        hook_fns: Dict[str, List[Callable]] = hook_utils.hook_fns_from_rich_prompts(
-            model=model,
-            rich_prompts=rich_prompts,
-        )
-        tmp_df: pd.DataFrame = gen_using_hooks(
-            model=model, hook_fns=hook_fns, log=False, **kwargs
-        )
-        data_frames.append(tmp_df)
-
-    if include_normal:
-        tmp_df: pd.DataFrame = gen_using_hooks(
-            model=model, hook_fns={}, log=False, **kwargs
-        )
-        data_frames.append(tmp_df)
-
-    # Combine the completions, ensuring that the indices are unique
-    results = pd.concat(data_frames, ignore_index=True)
-    return results
 
 
 # Display utils #
@@ -288,11 +224,37 @@ def bold_text(text: str) -> str:
     return f"\033[1m{text}\033[0m"
 
 
-def pretty_print_completions(results: pd.DataFrame) -> None:
+def _remove_eos(completion: str) -> str:
+    """If completion ends with multiple <|endoftext|> strings, return a
+    new string in which all but one are removed."""
+    has_eos: bool = completion.endswith("<|endoftext|>")
+    new_completion: str = completion.rstrip("<|endoftext|>")
+    if has_eos:
+        new_completion += "<|endoftext|>"
+    return new_completion
+
+
+def pretty_print_completions(
+    results: pd.DataFrame,
+    normal_title: str = "Unsteered completions",
+    mod_title: str = "Steered completions",
+    normal_prompt_override: Optional[str] = None,
+    mod_prompt_override: Optional[str] = None,
+) -> None:
     """Pretty-print the given completions.
 
     args:
         `results`: A `DataFrame` with the completions.
+
+        `normal_title`: The title to use for the normal completions.
+
+        `mod_title`: The title to use for the modified completions.
+
+        `normal_prompt_override`: If not `None`, use this prompt for the
+            normal completions.
+
+        `mod_prompt_override`: If not `None`, use this prompt for the
+            modified completions.
     """
     assert all(
         col in results.columns
@@ -313,11 +275,11 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
 
     # Figure out which columns to add
     completion_cols: List[str] = []
-    completion_cols += ["Normal completions"] if n_rows_unmod > 0 else []
-    completion_cols += ["Modified completions"] if n_rows_mod > 0 else []
+    completion_cols += [normal_title] if n_rows_unmod > 0 else []
+    completion_cols += [mod_title] if n_rows_mod > 0 else []
     completion_dict: dict = {}
     for col in completion_cols:
-        is_mod = col == "Modified completions"
+        is_mod = col == mod_title
         completion_dict[col] = results[results["is_modified"] == is_mod][
             "completions"
         ]
@@ -336,46 +298,90 @@ def pretty_print_completions(results: pd.DataFrame) -> None:
 
     # Put into table
     for row in zip(*completion_dict.values()):
-        table.add_row(
-            [f"{bold_text(prompt)}{completion}" for completion in row]
+        # Bold the appropriate prompt
+        normal_str = bold_text(
+            prompt
+            if normal_prompt_override is None
+            else normal_prompt_override
         )
+        mod_str = bold_text(
+            prompt if mod_prompt_override is None else mod_prompt_override
+        )
+        if all_modified:
+            new_row = [mod_str + _remove_eos(row[0])]
+        elif all_normal:
+            new_row = [normal_str + _remove_eos(row[0])]
+        else:
+            normal_str += _remove_eos(row[0])
+            mod_str += _remove_eos(row[1])
+            new_row = [normal_str, mod_str]
+
+        table.add_row(new_row)
     print(table)
 
 
 @logging.loggable
 def print_n_comparisons(
     prompt: str,
+    model: HookedTransformer,
     num_comparisons: int = 5,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
+    rich_prompts: Optional[List[RichPrompt]] = None,
+    addition_location: str = "front",
+    res_stream_slice: slice = slice(None),
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
     functions.
 
-    Takes keyword arguments for `gen_using_rich_prompts`.
-
     args:
         `prompt`: The prompt to use for completion.
+
+        `model`: The model to use for completion.
 
         `num_comparisons`: The number of comparisons to make.
 
         `log`: To enable logging of this call to wandb, pass either
         True, or a dict contining any of ('tags', 'group', 'notes') to
-        pass these keys to the wandb init call.  False to disable logging.
+        pass these keys to the wandb init call.  False to disable
+        logging.
+
+        `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
+
+        `addition_location`: Whether to add `activations` from
+        `rich_prompts` to the front-positioned
+        or back-positioned residual streams in the forward poss. Must be
+        either "front" or "back".
+
+        `res_stream_slice`: A slice specifying which activation positions to add
+        into the residual stream.
 
         `kwargs`: Keyword arguments to pass to
-        `gen_using_rich_prompts`.
+        `gen_using_hooks`.
     """
     assert num_comparisons > 0, "num_comparisons must be positive"
 
     prompt_batch: List[str] = [prompt] * num_comparisons
 
-    # Make a dataframe, and run the modified and unmodified models
-    # according to whether we want to include them
-    results: pd.DataFrame = gen_normal_and_modified(
-        prompt_batch=prompt_batch,
-        log=log,
-        **kwargs,
+    # Generate the completions from the normal model
+    normal_df: pd.DataFrame = gen_using_hooks(
+        prompt_batch=prompt_batch, model=model, hook_fns={}, **kwargs
     )
+    data_frames: List[pd.DataFrame] = [normal_df]
+
+    # Generate the completions from the modified model
+    if rich_prompts is not None:
+        mod_df: pd.DataFrame = gen_using_rich_prompts(
+            prompt_batch=prompt_batch,
+            model=model,
+            rich_prompts=rich_prompts,
+            addition_location=addition_location,
+            res_stream_slice=res_stream_slice,
+            **kwargs,
+        )
+        data_frames.append(mod_df)
+
+    # Combine the completion results, ensuring that the indices are unique
+    results: pd.DataFrame = pd.concat(data_frames, ignore_index=True)
 
     pretty_print_completions(results=results)
