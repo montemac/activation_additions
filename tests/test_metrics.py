@@ -1,8 +1,10 @@
 """Test suite for metrics.py"""
-import pytest
-import pandas as pd
-
 from typing import Callable, List
+import pytest
+
+import pandas as pd
+import openai
+
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import metrics, completion_utils, utils
@@ -46,7 +48,9 @@ def test_get_word_count_metric():
     """Test for get_sentiment_metric().  Creates a word count metric,
     applies it to some strings, and checks the results against
     pre-defined constants."""
-    metric: Callable = metrics.get_word_count_metric(["dog", "dogs", "puppy", "puppies"])
+    metric: Callable = metrics.get_word_count_metric(
+        ["dog", "dogs", "puppy", "puppies"]
+    )
     prompts: List[str] = [
         "Dogs and puppies are the best!",
         "Look at that cute dog with a puppy over there.",
@@ -63,8 +67,6 @@ def test_openai_metric():
     """Test for get_openai_metric(). Creates an OpenAI metric, applies
     it to some strings, and checks the results against pre-defined
     constants."""
-    import openai
-
     if openai.api_key is None:
         pytest.skip("OpenAI API key not found.")
 
@@ -93,8 +95,6 @@ def test_openai_metric():
 def test_openai_metric_bulk():
     """Test for get_openai_metric(). Creates an OpenAI metric, applies it to >20 strings,
     and makes sure it doesn't error (20 is the limit for one OAI request)"""
-    import openai
-
     if openai.api_key is None:
         pytest.skip("OpenAI API key not found.")
 
@@ -121,12 +121,15 @@ def test_add_metric_cols(model):
         tokens_to_generate=1,
         seed=0,
     )
-    results_df: pd.DataFrame = metrics.add_metric_cols(results_df, metrics_dict)
+    results_df: pd.DataFrame = metrics.add_metric_cols(
+        results_df, metrics_dict
+    )
     target = pd.DataFrame(
         {
             "prompts": results_df["prompts"],
             "completions": results_df["completions"],
             "loss": results_df["loss"],
+            "logits": results_df["logits"],
             "is_modified": results_df["is_modified"],
             "metric_inputs": results_df["metric_inputs"],
             "sentiment1_label": ["POSITIVE", "NEGATIVE"],

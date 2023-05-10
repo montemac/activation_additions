@@ -20,7 +20,6 @@ setup(
         "pandas>=1.4.4",
         "jaxtyping>=0.2.14",
         "prettytable>=3.6.0",
-        "funcy>=2.0",
         "wandb==0.13.5",  # transformer_lens 0.0.0 requires <0.14.0, >=0.13.5
         "openai>=0.27.2",
         "pytest",

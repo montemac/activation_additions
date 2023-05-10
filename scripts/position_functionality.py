@@ -105,6 +105,9 @@ merged_df = metrics.add_metric_cols(data=merged_df, metrics_dict=metrics_dict)
 avg_words_df: pd.DataFrame = (
     merged_df.groupby("location").mean(numeric_only=True).reset_index()
 )
+print(avg_words_df)
+
+# %%
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -124,6 +127,8 @@ fig: go.Figure = px.bar(
 )
 
 # Set x ordering to "front", "mid", "back"
-fig.update_xaxes(categoryorder="array", categoryarray=["front", "halfway", "back"])
+fig.update_xaxes(categoryorder="array", categoryarray=["front", "mid", "back"])
 
 fig.show()
+
+# %%

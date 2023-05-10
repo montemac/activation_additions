@@ -2,8 +2,6 @@
 from typing import List, Callable, Optional, Dict, Tuple
 from collections import defaultdict
 from jaxtyping import Float, Int
-import funcy as fn
-
 import torch
 from einops import reduce
 
@@ -184,7 +182,7 @@ def hook_fn_from_activations(
             "Invalid addition_location. Must be 'front' or 'mid' or 'back'."
         )
     if res_stream_slice != slice(None):  # Check that the slice is valid
-        assert 0 <= res_stream_slice.start < res_stream_slice.stop
+        assert 0 <= res_stream_slice.start <= res_stream_slice.stop
         assert res_stream_slice.stop <= activations.shape[-1], (
             f"res_stream_slice.stop ({res_stream_slice.stop}) must be at most"
             f" dmodel ({activations.shape[-1]})"
@@ -265,7 +263,7 @@ def hook_fns_from_act_dict(
     first.
     """
     # Make the dictionary
-    hook_fns: Dict[str, Callable] = {}
+    hook_fns: Dict[str, List[Callable]] = {}
 
     # Add hook functions for each activation name
     for act_name, act_list in activation_dict.items():
@@ -274,7 +272,7 @@ def hook_fns_from_act_dict(
             hook_fn_from_activations(activations, **kwargs)
             for activations in act_list
         ]
-        hook_fns[act_name] = fn.compose(*act_fns[::-1])
+        hook_fns[act_name] = act_fns
 
     return hook_fns
 
