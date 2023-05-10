@@ -78,7 +78,6 @@ def plot_lens_diff(
 
     fig.update_layout(height=1000, width=800, title_text="Tokens visualized with the Tuned Lens")
 
-    # TODO: What if this changes?
     trajectories = prediction_trajectories(caches, dataframes, model.tokenizer, tuned_lens)
 
     # Update heatmap data inside playground function
