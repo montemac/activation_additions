@@ -171,7 +171,7 @@ def hook_fns_from_rich_prompts(
 def forward_with_rich_prompts(
     model: HookedTransformer,
     rich_prompts: List[RichPrompt],
-    input: Any,
+    input: Any,  # pylint: disable=redefined-builtin
     xvec_position: str = "front",
     injection_mode: str = "overlay",
     **forward_kwargs,
@@ -204,7 +204,7 @@ def forward_with_rich_prompts(
         or forward_kwargs.get("loss_per_token", False)
     ), "Must set loss_per_token=True when using pad_remove and returning loss"
     # Tokenize if needed
-    if isinstance(input, str) or isinstance(input, list):
+    if isinstance(input, (list, str)):
         input_tokens = model.to_tokens(
             input, prepend_bos=forward_kwargs.get("prepend_bos", True)
         )
@@ -231,9 +231,13 @@ def forward_with_rich_prompts(
     # Trim padding positions from return objects if needed
     return_type = forward_kwargs.get("return_type", "logits")
     if injection_mode == "pad_remove":
-        remove_pad = lambda val: torch.concat(
-            [val[:, 0:1, ...], val[:, rich_prompt_len:, ...]], axis=1
-        )
+
+        def remove_pad(val):
+            """Convenience function to remove padding."""
+            return torch.concat(
+                [val[:, 0:1, ...], val[:, rich_prompt_len:, ...]], axis=1
+            )
+
         if return_type in ["logits", "loss"]:
             ret = remove_pad(ret)
         elif return_type == "both":
@@ -252,11 +256,13 @@ def remove_and_return_hooks(
     wrapped.
     """
     hooks_by_hook_point_name = {}
+    # pylint: disable=protected-access
     for name, hook_point in model.hook_dict.items():
         if len(hook_point._forward_hooks) > 0:
             hooks_by_hook_point_name[name] = list(
                 hook_point._forward_hooks.values()
             )
+    # pylint: enable=protected-access
     model.remove_all_hook_fns()
     return hooks_by_hook_point_name
 

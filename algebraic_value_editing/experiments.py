@@ -7,19 +7,13 @@ from typing import Tuple, Union, Optional, List
 import numpy as np
 import pandas as pd
 import torch
-from tqdm.auto import tqdm
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly as py
-import plotly.subplots
 
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import (
-    hook_utils,
     prompt_utils,
-    utils,
-    completion_utils,
     metrics,
     sweeps,
     logits,
@@ -95,7 +89,7 @@ def run_corpus_logprob_experiment(
     # Get the modified model logprobs over all the RichPrompts
     mod_df = sweeps.sweep_over_metrics(
         model=model,
-        inputs=tokens_df["tokens"],
+        inputs=tokens_df["tokens"],  # pylint: disable=unsubscriptable-object
         rich_prompts=rich_prompts_df["rich_prompts"],
         metrics_dict=metrics_dict,
         prefix_cols=False,
@@ -175,7 +169,7 @@ def plot_corpus_logprob_experiment(
     for annot in fig.layout.annotations:
         if "=" in annot.text:
             annot.update(
-                text=" ".join(annot.text.split("=")), font=dict(size=16)
+                text=" ".join(annot.text.split("=")), font={"size": 16}
             )
     return fig
 
@@ -268,7 +262,7 @@ def show_token_probs(
                 x=unit_line_x,
                 y=unit_line_y,
                 mode="lines",
-                line=dict(dash="dot"),
+                line={"dash": "dot"},
                 name="modified = normal",
                 line_color=px.colors.qualitative.Plotly[1],
                 showlegend=False,
@@ -400,7 +394,7 @@ def compare_with_prompting(
         )
         figs_dict[name] = fig
 
-    for name in probs_dict.keys():
+    for name in probs_dict:
         show_by_name(name)
 
     return figs_dict

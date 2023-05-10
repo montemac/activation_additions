@@ -58,7 +58,7 @@ def make_rich_prompts(
                         for phrase, init_coeff in phrases_this
                     ]
                     # Get max length of tokens
-                    max_len = max([tokens.shape[-1] for tokens in tokens_list])
+                    max_len = max(tokens.shape[-1] for tokens in tokens_list)
                     # Pad each phrase's tokens
                     tokens_list = [
                         torch.nn.functional.pad(

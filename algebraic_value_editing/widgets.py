@@ -3,7 +3,6 @@ testing activation injections."""
 
 from typing import Optional, Tuple
 
-from ipywidgets import interact, interactive, fixed, interact_manual
 import ipywidgets as widgets
 from IPython.display import display
 import plotly.graph_objects as go
@@ -15,7 +14,6 @@ from algebraic_value_editing import (
     logits,
     experiments,
     completion_utils,
-    utils,
 )
 
 
@@ -76,7 +74,7 @@ def make_widget(
         widgets.Button(description="Run"),
         "",
     )
-    ui = widgets.GridBox(
+    interface = widgets.GridBox(
         ui_items,
         layout=widgets.Layout(grid_template_columns="repeat(2, 150px)"),
     )
@@ -104,9 +102,9 @@ def make_widget(
             return_positions_above=0,
         )
         # Show token probabilities figure
-        TOP_K = 10
+        top_k = 10
         fig, _ = experiments.show_token_probs(
-            model, probs["normal", "probs"], probs["mod", "probs"], -1, TOP_K
+            model, probs["normal", "probs"], probs["mod", "probs"], -1, top_k
         )
         fig.update_layout(width=1000)
         fig_widget = go.FigureWidget(fig)
@@ -139,17 +137,17 @@ def make_widget(
             probs["normal", "probs"],
             probs["mod", "probs"],
             -1,
-            TOP_K,
+            top_k,
             sort_mode="kl_div",
         )
         print("Top-K tokens by contribution to KL divergence:")
         print(kl_div_plot_df[["text", "y_values"]])
         print("")
         # Show completions
-        NUM_COMPLETIONS = 3
-        completion_results = completion_utils.print_n_comparisons(
+        num_completions = 3
+        completion_utils.print_n_comparisons(
             prompt=input_text,
-            num_comparisons=NUM_COMPLETIONS,
+            num_comparisons=num_completions,
             model=model,
             rich_prompts=rich_prompts,
             seed=completion_seed,
@@ -161,7 +159,7 @@ def make_widget(
 
     out = widgets.Output()
 
-    def on_click_run(btn):
+    def on_click_run(btn):  # pylint: disable=unused-argument
         with out:
             out.clear_output(wait=True)
             do_injection(
@@ -177,4 +175,4 @@ def make_widget(
 
     on_click_run(None)
 
-    return ui, out
+    return interface, out

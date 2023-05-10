@@ -140,7 +140,7 @@ def get_effectiveness_and_disruption(
 
     if mode == "mask_injection_pos":
         mask_pos = max(
-            [rich_prompt.tokens.shape[0] for rich_prompt in rich_prompts]
+            rich_prompt.tokens.shape[0] for rich_prompt in rich_prompts
         )
         eff[:mask_pos] = np.nan
         foc[:mask_pos] = np.nan
@@ -153,6 +153,7 @@ def plot_effectiveness_and_disruption(
     foc: np.ndarray,
     title: Optional[str] = None,
 ):
+    """Plot previously calculated effectiveness and disruption scores."""
     plot_df = pd.concat(
         [
             pd.DataFrame(
@@ -190,11 +191,11 @@ def plot_effectiveness_and_disruption(
     # fig.update_xaxes(tickangle=-45, title="", tickfont=dict(size=14))
     fig.update_xaxes(tickangle=-45, title="")
     fig.update_layout(
-        xaxis=dict(
-            tickmode="array",
-            tickvals=plot_df["pos"],
-            ticktext=plot_df["tokens_str"],
-        )
+        xaxis={
+            "tickmode": "array",
+            "tickvals": plot_df["pos"],
+            "ticktext": plot_df["tokens_str"],
+        }
     )
     fig.layout["yaxis"]["title"] = "nats"
     fig.layout["annotations"] = []
@@ -214,10 +215,8 @@ def get_token_probs(
     Return value is a DataFrame with tokens on the columns, prompts as
     index.
     """
-    assert (
-        return_positions_above is None
-        or isinstance(prompts, str)
-        or isinstance(prompts, torch.Tensor)
+    assert return_positions_above is None or isinstance(
+        prompts, (str, torch.Tensor)
     ), "Can only return logits for multiple positions for a single prompt."
     # Add hooks if provided
     if rich_prompts is not None:
@@ -335,9 +334,7 @@ def sort_tokens_by_probability(
     return pd.concat(tokens_sorted_list, axis="columns", keys=probs_df.columns)
 
 
-def plot_probs_changes(
-    model: HookedTransformer, probs_df: pd.DataFrame, num: int = 30
-):
+def plot_probs_changes(probs_df: pd.DataFrame, num: int = 30):
     """Plot various view into token probabilities based on normal and
     modified distributions."""
     # Build up the DataFrame of probabilities with various other columns

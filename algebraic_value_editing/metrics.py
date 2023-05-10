@@ -17,7 +17,7 @@ import torch
 import torch.nn.functional as F
 from transformers import pipeline
 import openai
-from jaxtyping import Float, Int
+from jaxtyping import Int
 from transformer_lens import HookedTransformer
 from transformer_lens.utils import lm_cross_entropy_loss
 
@@ -35,7 +35,7 @@ def add_metric_cols(
     metrics_dict: Union[
         Dict[str, TextMetricFunc], Dict[str, TokensMetricFunc]
     ],
-    cols_to_use: Union[str, List[str]] = ["prompts", "completions"],
+    cols_to_use: Optional[Union[str, List[str]]] = None,
     show_progress: bool = False,
     prefix_cols: bool = True,
 ):
@@ -44,6 +44,8 @@ def add_metric_cols(
     concatenated), adding the metric outputs as additional columns and
     returning the resulting DataFrame.
     """
+    if cols_to_use is None:
+        cols_to_use = ["prompts", "completions"]
     if not isinstance(cols_to_use, list):
         cols_to_use = [cols_to_use]
     # Join input columns data if needed
@@ -81,7 +83,7 @@ def get_loss_metric(
     if not isinstance(agg_mode, list):
         agg_mode = [agg_mode]
     assert all(
-        [mode in ["mean", "sum", "max", "full"] for mode in agg_mode]
+        mode in ["mean", "sum", "max", "full"] for mode in agg_mode
     ), "Invalid agg mode"
 
     def metric_func(
@@ -100,13 +102,13 @@ def get_loss_metric(
             )
             loss_values = {}
             if "mean" in agg_mode:
-                loss_values[f"loss_mean"] = loss.mean()
+                loss_values["loss_mean"] = loss.mean()
             if "sum" in agg_mode:
-                loss_values[f"loss_sum"] = loss.sum()
+                loss_values["loss_sum"] = loss.sum()
             if "max" in agg_mode:
-                loss_values[f"loss_max"] = loss.max()
+                loss_values["loss_max"] = loss.max()
             if "full" in agg_mode:
-                loss_values[f"loss_full"] = loss
+                loss_values["loss_full"] = loss
             loss_list.append(loss_values)
         return pd.DataFrame(loss_list, index=index)
 
@@ -162,7 +164,7 @@ def get_logprob_metric(
     if not isinstance(agg_mode, list):
         agg_mode = [agg_mode]
     assert all(
-        [mode in ["actual_next_token", "full", "kl_div"] for mode in agg_mode]
+        mode in ["actual_next_token", "full", "kl_div"] for mode in agg_mode
     ), "Invalid agg mode"
     assert (
         "kl_div" not in agg_mode or q_model is not None
@@ -240,7 +242,7 @@ def get_sentiment_metric(
 
     def metric_func(
         strs: Iterable[str],
-        show_progress: bool = False,
+        show_progress: bool = False,  # pylint: disable=unused-argument
         index: Optional[pd.Index] = None,
     ) -> pd.DataFrame:
         strs = list(strs)
@@ -271,7 +273,7 @@ def get_word_count_metric(
 
     def metric_func(
         strs: Iterable[str],
-        show_progress: bool = False,
+        show_progress: bool = False,  # pylint: disable=unused-argument
         index: Optional[pd.Index] = None,
     ) -> pd.DataFrame:
         if not case_sensitive:
@@ -296,28 +298,36 @@ def get_openai_metric(
     model_name: str,  # e.g. text-davinci-003
     criterion: str,  # e.g. "happy" gives prompt "How happy is this text?" as a prompt
 ) -> TextMetricFunc:
-    """Create a metric using an OpenAI model. and chain-of-thought. The model is called twice, first to get a reasoning for the rating, then to get the rating itself (from 1-10). The metric function returns a dataframe with two columns: "rating" and "reasoning"
+    """Create a metric using an OpenAI model. and chain-of-thought. The
+    model is called twice, first to get a reasoning for the rating, then
+    to get the rating itself (from 1-10). The metric function returns a
+    dataframe with two columns: "rating" and "reasoning"
 
     Considerations:
-    - Cost: Chain of thought is only effective for the most capable model (text-davinci-003) which is quite expensive; 0.02$ per 1k tokens, so on the order of 0.01$ per str passed to metric_func.
-    - Bias: RLHF models are very biased towards giving moderate ratings like 7. In future we may want to consider normalizing the ratings to be more centered around 5. (And doing this for humans as well.)
+    - Cost: Chain of thought is only effective for the most capable
+    model (text-davinci-003) which is quite expensive; 0.02$ per 1k
+    tokens, so on the order of 0.01$ per str passed to metric_func.
+    - Bias: RLHF models are very biased towards giving moderate ratings
+    like 7. In future we may want to consider normalizing the ratings to
+    be more centered around 5. (And doing this for humans as well.)
     """
 
     # extract the ratings
-    def _intify(s):
+    def _intify(int_string):
         try:
-            return int(s)
-        except:
+            return int(int_string)
+        except ValueError:
             return None
 
     def metric_func(
         strs: Iterable[str],
-        show_progress: bool = False,
+        show_progress: bool = False,  # pylint: disable=unused-argument
         index: Optional[pd.Index] = None,
     ) -> pd.DataFrame:
         prompts = [
-            f"How {criterion} is this text? Give reasoning in 1-3 sentences. Text:\n{s}\nReasoning:\n"
-            for s in strs
+            f"How {criterion} is this text? Give reasoning in "
+            + f"1-3 sentences. Text:\n{str_this}\nReasoning:\n"
+            for str_this in strs
         ]
         response = openai.Completion.create(
             model=model_name,
