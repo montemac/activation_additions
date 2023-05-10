@@ -111,6 +111,7 @@ def make_widget(
         fig.update_layout(width=1000)
         fig_widget = go.FigureWidget(fig)
         # Show the token probability changes
+        print("")
         display(fig_widget)
         # Show some KL stats and other misc things
         kl_div = (
