@@ -11,7 +11,7 @@ import pandas as pd
 import prettytable
 import einops
 
-from transformer_lens.HookedTransformer import HookedTransformer
+from transformer_lens.HookedTransformer import HookedTransformer, Output
 
 from algebraic_value_editing.prompt_utils import RichPrompt
 from algebraic_value_editing import hook_utils, logging
@@ -90,11 +90,8 @@ def gen_using_model(
     )
 
     # Compute the loss per token
-    loss: Float[t.Tensor, "batch pos"] = (
-        model(completions.clone(), return_type="loss", loss_per_token=True)
-        .detach()
-        .cpu()
-    )
+    output: Output = model(completions.clone(), return_type="both", loss_per_token=True)
+    loss, logits = output.loss.detach().cpu(), output.logits.detach().cpu()
     average_loss: np.ndarray = einops.reduce(
         loss, "batch pos -> batch", "mean"
     ).numpy()  # NOTE why are we casting to numpy?
@@ -110,6 +107,7 @@ def gen_using_model(
             "prompts": prompt_batch,
             "completions": model.to_string(trimmed_completions),
             "loss": list(average_loss),
+            "logits": logits.tolist(),
         }
     )
 
