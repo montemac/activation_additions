@@ -31,10 +31,6 @@ def fwd_hooks_from_activ_hooks(activ_hooks):
     ]
 
 
-def prompt_to_input_ids(prompt, tokenizer):
-    return
-
-
 def trajectory_log_probs(tuned_lens, logits, cache):
     """
     Get the log probabilities of the trajectory from the cache and logits.
