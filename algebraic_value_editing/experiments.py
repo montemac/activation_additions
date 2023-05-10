@@ -162,7 +162,7 @@ def plot_corpus_logprob_experiment(
         labels[color_qty] = color_name
     if facet_col_name is not None:
         labels[facet_col_qty] = facet_col_name
-    return px.line(
+    fig = px.line(
         results_grouped_df,
         y="logprob_actual_next_token_diff_mean",
         x=x_qty,
@@ -172,6 +172,12 @@ def plot_corpus_logprob_experiment(
         title=f"Average change in log-probabilities of tokens in {corpus_name}",
         **plot_kwargs,
     )
+    for annot in fig.layout.annotations:
+        if "=" in annot.text:
+            annot.update(
+                text=" ".join(annot.text.split("=")), font=dict(size=16)
+            )
+    return fig
 
 
 def show_token_probs(

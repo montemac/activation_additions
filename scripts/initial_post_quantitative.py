@@ -354,7 +354,7 @@ else:
         label_col="topic",
     )
 results_grouped_df = results_grouped_df.sort_values(
-    ["act_name", "topic"], ascending=False
+    ["act_name", "topic"], ascending=[True, False]
 )
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
@@ -403,7 +403,7 @@ else:
         label_col="topic",
     )
 results_grouped_df = results_grouped_df.sort_values(
-    ["act_name", "topic"], ascending=False
+    ["coeff", "act_name", "topic"], ascending=[True, True, False]
 )
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
@@ -412,7 +412,7 @@ fig = experiments.plot_corpus_logprob_experiment(
     x_name="Injection coefficient",
     color_qty="topic",
     facet_col_qty="act_name",
-    facet_col_name="layer",
+    facet_col_name="Layer",
     facet_col_spacing=0.05,
 )
 # Manually set ticks
@@ -586,7 +586,7 @@ fig = experiments.plot_corpus_logprob_experiment(
     x_name="Injection coefficient",
     color_qty="sentiment",
     facet_col_qty="act_name",
-    facet_col_name="layer",
+    facet_col_name="Layer",
     facet_col_spacing=0.05,
 )
 # Manually set ticks
@@ -596,6 +596,7 @@ fig.update_xaxes(
         tickvals=[-1, 0, 1, 2, 3],
     )
 )
+fig.update_layout(yaxis_range=[-0.35, 0.1])
 fig.show()
 fig.write_image(
     "images/yelp_reviews_coeffs.png",
