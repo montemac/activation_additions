@@ -33,6 +33,7 @@ else: device = torch.device('cpu')
 torch.set_grad_enabled(False)
 
 # Load model from huggingface
+# TODO: Fix memory waste from loading model twice
 hf_model = AutoModelForCausalLM.from_pretrained(
     model_name,
     # revision=f"checkpoint-{cfg.checkpoint_value}"
