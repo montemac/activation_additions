@@ -9,8 +9,6 @@ from transformer_lens.HookedTransformer import HookedTransformer
 from algebraic_value_editing import hook_utils, prompt_utils
 from algebraic_value_editing.prompt_utils import RichPrompt
 
-from algebraic_value_editing import hook_utils
-
 
 # Fixtures
 @pytest.fixture(name="attn_2l_model", scope="module")

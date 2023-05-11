@@ -88,7 +88,7 @@ def steering_vec_magnitudes(
     activations_lst = [act.squeeze(0) for act in activations_lst]
 
     # Find the maximum sequence length (pos dimension) and pad the activations
-    max_seq_len: int = max([a.shape[0] for a in activations_lst])
+    max_seq_len: int = max(a.shape[0] for a in activations_lst)
 
     # Pad each activation tensor along its seq dimension
     padded_act_lst: List[Float[torch.Tensor, "pos d_model"]] = [
@@ -174,7 +174,8 @@ def hook_fn_from_activations(
         `activations`: The activations to add in
 
         `addition_location`: Whether to add `activations` to the front-positioned
-        or back-positioned residual streams in the forward poss. Must be either "front" or "mid" or "back".
+        or back-positioned residual streams in the forward poss. Must be
+        either "front" or "mid" or "back".
 
         `res_stream_slice`: The slice of the residual stream dimensions to apply
         the activations to. If `res_stream_slice` is `slice(None)`,

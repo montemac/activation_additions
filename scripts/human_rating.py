@@ -2,8 +2,8 @@
 between two prompts. """
 
 # %%
+from typing import List
 from funcy import partial
-from typing import List, Dict, Callable
 import pandas as pd
 from transformer_lens.HookedTransformer import HookedTransformer
 
@@ -26,7 +26,6 @@ default_kwargs = {
     "temperature": 1,
     "freq_penalty": 1,
     "top_p": 0.3,
-    "model": gpt2_xl,
 }
 
 get_x_vector_preset = partial(
@@ -61,8 +60,8 @@ prompt: str = (
 prompt_batch: List[str] = [prompt] * 5
 # Generate the completions from the normal model
 normal_df: pd.DataFrame = completion_utils.gen_using_hooks(
-    prompt_batch=prompt_batch,
     model=gpt2_xl,
+    prompt_batch=prompt_batch,
     hook_fns={},
     seed=1,
     tokens_to_generate=60,
