@@ -58,7 +58,7 @@ PNG_SCALE = 2.0
 MODEL: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
 ).to(
-    "cuda:1"
+    "cuda:0"
 )  # type: ignore
 
 
@@ -761,74 +761,4 @@ print(plot_df)
 #     width=PNG_WIDTH,
 #     height=PNG_HEIGHT,
 #     scale=PNG_SCALE,
-# )
-
-# %%
-# TEMP: kl debugging
-# from typing import List, Dict, Callable
-# from jaxtyping import Int, Float
-# from algebraic_value_editing.prompt_utils import RichPrompt
-
-# prompt = "I went up to my friend and said"
-# model = MODEL
-# act_name = 20
-
-# anger_calm_additions: List[RichPrompt] = [
-#     RichPrompt(prompt="Anger", coeff=1, act_name=act_name),
-#     RichPrompt(prompt="Calm", coeff=-1, act_name=act_name),
-# ]
-
-# anger_vec: Float[
-#     torch.Tensor, "batch seq d_model"
-# ] = hook_utils.get_prompt_activations(
-#     model, anger_calm_additions[0]
-# ) + hook_utils.get_prompt_activations(
-#     model, anger_calm_additions[1]
-# )
-
-# seq_slice: slice = slice(
-#     3, None
-# )  # Slice off the first 3 tokens, whose outputs will be messed up by the ActivationAddition
-# logit_indexing: Tuple[slice, slice] = (slice(None), seq_slice)
-
-# model_device: torch.device = next(model.parameters()).device
-
-# anger_hooks: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
-#     model=model, rich_prompts=anger_calm_additions
-# )
-
-# anger_logits: Float[torch.Tensor, "batch seq vocab"] = model.run_with_hooks(
-#     prompt, fwd_hooks=list(anger_hooks.items())
-# )[logit_indexing]
-
-# normal_logits: Float[torch.Tensor, "batch seq vocab"] = model(prompt)[
-#     logit_indexing
-# ]
-
-# # Convert logits to probabilities using softmax
-# normal_probs, anger_probs = [
-#     torch.nn.functional.softmax(logits, dim=-1)
-#     for logits in [normal_logits, anger_logits]
-# ]
-
-# # Compute KL between the two, negating because kl_div computes negation of KL
-# kl_anger = (
-#     torch.nn.functional.kl_div(
-#         input=anger_probs.log(),
-#         target=normal_probs,
-#         reduction="none",
-#     )
-#     .sum(axis=-1)
-#     .mean()
-# )  # KL(rand_probs || normal_probs)
-# kl_anger_manual = (
-#     (anger_probs * torch.log(anger_probs / normal_probs)).sum(axis=-1).mean()
-# ).item()
-# # kl_anger = torch.nn.functional.kl_div(
-# #     input=normal_probs.log(), target=anger_probs, reduction="mean"
-# # )  # KL(normal_probs || rand_probs)
-# (
-#     kl_anger,
-#     kl_anger_manual,
-#     -(normal_probs * normal_probs.log()).sum(axis=-1).mean(),
 # )

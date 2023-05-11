@@ -254,8 +254,9 @@ def sweep_over_metrics(
         )
         # Get the modified loss and append
         model.remove_all_hook_fns()
-        for act_name, hook_fn in hook_fns.items():
-            model.add_hook(act_name, hook_fn)
+        for act_name, hook_fns_list in hook_fns.items():
+            for hook_fn in hook_fns_list:
+                model.add_hook(act_name, hook_fn)
         patched_df = metrics.add_metric_cols(
             inputs_df, metrics_dict, cols_to_use="input", **metric_args
         )

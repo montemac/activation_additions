@@ -364,8 +364,9 @@ def forward_with_rich_prompts(
     )
     model.remove_all_hook_fns()
     try:
-        for act_name, hook_fn in hook_fns.items():
-            model.add_hook(act_name, hook_fn)
+        for act_name, hook_fns_list in hook_fns.items():
+            for hook_fn in hook_fns_list:
+                model.add_hook(act_name, hook_fn)
         ret = model.forward(input_tokens, **forward_kwargs)
     finally:
         model.remove_all_hook_fns()

@@ -222,12 +222,13 @@ def get_token_probs(
         return_positions_above = 0
     # Add hooks if provided
     if rich_prompts is not None:
-        hook_fns = hook_utils.hook_fns_from_rich_prompts(
+        hook_fns_dict = hook_utils.hook_fns_from_rich_prompts(
             model=model,
             rich_prompts=rich_prompts,
         )
-        for act_name, hook_fn in hook_fns.items():
-            model.add_hook(act_name, hook_fn)
+        for act_name, hook_fns in hook_fns_dict.items():
+            for hook_fn in hook_fns:
+                model.add_hook(act_name, hook_fn)
     # Try-except-finally to ensure hooks are cleaned up
     try:
         if isinstance(prompts, (str, torch.Tensor)):
