@@ -38,12 +38,13 @@ def preserve_rng_state(func):
 
 
 @preserve_rng_state
+@logging.loggable
 def gen_using_model(
     model: HookedTransformer,
     prompt_batch: List[str],
     tokens_to_generate: int = 40,
     seed: Optional[int] = None,
-    log: Union[bool, Dict] = False, # pylint: disable=unused-argument
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **sampling_kwargs,
 ) -> pd.DataFrame:
     """Run `model` on `prompt_batch`
@@ -78,10 +79,7 @@ def gen_using_model(
     if seed is not None:
         t.manual_seed(seed)
 
-
-    tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(
-        prompt_batch
-    )
+    tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(prompt_batch)
     completions: Float[t.Tensor, "batch pos"] = model.generate(
         input=tokenized_prompts,
         max_new_tokens=tokens_to_generate,
@@ -116,6 +114,7 @@ def gen_using_model(
 
 # Ensure that even if we set the seed, we don't change the RNG state globally
 @preserve_rng_state
+@logging.loggable
 def gen_using_hooks(
     model: HookedTransformer,
     prompt_batch: List[str],
@@ -158,15 +157,18 @@ def gen_using_hooks(
     # Feels a bit strong to deprecate this, but using gen_using_model is more flexible.
     # warnings.warn("Deprecated: Use `gen_using_model` and `with model.hooks(...)` instead")
 
-    fwd_hooks = [(name, hook_fn) for name, hook_fns in hook_fns.items() for hook_fn in hook_fns]
+    fwd_hooks = [
+        (name, hook_fn) for name, hook_fns in hook_fns.items() for hook_fn in hook_fns
+    ]
     with model.hooks(fwd_hooks=fwd_hooks):
-        results = gen_using_model(model, prompt_batch, tokens_to_generate, seed, log, **sampling_kwargs)
+        results = gen_using_model(
+            model, prompt_batch, tokens_to_generate, seed, log, **sampling_kwargs
+        )
 
     # Mark the completions as modified or not
     results["is_modified"] = hook_fns != {}
 
     return results
-
 
 
 @logging.loggable
@@ -255,8 +257,7 @@ def pretty_print_completions(
             modified completions.
     """
     assert all(
-        col in results.columns
-        for col in ("prompts", "completions", "is_modified")
+        col in results.columns for col in ("prompts", "completions", "is_modified")
     )
 
     # Assert that an equal number of rows have `is_modified` True and
@@ -278,9 +279,7 @@ def pretty_print_completions(
     completion_dict: dict = {}
     for col in completion_cols:
         is_mod = col == mod_title
-        completion_dict[col] = results[results["is_modified"] == is_mod][
-            "completions"
-        ]
+        completion_dict[col] = results[results["is_modified"] == is_mod]["completions"]
 
     # Format the DataFrame for printing
     prompt: str = results["prompts"].tolist()[0]
@@ -298,9 +297,7 @@ def pretty_print_completions(
     for row in zip(*completion_dict.values()):
         # Bold the appropriate prompt
         normal_str = bold_text(
-            prompt
-            if normal_prompt_override is None
-            else normal_prompt_override
+            prompt if normal_prompt_override is None else normal_prompt_override
         )
         mod_str = bold_text(
             prompt if mod_prompt_override is None else mod_prompt_override
