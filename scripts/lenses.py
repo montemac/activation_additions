@@ -134,43 +134,50 @@ for coeff in tqdm(coeffs):
 
 import plotly.graph_objects as go
 
-layer_stride = 4
-hm_templ = traj_list_by_coeff[coeffs[0]].entropy().heatmap(layer_stride=layer_stride)
-xmax, ymax = hm_templ.customdata.shape[:-1]
+# Preparing heatmap for frames
+def prepare_heatmap(coeff, traj):
+    return go.Frame(
+        data=[apply_metric('entropy', traj).heatmap(layer_stride=layer_stride)],
+        layout=go.Layout(
+            title_text=f"Tokens visualized with the Tuned Lens, coeff={coeff}",
+        )
+    )
 
-fig = go.Figure(
-    data=[hm_templ],
-    layout=go.Layout(
-        # get xaxis from template heatmap
+# Preparing buttons for the layout
+def prepare_buttons():
+    return dict(
+        type="buttons",
+        direction="left",
+        xanchor="right", 
+        yanchor="top",
+        pad={"r": 10, "t": 100},
+        buttons=[dict(label="Play", method="animate", args=[None])],
+    )
+
+# Preparing layout for the figure
+def prepare_layout():
+    return go.Layout(
         xaxis=dict(autorange=True),
         yaxis=dict(autorange=True),
         title_text="Tokens visualized with the Tuned Lens",
-        updatemenus=[dict(
-            type="buttons",
-            buttons=[
-                dict(label="Play", method="animate", args=[
-                    None
-                    # dict(frame=dict(duration=500, redraw=False), fromcurrent=True, mode="immediate"),
-                ])
-            ],
-            direction="left",
-            xanchor="right", yanchor="top", # required for right/top padding
-            pad={"r": 10, "t": 100},
-        )],
-    ),
-    frames=[
-        go.Frame(
-            data=[
-                apply_metric('entropy', traj).heatmap(layer_stride=layer_stride)
-            ],
-            layout=go.Layout(
-                title_text=f"Tokens visualized with the Tuned Lens, coeff={coeff}",
-            ),
-        )
-        for coeff, traj in traj_list_by_coeff.items()
-    ]
+        updatemenus=[prepare_buttons()],
+    )
+
+# Prepare the frames
+frames = [prepare_heatmap(coeff, traj) for coeff, traj in traj_list_by_coeff.items()]
+
+# Creating the figure
+layer_stride = 4
+hm_templ = traj_list_by_coeff[coeffs[0]].entropy().heatmap(layer_stride=layer_stride)
+
+fig = go.Figure(
+    data=[hm_templ],
+    layout=prepare_layout(),
+    frames=frames,
 )
+
 fig.show()
+
 
 # %%
 
