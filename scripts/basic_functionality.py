@@ -1,16 +1,14 @@
 """ This script demonstrates how to use the algebraic_value_editing library to generate comparisons
 between two prompts. """
-# %% 
-%load_ext autoreload
-%autoreload 2
 
 # %%
 from typing import List
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import completion_utils
+from algebraic_value_editing import completion_utils, utils
 from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
 
+utils.enable_ipython_reload()
 
 # %%
 model: HookedTransformer = HookedTransformer.from_pretrained(
@@ -29,12 +27,15 @@ rich_prompts: List[RichPrompt] = [
         pad_method="tokens_right",
     ),
 ]
+
 completion_utils.print_n_comparisons(
     prompt=(
         "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling"
     ),
     num_comparisons=5,
-    xvec_position = 'front', #you can also set this to 'back' and it will add the xvec to the end of the resid stream vector
+    # you can also set this to 'back' and it will add the xvec to the
+    # end of the resid stream vector
+    xvec_position="front",
     model=model,
     rich_prompts=rich_prompts,
     seed=0,

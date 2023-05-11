@@ -1,13 +1,10 @@
-# %%[markdown]
-# Demonstration of the algebraic value editing sandbox widget on GPT2-XL
-#
-# TODO: instructions for use
+"""Demo of activation injection widget."""
 
 # %%
 # Imports, etc
 from IPython.display import display
-from algebraic_value_editing import widgets, utils
 from transformer_lens import HookedTransformer
+from algebraic_value_editing import widgets, utils
 
 utils.enable_ipython_reload()
 

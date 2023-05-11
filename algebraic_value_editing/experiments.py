@@ -340,6 +340,7 @@ def compare_with_prompting(
                 model=model,
                 prompts=tokens_padded,
                 return_positions_above=0,
+                # pylint: disable=duplicate-code
                 rich_prompts=list(
                     prompt_utils.get_x_vector(
                         prompt1=phrases[0],
@@ -351,6 +352,7 @@ def compare_with_prompting(
                         custom_pad_id=model.to_single_token(" "),
                     )
                 ),
+                # pylint: enable=duplicate-code
             )
             .iloc[-len_normal:]
             .reset_index(drop=True)

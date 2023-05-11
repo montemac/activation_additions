@@ -28,7 +28,6 @@ MODEL = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
 ).to("cuda:0")
 
-
 # %%
 # Generate some example completions, for reproduction reference from
 # Alex's notebook.

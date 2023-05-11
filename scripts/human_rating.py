@@ -1,17 +1,16 @@
 """ This script demonstrates how to use the algebraic_value_editing library to generate comparisons
 between two prompts. """
-# %%
-%load_ext autoreload 
-%autoreload 2 
 
 # %%
 from typing import List
 import pandas as pd
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import completion_utils
+from algebraic_value_editing import completion_utils, utils
 from algebraic_value_editing.analysis import rate_completions
 from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
+
+utils.enable_ipython_reload()
 
 
 # %%

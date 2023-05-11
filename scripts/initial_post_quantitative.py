@@ -1,3 +1,5 @@
+"""Notebook that creates results and assets for the quantitative section
+of the post """
 # %%[markdown]
 # # Steering GPT-2-XL by adding an activation vector | Quantitative analysis
 #
@@ -10,7 +12,7 @@
 # %%
 # Imports, etc
 import pickle
-import textwrap
+import textwrap  # pylint: disable=unused-import
 import os
 
 import numpy as np
@@ -46,9 +48,9 @@ if not os.path.exists("images"):
     os.mkdir("images")
 
 # Plotting constants
-png_width = 750
-png_height = 400
-png_scale = 2.0
+PNG_WIDTH = 750
+PNG_HEIGHT = 400
+PNG_SCALE = 2.0
 
 
 # %%
@@ -70,7 +72,7 @@ MODEL: HookedTransformer = HookedTransformer.from_pretrained(
 
 # %%
 # The input text
-text = (
+TEXT = (
     "I'm excited because I'm going to a wedding this weekend."
     + " Two of my old friends from school are getting married"
 )
@@ -103,7 +105,7 @@ rich_prompts = list(
 # Calculate normal and modified token probabilities
 probs = logits.get_normal_and_modified_token_probs(
     model=MODEL,
-    prompts=text,
+    prompts=TEXT,
     rich_prompts=rich_prompts,
     return_positions_above=0,
 )
@@ -118,7 +120,7 @@ eff, foc = logits.get_effectiveness_and_disruption(
 
 # Plot!
 fig = logits.plot_effectiveness_and_disruption(
-    tokens_str=MODEL.to_str_tokens(text),
+    tokens_str=MODEL.to_str_tokens(TEXT),
     eff=eff,
     foc=foc,
     title='Effectiveness and disruption scores for the " wedding" vector intervention',
@@ -126,7 +128,7 @@ fig = logits.plot_effectiveness_and_disruption(
 fig.update_layout(height=600)
 fig.show()
 fig.write_image(
-    "images/zoom_in1.png", width=png_width, height=png_height, scale=png_scale
+    "images/zoom_in1.png", width=PNG_WIDTH, height=PNG_HEIGHT, scale=PNG_SCALE
 )
 
 
@@ -148,9 +150,9 @@ fig, probs_plot_df = experiments.show_token_probs(
 fig.show()
 fig.write_image(
     "images/zoom_in_top_k.png",
-    width=png_width,
-    height=png_height,
-    scale=png_scale,
+    width=PNG_WIDTH,
+    height=PNG_HEIGHT,
+    scale=PNG_SCALE,
 )
 
 # Sort by contribution to KL divergence, shows which tokens are
@@ -167,9 +169,9 @@ fig, kl_div_plot_df = experiments.show_token_probs(
 fig.show()
 fig.write_image(
     "images/zoom_in_top_k_kl_div.png",
-    width=png_width,
-    height=png_height,
-    scale=png_scale,
+    width=PNG_WIDTH,
+    height=PNG_HEIGHT,
+    scale=PNG_SCALE,
 )
 
 for idx, row in kl_div_plot_df.iterrows():
@@ -181,7 +183,7 @@ for idx, row in kl_div_plot_df.iterrows():
 
 # %%
 # Sweep effectiveness and disruption over hyperparams
-text = "I'm excited because I'm going to a"
+TEXT = "I'm excited because I'm going to a"
 
 is_steering_aligned = np.zeros(MODEL.cfg.d_vocab_out, dtype=bool)
 is_steering_aligned[MODEL.to_single_token(" wedding")] = True
@@ -200,16 +202,16 @@ results_list = []
 for idx, row in tqdm(list(rich_prompts_df.iterrows())):
     probs = logits.get_normal_and_modified_token_probs(
         model=MODEL,
-        prompts=[text],
+        prompts=[TEXT],
         rich_prompts=row["rich_prompts"],
     )
     results_list.append(
         {
             "effectiveness": logits.effectiveness(
-                probs, [text], is_steering_aligned
+                probs, [TEXT], is_steering_aligned
             ).iloc[0],
             "disruption": logits.disruption(
-                probs, [text], is_steering_aligned
+                probs, [TEXT], is_steering_aligned
             ).iloc[0],
             "act_name": row["act_name"],
         }
@@ -238,9 +240,9 @@ fig = px.line(
 fig.show()
 fig.write_image(
     "images/zoom_in_layers.png",
-    width=png_width,
-    height=png_height,
-    scale=png_scale,
+    width=PNG_WIDTH,
+    height=PNG_HEIGHT,
+    scale=PNG_SCALE,
 )
 
 # %%
@@ -257,16 +259,16 @@ results_list = []
 for idx, row in tqdm(list(rich_prompts_df.iterrows())):
     probs = logits.get_normal_and_modified_token_probs(
         model=MODEL,
-        prompts=[text],
+        prompts=[TEXT],
         rich_prompts=row["rich_prompts"],
     )
     results_list.append(
         {
             "effectiveness": logits.effectiveness(
-                probs, [text], is_steering_aligned
+                probs, [TEXT], is_steering_aligned
             ).iloc[0],
             "disruption": logits.disruption(
-                probs, [text], is_steering_aligned
+                probs, [TEXT], is_steering_aligned
             ).iloc[0],
             "coeff": row["coeff"],
         }
@@ -295,9 +297,9 @@ fig = px.line(
 fig.show()
 fig.write_image(
     "images/zoom_in_coeffs.png",
-    width=png_width,
-    height=png_height,
-    scale=png_scale,
+    width=PNG_WIDTH,
+    height=PNG_HEIGHT,
+    scale=PNG_SCALE,
 )
 
 # %%[markdown]
@@ -325,7 +327,7 @@ tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 # Tokenize the essays into sentences
 texts = []
 for desc, filename in FILENAMES.items():
-    with open(filename, "r") as file:
+    with open(filename, "r", encoding="utf8") as file:
         sentences = [
             "" + sentence for sentence in tokenizer.tokenize(file.read())
         ]
@@ -367,9 +369,9 @@ fig = experiments.plot_corpus_logprob_experiment(
 fig.show()
 fig.write_image(
     "images/weddings_essays_layers.png",
-    width=png_width,
-    height=png_height,
-    scale=png_scale,
+    width=PNG_WIDTH,
+    height=PNG_HEIGHT,
+    scale=PNG_SCALE,
 )
 
 # %%
@@ -416,18 +418,13 @@ fig = experiments.plot_corpus_logprob_experiment(
     facet_col_spacing=0.05,
 )
 # Manually set ticks
-fig.update_xaxes(
-    dict(
-        tickmode="array",
-        tickvals=[-1, 0, 1, 2, 3, 4],
-    )
-)
+fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3, 4]})
 fig.show()
 fig.write_image(
     "images/weddings_essays_coeffs.png",
-    width=png_width,
-    height=png_height,
-    scale=png_scale,
+    width=PNG_WIDTH,
+    height=PNG_HEIGHT,
+    scale=PNG_SCALE,
 )
 
 # %%
@@ -463,18 +460,18 @@ yelp_data = pd.read_csv("../data/restaurant_proc.csv").drop(
 )
 
 # Pull the first N reviews of each sentiment
-num_each_sentiment = 100
-offset = 0
+NUM_EACH_SENTIMENT = 100
+OFFSET = 0
 yelp_sample = pd.concat(
     [
         yelp_data[yelp_data["sentiment"] == "positive"].iloc[
-            offset : (offset + num_each_sentiment)
+            OFFSET : (OFFSET + NUM_EACH_SENTIMENT)
         ],
         yelp_data[yelp_data["sentiment"] == "neutral"].iloc[
-            offset : (offset + num_each_sentiment)
+            OFFSET : (OFFSET + NUM_EACH_SENTIMENT)
         ],
         yelp_data[yelp_data["sentiment"] == "negative"].iloc[
-            offset : (offset + num_each_sentiment)
+            OFFSET : (OFFSET + NUM_EACH_SENTIMENT)
         ],
     ]
 ).reset_index(drop=True)
@@ -535,14 +532,20 @@ fig = experiments.plot_corpus_logprob_experiment(
     x_name="Injection layer",
     color_qty="sentiment",
     facet_col_qty=None,
+    category_orders={"sentiment": ["negative", "neutral", "positive"]},
+    color_discrete_sequence=[
+        px.colors.qualitative.Plotly[1],
+        px.colors.qualitative.Plotly[0],
+        px.colors.qualitative.Plotly[2],
+    ],
 )
 fig.update_layout(yaxis_range=[-0.2, 0.1])
 fig.show()
 fig.write_image(
     "images/yelp_reviews_layers.png",
-    width=png_width,
-    height=png_height,
-    scale=png_scale,
+    width=PNG_WIDTH,
+    height=PNG_HEIGHT,
+    scale=PNG_SCALE,
 )
 
 
@@ -588,21 +591,22 @@ fig = experiments.plot_corpus_logprob_experiment(
     facet_col_qty="act_name",
     facet_col_name="Layer",
     facet_col_spacing=0.05,
+    category_orders={"sentiment": ["negative", "neutral", "positive"]},
+    color_discrete_sequence=[
+        px.colors.qualitative.Plotly[1],
+        px.colors.qualitative.Plotly[0],
+        px.colors.qualitative.Plotly[2],
+    ],
 )
 # Manually set ticks
-fig.update_xaxes(
-    dict(
-        tickmode="array",
-        tickvals=[-1, 0, 1, 2, 3],
-    )
-)
+fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3]})
 fig.update_layout(yaxis_range=[-0.35, 0.1])
 fig.show()
 fig.write_image(
     "images/yelp_reviews_coeffs.png",
-    width=png_width,
-    height=png_height,
-    scale=png_scale,
+    width=PNG_WIDTH,
+    height=PNG_HEIGHT,
+    scale=PNG_SCALE,
 )
 
 
@@ -637,9 +641,9 @@ for name, fig in figs.items():
     fig.show()
     fig.write_image(
         f"images/prompt_cmp_excited_{name}.png",
-        width=png_width,
-        height=png_height,
-        scale=png_scale,
+        width=PNG_WIDTH,
+        height=PNG_HEIGHT,
+        scale=PNG_SCALE,
     )
 
 figs = experiments.compare_with_prompting(
@@ -654,9 +658,9 @@ for name, fig in figs.items():
     fig.show()
     fig.write_image(
         f"images/prompt_cmp_GDP_{name}.png",
-        width=png_width,
-        height=png_height,
-        scale=png_scale,
+        width=PNG_WIDTH,
+        height=PNG_HEIGHT,
+        scale=PNG_SCALE,
     )
 
 
@@ -746,15 +750,15 @@ plot_df = pd.concat(
     ]
 ).reset_index(drop=True)
 
-plot_df
+print(plot_df)
 
 # Plot a simple bar chart of the results
 # fig.show()
 # fig.write_image(
 #     "images/prompt_cmp_weddings.png",
-#     width=png_width,
-#     height=png_height,
-#     scale=png_scale,
+#     width=PNG_WIDTH,
+#     height=PNG_HEIGHT,
+#     scale=PNG_SCALE,
 # )
 
 # %%

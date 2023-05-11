@@ -3,6 +3,7 @@
 # %%
 import pytest
 import pandas as pd
+import openai
 
 from transformer_lens import HookedTransformer
 
@@ -31,14 +32,14 @@ def test_get_sentiment_metric():
         "I love chocolate",
         "I hate chocolate",
     ]
-    results = metric(prompts)
+    results = metric(prompts, index=["a", "b"])
     target = pd.DataFrame(
         {
             "label": ["POSITIVE", "NEGATIVE"],
             "score": [0.999846, 0.998404],
             "is_positive": [True, False],
         },
-        index=prompts,
+        index=["a", "b"],
     )
     pd.testing.assert_frame_equal(results, target)
 
@@ -55,7 +56,6 @@ def test_get_word_count_metric():
     results = metric(prompts)
     target = pd.DataFrame(
         {"count": [2, 2]},
-        index=prompts,
     )
     pd.testing.assert_frame_equal(results, target)
 
@@ -64,8 +64,6 @@ def test_openai_metric():
     """Test for get_openai_metric(). Creates an OpenAI metric, applies
     it to some strings, and checks the results against pre-defined
     constants."""
-    import openai
-
     if openai.api_key is None:
         pytest.skip("OpenAI API key not found.")
 
@@ -76,8 +74,10 @@ def test_openai_metric():
         {
             "rating": [10, 1],
             "reasoning": [
-                "This text is very happy because it expresses a strong positive emotion towards something.",
-                "This text is not very happy because it expresses a negative sentiment towards chocolate.",
+                "This text is very happy because it expresses"
+                + " a strong positive emotion towards something.",
+                "This text is not very happy because it expresses"
+                + " a negative sentiment towards chocolate.",
             ],
         },
         index=prompts,

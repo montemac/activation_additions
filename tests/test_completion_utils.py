@@ -1,9 +1,10 @@
 """ Tests for the `completions` module. """
 
 from typing import List, Tuple, Set
-import pandas as pd
-import pytest
 import os
+import pytest
+
+import pandas as pd
 import torch
 from transformer_lens.HookedTransformer import HookedTransformer
 
@@ -62,7 +63,7 @@ def test_zero_coeff_does_nothing(attn_2l_model: HookedTransformer):
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompt_batch=["I think you're "],
             model=attn_2l_model,
-            xvec_position='front',
+            xvec_position="front",
             rich_prompts=rich_prompts,
             seed=0,
         )
@@ -113,7 +114,7 @@ def test_sad_scenario_2000(attn_2l_model: HookedTransformer) -> None:
     first_completion: str = completion_utils.gen_using_rich_prompts(
         prompt_batch=[prompt] * 5,
         model=attn_2l_model,
-        xvec_position='front',
+        xvec_position="front",
         rich_prompts=rich_prompts,
         seed=0,
         **sampling_kwargs,
@@ -143,7 +144,7 @@ def test_each_block_injection_produces_diff_results(
             prompt_batch=["I think you're "],
             model=attn_2l_model,
             rich_prompts=rich_prompts,
-            xvec_position='front',
+            xvec_position="front",
             seed=0,
         )
         completion = results["completions"][0]
@@ -172,7 +173,7 @@ def test_x_vec_coefficient_matters(attn_2l_model: HookedTransformer):
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompt_batch=["I think you're "],
             model=attn_2l_model,
-            xvec_position='front',
+            xvec_position="front",
             rich_prompts=[*x_vector],
             seed=0,
         )
@@ -210,14 +211,14 @@ def test_x_vec_inverse_equality(attn_2l_model: HookedTransformer):
     results1: pd.DataFrame = completion_utils.gen_using_rich_prompts(
         prompt_batch=["I think you're "],
         model=attn_2l_model,
-        xvec_position='front',
+        xvec_position="front",
         rich_prompts=[*x_vector1],
         seed=0,
     )
     results2: pd.DataFrame = completion_utils.gen_using_rich_prompts(
         prompt_batch=["I think you're "],
         model=attn_2l_model,
-        xvec_position='front',
+        xvec_position="front",
         rich_prompts=[*x_vector2],
         seed=0,
     )
@@ -243,7 +244,7 @@ def test_x_vec_same_prompt_cancels(attn_2l_model: HookedTransformer):
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompt_batch=["I think you're "],
             model=attn_2l_model,
-            xvec_position='front',
+            xvec_position="front",
             rich_prompts=rich_prompts,
             seed=0,
         )
@@ -271,7 +272,7 @@ def test_x_vec_padding_matters(attn_2l_model: HookedTransformer):
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompt_batch=["I think you're "],
             model=attn_2l_model,
-            xvec_position='front',
+            xvec_position="front",
             rich_prompts=[*x_vector],
             seed=0,
         )
@@ -290,7 +291,7 @@ def test_seed_choice_matters(attn_2l_model: HookedTransformer):
         results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompt_batch=["I think you're "],
             model=attn_2l_model,
-            xvec_position='front',
+            xvec_position="front",
             rich_prompts=[],
             seed=seed,
         )
@@ -307,7 +308,7 @@ def test_rng_reset(attn_2l_model: HookedTransformer):
     completion_utils.gen_using_rich_prompts(
         prompt_batch=["I think you're "],
         model=attn_2l_model,
-        xvec_position='front',
+        xvec_position="front",
         rich_prompts=[],
         seed=0,
     )
@@ -420,7 +421,7 @@ def test_seed_completions_reproducible(attn_2l_model: HookedTransformer):
         result: pd.DataFrame = completion_utils.gen_using_rich_prompts(
             prompt_batch=["I think you're "],
             model=attn_2l_model,
-            xvec_position='front',
+            xvec_position="front",
             rich_prompts=[],
             seed=seed,
         )

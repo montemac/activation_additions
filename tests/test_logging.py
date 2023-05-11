@@ -5,7 +5,6 @@ import pytest
 
 import numpy as np
 import pandas as pd
-import pandas.testing
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import (
@@ -66,8 +65,8 @@ def test_positional_args(model):
     decorator."""
     completion_utils.print_n_comparisons(
         "I think you're ",
-        model,
-        num_comparisons=5,
+        5,
+        model=model,
         rich_prompts=[],
         seed=0,
     )
