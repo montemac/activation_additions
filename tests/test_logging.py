@@ -31,6 +31,8 @@ def fixture_model() -> HookedTransformer:
 def test_logging(model):
     """Tests a sweep over prompts with logging enabled.  Verifies that
     the correct data is uploaded to a new wandb run."""
+    # TODO: do this properly with pytest config
+    pytest.skip("Logging testing is slow! Change this line to enable it.")
     # Perform a completion test
     results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
         model=model,
