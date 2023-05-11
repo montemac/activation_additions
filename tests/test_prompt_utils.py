@@ -42,7 +42,7 @@ def test_x_vector_creation():
         act_name="",
     )
 
-    # Check that the x_vectors are the same as the RichPrompts
+    # Check that the x_vectors are the same as the ActivationAdditions
     for xvec, rch_prompt in zip(
         [x_vector_positive, x_vector_negative],
         [rich_prompt_positive, rich_prompt_negative],

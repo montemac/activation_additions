@@ -147,7 +147,7 @@ def test_magnitudes_zeros(attn_2l_model):
 
 
 def test_magnitudes_cancels(attn_2l_model):
-    """Test that the magnitudes are zero when the RichPrompts are exact opposites."""
+    """Test that the magnitudes are zero when the ActivationAdditions are exact opposites."""
     # Create a ActivationAddition with all zeros
     additions: List[ActivationAddition] = [
         ActivationAddition(prompt="Test", coeff=1, act_name=0),

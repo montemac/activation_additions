@@ -57,7 +57,7 @@ completion_utils.print_n_comparisons(
 
 
 # %%
-# Generate a set of RichPrompts over a range of phrases, layers and
+# Generate a set of ActivationAdditions over a range of phrases, layers and
 # coeffs
 # TODO: need to find a way to add padding specifications to these sweep inputs
 rich_prompts_df = sweeps.make_rich_prompts(

@@ -1,5 +1,5 @@
 """ Functions for generating completions from a model, using a prompt
-and a list of RichPrompts. """
+and a list of ActivationAdditions. """
 
 from functools import wraps
 from typing import List, Optional, Dict, Callable, Union

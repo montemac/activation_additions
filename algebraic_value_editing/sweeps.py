@@ -76,7 +76,7 @@ def sweep_over_prompts(
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Apply each provided ActivationAddition to each prompt num_completions
     times, returning the results in a dataframe.  The iterable of
-    RichPrompts may be created directly for simple cases, or created by
+    ActivationAdditions may be created directly for simple cases, or created by
     sweeping over e.g. layers, coeffs, ingredients, etc. using other
     functions in this module.
 
@@ -127,7 +127,7 @@ def sweep_over_prompts(
         )
         # Append for later concatenation
         normal_list.append(normal_df)
-        # Iterate over RichPrompts
+        # Iterate over ActivationAdditions
         for index, rich_prompts_this in enumerate(tqdm(rich_prompts)):
             # Generate the patched completions, with logging
             # forced off since we'll be logging to final DataFrames

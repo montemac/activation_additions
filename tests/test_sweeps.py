@@ -108,7 +108,7 @@ def make_and_save_sweep_results(model):
 
 def test_sweep_over_prompts(model):
     """Test for sweep_over_prompts().  Uses a toy model fixture, passes
-    a handful of RichPrompts and prompts, and compares results to a
+    a handful of ActivationAdditions and prompts, and compares results to a
     pre-cached reference output."""
     normal_df, patched_df, _ = do_sweep(model)
     normal_target, patched_target, _, _, _ = load_cached_sweep_over_prompts()
