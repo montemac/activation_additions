@@ -11,7 +11,7 @@ from tqdm.auto import tqdm
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import metrics, logging
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import ActivationAddition
 from algebraic_value_editing.completion_utils import (
     gen_using_hooks,
     gen_using_rich_prompts,
@@ -25,14 +25,14 @@ def make_rich_prompts(
     coeffs: Union[List[float], np.ndarray],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
 ) -> pd.DataFrame:
-    """Make a single series of RichPrompt lists by combining all permutations
+    """Make a single series of ActivationAddition lists by combining all permutations
     of lists of phrases with initial coeffs, activation names (i.e. layers), and
     additional coeffs that are applied to lists of phrases as an
     additional scale factor. For example, a 'phrase diff' at various coeffs can
     be created by passing `phrases=[[(phrase1, 1.0), (phrase2, -1.0)]]`
     and `coeffs=[-10, -1, 1, 10]`.
 
-    The returned DataFrame has columns for the RichPrompt lists, and the
+    The returned DataFrame has columns for the ActivationAddition lists, and the
     inputs that generated each one (i.e. phrases, act_name, coeff)."""
     rows = []
     for phrases_this in phrases:
@@ -41,7 +41,7 @@ def make_rich_prompts(
                 rich_prompts_this = []
                 for phrase, init_coeff in phrases_this:
                     rich_prompts_this.append(
-                        RichPrompt(
+                        ActivationAddition(
                             coeff=init_coeff * coeff,
                             act_name=act_name,
                             prompt=phrase,
@@ -63,7 +63,7 @@ def make_rich_prompts(
 def sweep_over_prompts(
     model: HookedTransformer,
     prompts: Iterable[str],
-    rich_prompts: Iterable[List[RichPrompt]],
+    rich_prompts: Iterable[List[ActivationAddition]],
     num_normal_completions: int = 100,
     num_patched_completions: int = 100,
     tokens_to_generate: int = 40,
@@ -74,7 +74,7 @@ def sweep_over_prompts(
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **sampling_kwargs,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Apply each provided RichPrompt to each prompt num_completions
+    """Apply each provided ActivationAddition to each prompt num_completions
     times, returning the results in a dataframe.  The iterable of
     RichPrompts may be created directly for simple cases, or created by
     sweeping over e.g. layers, coeffs, ingredients, etc. using other
@@ -85,14 +85,14 @@ def sweep_over_prompts(
 
         prompts: The prompts to use for completion.
 
-        rich_prompts: An iterable of RichPrompt lists to patch into the
+        rich_prompts: An iterable of ActivationAddition lists to patch into the
         prompts, in all permutations.
 
         num_normal_completions: Number of completions to generate for each
         prompt for the normal, unpatched model.
 
         num_patched_completions: Number of completions to generate for each
-        prompt/RichPrompt combination.
+        prompt/ActivationAddition combination.
 
         tokens_to_generate: The number of additional tokens to generate.
 
@@ -160,8 +160,8 @@ def reduce_sweep_results(
 ):
     """Perform some common post-processing on sweep results to:
     - take means for all metrics over all repititions of each
-      (RichPrompt, prompt) pair,
-    - join RichPrompt information into patched data so that phrases,
+      (ActivationAddition, prompt) pair,
+    - join ActivationAddition information into patched data so that phrases,
       coeffs, act_names are available as columns"""
     reduced_df = patched_df.groupby(["prompts", "rich_prompt_index"]).mean(
         numeric_only=True

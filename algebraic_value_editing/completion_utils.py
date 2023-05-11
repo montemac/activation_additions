@@ -13,7 +13,7 @@ import einops
 
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import ActivationAddition
 from algebraic_value_editing import hook_utils, logging
 
 
@@ -134,7 +134,7 @@ def gen_using_hooks(
 @logging.loggable
 def gen_using_rich_prompts(
     model: HookedTransformer,
-    rich_prompts: List[RichPrompt],
+    rich_prompts: List[ActivationAddition],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     addition_location: str = "front",
     res_stream_slice: slice = slice(None),
@@ -145,7 +145,7 @@ def gen_using_rich_prompts(
     args:
         `model`: The model to use for completion.
 
-        `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
+        `rich_prompts`: A list of `ActivationAddition`s to use to create hooks.
 
         `log`: To enable logging of this call to `wandb`, pass either
         `True`, or a dict contining any of ('tags', 'group', 'notes') to
@@ -285,7 +285,7 @@ def print_n_comparisons(
     model: HookedTransformer,
     num_comparisons: int = 5,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
-    rich_prompts: Optional[List[RichPrompt]] = None,
+    rich_prompts: Optional[List[ActivationAddition]] = None,
     addition_location: str = "front",
     res_stream_slice: slice = slice(None),
     **kwargs,
@@ -305,7 +305,7 @@ def print_n_comparisons(
         pass these keys to the wandb init call.  False to disable
         logging.
 
-        `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
+        `rich_prompts`: A list of `ActivationAddition`s to use to create hooks.
 
         `addition_location`: Whether to add `activations` from
         `rich_prompts` to the front-positioned

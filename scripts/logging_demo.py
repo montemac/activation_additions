@@ -30,7 +30,7 @@ _ = MODEL.to("cuda:0")
 
 # %%
 # Generate some completions, with logging enabled
-rich_prompts: List[prompt_utils.RichPrompt] = [
+rich_prompts: List[prompt_utils.ActivationAddition] = [
     *prompt_utils.get_x_vector(
         prompt1=" weddings",
         prompt2="",

@@ -2,7 +2,7 @@
 
 import pytest
 from transformer_lens.HookedTransformer import HookedTransformer
-from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
+from algebraic_value_editing.prompt_utils import ActivationAddition, get_x_vector
 
 
 # Fixtures
@@ -15,8 +15,8 @@ def fixture_model() -> HookedTransformer:
 
 
 def test_creation():
-    """Test that we can create a RichPrompt."""
-    rich_prompt = RichPrompt(
+    """Test that we can create a ActivationAddition."""
+    rich_prompt = ActivationAddition(
         prompt="Hello world!",
         act_name="encoder",
         coeff=1.0,
@@ -27,11 +27,11 @@ def test_creation():
 
 
 def test_x_vector_creation():
-    """Test that we can create a RichPrompt's x_vector."""
-    rich_prompt_positive = RichPrompt(
+    """Test that we can create a ActivationAddition's x_vector."""
+    rich_prompt_positive = ActivationAddition(
         prompt="Hello world!", act_name="", coeff=1.0
     )
-    rich_prompt_negative = RichPrompt(
+    rich_prompt_negative = ActivationAddition(
         prompt="Goodbye world!", act_name="", coeff=-1.0
     )
 

@@ -11,14 +11,14 @@ from transformer_lens import ActivationCache
 from transformer_lens.HookedTransformer import HookedTransformer
 from transformer_lens.hook_points import HookPoint
 
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import ActivationAddition
 from algebraic_value_editing import prompt_utils
 
 
 def get_prompt_activations(  # TODO rename
-    model: HookedTransformer, rich_prompt: RichPrompt
+    model: HookedTransformer, rich_prompt: ActivationAddition
 ) -> Float[torch.Tensor, "batch pos d_model"]:
-    """Takes a `RichPrompt` and returns the rescaled activations for that
+    """Takes a `ActivationAddition` and returns the rescaled activations for that
     prompt, for the appropriate `act_name`. Rescaling is done by running
     the model forward with the prompt and then multiplying the
     activations by the coefficient `rich_prompt.coeff`.
@@ -42,9 +42,9 @@ def get_prompt_activations(  # TODO rename
 
 
 def get_activation_dict(
-    model: HookedTransformer, rich_prompts: List[RichPrompt]
+    model: HookedTransformer, rich_prompts: List[ActivationAddition]
 ) -> Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]]:
-    """Takes a list of `RichPrompt`s and returns a dictionary mapping
+    """Takes a list of `ActivationAddition`s and returns a dictionary mapping
     activation names to lists of activations.
     """
     # Make the dictionary
@@ -63,7 +63,7 @@ def get_activation_dict(
 
 # Get magnitudes
 def steering_vec_magnitudes(
-    act_adds: List[RichPrompt], model: HookedTransformer
+    act_adds: List[ActivationAddition], model: HookedTransformer
 ) -> Float[torch.Tensor, "pos"]:
     """Compute the magnitude of the net steering vector at each sequence
     position."""
@@ -75,7 +75,7 @@ def steering_vec_magnitudes(
             "Only one activation name is supported for now."
         )
 
-    # Get the RichPrompt activations from the dict
+    # Get the ActivationAddition activations from the dict
     activations_lst: List[Float[torch.Tensor, "batch pos d_model"]] = list(
         act_dict.values()
     )[0]
@@ -133,7 +133,7 @@ def prompt_magnitudes(
 
 def steering_magnitudes_relative_to_prompt(
     prompt: str,
-    act_adds: List[RichPrompt],
+    act_adds: List[ActivationAddition],
     model: HookedTransformer,
 ) -> Float[torch.Tensor, "pos"]:
     """Get the prompt and steering vector magnitudes and return their
@@ -280,14 +280,14 @@ def hook_fns_from_act_dict(
 
 
 def hook_fns_from_rich_prompts(
-    model: HookedTransformer, rich_prompts: List[RichPrompt], **kwargs
+    model: HookedTransformer, rich_prompts: List[ActivationAddition], **kwargs
 ) -> Dict[str, Callable]:
-    """Takes a list of `RichPrompt`s and makes a single activation-modifying forward hook.
+    """Takes a list of `ActivationAddition`s and makes a single activation-modifying forward hook.
 
     args:
         `model`: `HookedTransformer` object, with hooks already set up
 
-        `rich_prompts`: List of `RichPrompt` objects
+        `rich_prompts`: List of `ActivationAddition` objects
 
         `kwargs`: kwargs for `hook_fn_from_activations`
 

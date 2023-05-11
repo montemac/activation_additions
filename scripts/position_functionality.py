@@ -11,7 +11,7 @@ import torch
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from algebraic_value_editing import completion_utils
-from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
+from algebraic_value_editing.prompt_utils import ActivationAddition, get_x_vector
 
 
 # %%
@@ -29,9 +29,9 @@ sampling_kwargs = {
     "freq_penalty": 1.0
 }
 
-wedding_additions: List[RichPrompt] = [
-    RichPrompt(prompt=" wedding", coeff=4.0, act_name=6),
-    RichPrompt(prompt=" ", coeff=-4.0, act_name=6),
+wedding_additions: List[ActivationAddition] = [
+    ActivationAddition(prompt=" wedding", coeff=4.0, act_name=6),
+    ActivationAddition(prompt=" ", coeff=-4.0, act_name=6),
 ]
 # %% Print out qualitative results
 for location in ('front', 'mid', 'back'):

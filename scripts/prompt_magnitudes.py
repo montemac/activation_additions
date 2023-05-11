@@ -38,7 +38,7 @@ from typing import List, Dict
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from algebraic_value_editing import hook_utils, prompt_utils
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import ActivationAddition
 
 # %%
 device: str = "cpu"
@@ -630,7 +630,7 @@ def line_plot(
     title: str = "Residual Stream Norm by Layer Number",
     legend_title_text: str = "Prompt",
 ) -> go.Figure:
-    """Make a line plot of the RichPrompt norm. If log_y is True,
+    """Make a line plot of the ActivationAddition norm. If log_y is True,
     adds a column to the dataframe with the log10 of the norm."""
     for col in ["Prompt", "Activation Location", "Magnitude"]:
         assert col in df.columns, f"Column {col} not in dataframe"
