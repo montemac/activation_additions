@@ -44,6 +44,7 @@ def gen_using_model(
     prompt_batch: List[str],
     tokens_to_generate: int = 40,
     seed: Optional[int] = None,
+    include_logits: bool = False,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **sampling_kwargs,
 ) -> pd.DataFrame:
@@ -58,6 +59,9 @@ def gen_using_model(
         `tokens_to_generate`: The number of additional tokens to generate.
 
         `seed`: A random seed to use for generation.
+
+        `include_logits`: True to include the full logits tensors as a
+        column in the returned DataFrame.
 
         `log`: To enable logging of this call to wandb, pass either
         True, or a dict contining any of ('tags', 'group', 'notes') to
@@ -79,7 +83,9 @@ def gen_using_model(
     if seed is not None:
         t.manual_seed(seed)
 
-    tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(prompt_batch)
+    tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(
+        prompt_batch
+    )
     completions: Float[t.Tensor, "batch pos"] = model.generate(
         input=tokenized_prompts,
         max_new_tokens=tokens_to_generate,
@@ -88,8 +94,17 @@ def gen_using_model(
     )
 
     # Compute the loss per token
-    output: Output = model(completions.clone(), return_type="both", loss_per_token=True)
-    loss, logits = output.loss.detach().cpu(), output.logits.detach().cpu()
+    if include_logits:
+        output: Output = model(
+            completions.clone(), return_type="both", loss_per_token=True
+        )
+        loss, logits = output.loss.detach().cpu(), output.logits.detach().cpu()
+    else:
+        loss = (
+            model(completions.clone(), return_type="loss", loss_per_token=True)
+            .detach()
+            .cpu()
+        )
     average_loss: np.ndarray = einops.reduce(
         loss, "batch pos -> batch", "mean"
     ).numpy()  # NOTE why are we casting to numpy?
@@ -105,9 +120,11 @@ def gen_using_model(
             "prompts": prompt_batch,
             "completions": model.to_string(trimmed_completions),
             "loss": list(average_loss),
-            "logits": logits.tolist(),
         }
     )
+
+    if include_logits:
+        results["logits"] = logits.tolist()
 
     return results
 
@@ -121,6 +138,7 @@ def gen_using_hooks(
     hook_fns: Dict[str, List[Callable]],
     tokens_to_generate: int = 40,
     seed: Optional[int] = None,
+    include_logits: bool = False,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **sampling_kwargs,
 ) -> pd.DataFrame:
@@ -137,6 +155,9 @@ def gen_using_hooks(
         `tokens_to_generate`: The number of additional tokens to generate.
 
         `seed`: A random seed to use for generation.
+
+        `include_logits`: True to include the full logits tensors as a
+        column in the returned DataFrame.
 
         `log`: To enable logging of this call to wandb, pass either
         True, or a dict contining any of ('tags', 'group', 'notes') to
@@ -158,11 +179,19 @@ def gen_using_hooks(
     # warnings.warn("Deprecated: Use `gen_using_model` and `with model.hooks(...)` instead")
 
     fwd_hooks = [
-        (name, hook_fn) for name, hook_fns in hook_fns.items() for hook_fn in hook_fns
+        (name, hook_fn)
+        for name, hook_fns in hook_fns.items()
+        for hook_fn in hook_fns
     ]
     with model.hooks(fwd_hooks=fwd_hooks):
         results = gen_using_model(
-            model, prompt_batch, tokens_to_generate, seed, log, **sampling_kwargs
+            model,
+            prompt_batch,
+            tokens_to_generate,
+            seed,
+            include_logits,
+            log,
+            **sampling_kwargs,
         )
 
     # Mark the completions as modified or not
@@ -208,7 +237,9 @@ def gen_using_rich_prompts(
                 `loss`: The average loss per token of the completions.
     """
     # Create the hook functions
-    hook_fns: Dict[str, List[Callable]] = hook_utils.hook_fns_from_rich_prompts(
+    hook_fns: Dict[
+        str, List[Callable]
+    ] = hook_utils.hook_fns_from_rich_prompts(
         model=model,
         rich_prompts=rich_prompts,
         addition_location=addition_location,
@@ -257,7 +288,8 @@ def pretty_print_completions(
             modified completions.
     """
     assert all(
-        col in results.columns for col in ("prompts", "completions", "is_modified")
+        col in results.columns
+        for col in ("prompts", "completions", "is_modified")
     )
 
     # Assert that an equal number of rows have `is_modified` True and
@@ -279,7 +311,9 @@ def pretty_print_completions(
     completion_dict: dict = {}
     for col in completion_cols:
         is_mod = col == mod_title
-        completion_dict[col] = results[results["is_modified"] == is_mod]["completions"]
+        completion_dict[col] = results[results["is_modified"] == is_mod][
+            "completions"
+        ]
 
     # Format the DataFrame for printing
     prompt: str = results["prompts"].tolist()[0]
@@ -297,7 +331,9 @@ def pretty_print_completions(
     for row in zip(*completion_dict.values()):
         # Bold the appropriate prompt
         normal_str = bold_text(
-            prompt if normal_prompt_override is None else normal_prompt_override
+            prompt
+            if normal_prompt_override is None
+            else normal_prompt_override
         )
         mod_str = bold_text(
             prompt if mod_prompt_override is None else mod_prompt_override

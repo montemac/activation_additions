@@ -129,7 +129,6 @@ def test_add_metric_cols(model):
             "prompts": results_df["prompts"],
             "completions": results_df["completions"],
             "loss": results_df["loss"],
-            "logits": results_df["logits"],
             "is_modified": results_df["is_modified"],
             "metric_inputs": results_df["metric_inputs"],
             "sentiment1_label": ["POSITIVE", "NEGATIVE"],

@@ -35,13 +35,22 @@ def trajectory_log_probs(tuned_lens, logits, cache):
     """
     Get the log probabilities of the trajectory from the cache and logits.
     """
-    stream = [resid for name, resid in cache.items() if name.endswith("resid_pre")]
+    stream = [
+        resid for name, resid in cache.items() if name.endswith("resid_pre")
+    ]
     traj_log_probs = [
-        tuned_lens.forward(x, i).log_softmax(dim=-1).squeeze().detach().cpu().numpy()
+        tuned_lens.forward(x, i)
+        .log_softmax(dim=-1)
+        .squeeze()
+        .detach()
+        .cpu()
+        .numpy()
         for i, x in enumerate(stream)
     ]
     # Handle the case where the model has more/less tokens than the lens
-    model_log_probs = logits.log_softmax(dim=-1).squeeze().detach().cpu().numpy()
+    model_log_probs = (
+        logits.log_softmax(dim=-1).squeeze().detach().cpu().numpy()
+    )
     traj_log_probs.append(model_log_probs)
     return traj_log_probs
 
@@ -64,11 +73,17 @@ def prediction_trajectories(
     """
 
     logits_list = [torch.tensor(df["logits"]) for df in dataframes]
-    full_prompts = [df["prompts"][0] + df["completions"][0] for df in dataframes]
+    full_prompts = [
+        df["prompts"][0] + df["completions"][0] for df in dataframes
+    ]
     return [
         PredictionTrajectory(
-            log_probs=np.array(trajectory_log_probs(tuned_lens, logits, cache)),
-            input_ids=np.array(tokenizer.encode(prompt) + [tokenizer.eos_token_id]),
+            log_probs=np.array(
+                trajectory_log_probs(tuned_lens, logits, cache)
+            ),
+            input_ids=np.array(
+                tokenizer.encode(prompt) + [tokenizer.eos_token_id]
+            ),
             tokenizer=tokenizer,
         )
         for prompt, logits, cache in zip(full_prompts, logits_list, caches)
@@ -105,7 +120,9 @@ def run_hooked_and_normal_with_cache(model, rich_prompts, kw, device=None):
 
         # IMPORTANT: We call caching hooks *after* the value editing hooks.
         with model.hooks(fwd_hooks=fwd_hooks + caching_hooks):
-            results_df = completion_utils.gen_using_model(model, **kw)
+            results_df = completion_utils.gen_using_model(
+                model, include_logits=True, **kw
+            )
             results_df["is_modified"] = is_modified
         normal_and_modified_df.append(results_df)
         normal_and_modified_cache.append(cache)
