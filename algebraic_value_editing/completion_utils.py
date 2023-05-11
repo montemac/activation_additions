@@ -105,6 +105,7 @@ def gen_using_model(
             .detach()
             .cpu()
         )
+        logits = None
     average_loss: np.ndarray = einops.reduce(
         loss, "batch pos -> batch", "mean"
     ).numpy()  # NOTE why are we casting to numpy?
@@ -123,7 +124,7 @@ def gen_using_model(
         }
     )
 
-    if include_logits:
+    if logits is not None:
         results["logits"] = logits.tolist()
 
     return results
