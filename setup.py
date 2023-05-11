@@ -25,6 +25,11 @@ setup(
         "openai>=0.27.2",
         "nltk>=3.8.1",
         "kaleido>=0.2.1",
+        "pytest",
+        "plotly",
+        "nbformat",
+        "Ipython",
+        "ipywidgets",
     ],
     extras_require={
         "dev": [

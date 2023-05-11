@@ -30,6 +30,8 @@ TokensMetricFunc = Callable[
 ]
 
 
+# pylint: disable=dangerous-default-value
+# (False positive since we don't mutate the default value)
 def add_metric_cols(
     data: pd.DataFrame,
     metrics_dict: Union[
@@ -38,7 +40,7 @@ def add_metric_cols(
     cols_to_use: Optional[Union[str, List[str]]] = None,
     show_progress: bool = False,
     prefix_cols: bool = True,
-):
+) -> pd.DataFrame:
     """Apply a dict of named metrics to a series of strings
     specified by by a particular set of DataFrame columns (which will be
     concatenated), adding the metric outputs as additional columns and
@@ -48,6 +50,9 @@ def add_metric_cols(
         cols_to_use = ["prompts", "completions"]
     if not isinstance(cols_to_use, list):
         cols_to_use = [cols_to_use]
+    assert all(
+        col in data.columns for col in cols_to_use
+    ), f"Columns {cols_to_use} not found in data"
     # Join input columns data if needed
     if len(cols_to_use) > 1:
         data["metric_inputs"] = data[cols_to_use].agg("".join, axis=1)
@@ -297,6 +302,8 @@ def get_word_count_metric(
 def get_openai_metric(
     model_name: str,  # e.g. text-davinci-003
     criterion: str,  # e.g. "happy" gives prompt "How happy is this text?" as a prompt
+    chunk_size: int = 19,  # max chunk size passed to openai (limit is 19 for text-davinci-003)
+    max_reasoning_tokens: int = 100,  # max tokens to use for reasoning
 ) -> TextMetricFunc:
     """Create a metric using an OpenAI model. and chain-of-thought. The
     model is called twice, first to get a reasoning for the rating, then
@@ -312,42 +319,56 @@ def get_openai_metric(
     be more centered around 5. (And doing this for humans as well.)
     """
 
-    # extract the ratings
+    def chunks(lst: List[str], size: int):
+        """Yield successive `size` chunks from `lst`."""
+        for i in range(0, len(lst), size):
+            yield lst[i : i + size]
+
     def _intify(int_string):
-        try:
-            return int(int_string)
-        except ValueError:
-            return None
+        return int(int_string) if int_string.isdigit() else None
 
     def metric_func(
         strs: Iterable[str],
         show_progress: bool = False,  # pylint: disable=unused-argument
         index: Optional[pd.Index] = None,
     ) -> pd.DataFrame:
-        prompts = [
-            f"How {criterion} is this text? Give reasoning in "
-            + f"1-3 sentences. Text:\n{str_this}\nReasoning:\n"
-            for str_this in strs
-        ]
-        response = openai.Completion.create(
-            model=model_name,
-            prompt=prompts,
-            temperature=0.0,
-        )
-        reasoning = [choice["text"] for choice in response.choices]
-        contexts = [
-            prompt + reasoning for prompt, reasoning in zip(prompts, reasoning)
-        ]
-        response = openai.Completion.create(
-            model=model_name,
-            prompt=[
-                f"{ctx}\n\n{criterion.title()} rating (1-10):"
-                for ctx in contexts
-            ],
-            temperature=0.0,
-        )
+        ratings = []
+        reasoning = []
 
-        ratings = [_intify(r["text"].strip()) for r in response["choices"]]
+        for chunk in chunks(list(strs), chunk_size):
+            prompts = [
+                f"How {criterion} is this text? Give reasoning in 1-3"
+                f" sentences. Text:\n{s}\nReasoning:\n"
+                for s in chunk
+            ]
+            response = openai.Completion.create(
+                model=model_name,
+                prompt=prompts,
+                temperature=0.0,
+                max_tokens=max_reasoning_tokens,
+            )
+            chunk_reasoning: List[str] = [
+                choice["text"] for choice in response.choices  # type: ignore
+            ]
+            contexts: List[str] = [
+                prompt + reasoning
+                for prompt, reasoning in zip(prompts, chunk_reasoning)
+            ]
+            response = openai.Completion.create(
+                model=model_name,
+                prompt=[
+                    f"{ctx}\n\n{criterion.title()} rating (1-5):"
+                    for ctx in contexts
+                ],
+                temperature=0.0,
+                max_tokens=1,
+            )
+
+            chunk_ratings: List[Optional[int]] = [
+                _intify(r["text"].strip()) for r in response["choices"]  # type: ignore
+            ]
+            ratings.extend(chunk_ratings)
+            reasoning.extend(chunk_reasoning)
 
         # Return dataframe with ratings and reasoning
         return pd.DataFrame(
