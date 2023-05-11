@@ -378,7 +378,7 @@ def forward_with_rich_prompts(
         def remove_pad(val):
             """Convenience function to remove padding."""
             return torch.concat(
-                [val[:, 0:1, ...], val[:, rich_prompt_len:, ...]], axis=1
+                [val[:, 0:1, ...], val[:, rich_prompt_len:, ...]], dim=1
             )
 
         if return_type in ["logits", "loss"]:

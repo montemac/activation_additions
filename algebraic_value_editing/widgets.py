@@ -91,7 +91,7 @@ def make_widget(
                 act_name=act_name,
                 model=model,
                 pad_method="tokens_right",
-                custom_pad_id=model.to_single_token(" "),
+                custom_pad_id=model.to_single_token(" "),  # type: ignore
             ),
         )
         # Calculate normal and modified token probabilities

@@ -1,7 +1,7 @@
 """ Functions for performing automated sweeps of algebraic value editing
 over layers, coeffs, etc. """
 
-from typing import Iterable, Optional, List, Tuple, Union, Dict, Callable, Any
+from typing import Iterable, Optional, List, Tuple, Union, Dict, Any
 
 import numpy as np
 import pandas as pd
@@ -23,7 +23,7 @@ from algebraic_value_editing.completion_utils import (
 @logging.loggable
 def make_rich_prompts(
     phrases: List[List[Tuple[str, float]]],
-    act_names: Union[List[str], np.ndarray],
+    act_names: Union[List[str], List[int], np.ndarray],
     coeffs: Union[List[float], np.ndarray],
     pad: bool = False,
     model: Optional[HookedTransformer] = None,
@@ -51,10 +51,10 @@ def make_rich_prompts(
             for coeff in coeffs:
                 rich_prompts_this = []
                 if pad:
-                    pad_token: int = model.to_single_token(" ")
+                    pad_token: int = model.to_single_token(" ")  # type: ignore
                     # Convert all phrases into tokens
                     tokens_list = [
-                        model.to_tokens(phrase)[0]
+                        model.to_tokens(phrase)[0]  # type: ignore
                         for phrase, init_coeff in phrases_this
                     ]
                     # Get max length of tokens
@@ -112,7 +112,10 @@ def sweep_over_prompts(
     tokens_to_generate: int = 40,
     seed: Optional[int] = None,
     metrics_dict: Optional[
-        Dict[str, Callable[[Iterable[str]], pd.DataFrame]]
+        Union[
+            Dict[str, metrics.TextMetricFunc],
+            Dict[str, metrics.TokensMetricFunc],
+        ]
     ] = None,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **sampling_kwargs,
@@ -204,7 +207,10 @@ def sweep_over_metrics(
     model: HookedTransformer,
     inputs: Union[Iterable[Any], pd.Series],
     rich_prompts: Iterable[List[RichPrompt]],
-    metrics_dict: Dict[str, Callable[[Iterable[str]], pd.DataFrame]],
+    metrics_dict: Union[
+        Dict[str, metrics.TextMetricFunc],
+        Dict[str, metrics.TokensMetricFunc],
+    ],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **metric_args,
 ) -> pd.DataFrame:

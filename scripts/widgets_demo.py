@@ -12,7 +12,9 @@ utils.enable_ipython_reload()
 # Load a model
 MODEL: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
-).to("cuda:1")
+).to(
+    "cuda:1"
+)  # type: ignore
 
 # %%
 # Create and display the widget

@@ -32,7 +32,7 @@ def test_get_sentiment_metric():
         "I love chocolate",
         "I hate chocolate",
     ]
-    results: pd.DataFrame = metric(prompts, index=["a", "b"])
+    results: pd.DataFrame = metric(prompts, False, pd.Index(["a", "b"]))
     target = pd.DataFrame(
         {
             "label": ["POSITIVE", "NEGATIVE"],
@@ -55,7 +55,7 @@ def test_get_word_count_metric():
         "Dogs and puppies are the best!",
         "Look at that cute dog with a puppy over there.",
     ]
-    results: pd.DataFrame = metric(prompts)
+    results: pd.DataFrame = metric(prompts, False, None)
     target = pd.DataFrame(
         {"count": [2, 2]},
     )
@@ -71,7 +71,7 @@ def test_openai_metric():
 
     metric: Callable = metrics.get_openai_metric("text-davinci-003", "happy")
     prompts: List[str] = ["I love chocolate!", "I hate chocolate!"]
-    results: pd.DataFrame = metric(prompts)
+    results: pd.DataFrame = metric(prompts, False, None)
     target = pd.DataFrame(
         {
             "rating": [5, 1],
@@ -94,7 +94,7 @@ def test_openai_metric_bulk():
         pytest.skip("OpenAI API key not found.")
 
     metric: Callable = metrics.get_openai_metric("text-davinci-003", "happy")
-    metric([""] * 21)  # The test is that this doesn't error!
+    metric([""] * 21, False, None)  # The test is that this doesn't error!
 
 
 def test_add_metric_cols(model):

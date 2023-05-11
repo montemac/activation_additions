@@ -63,8 +63,8 @@ def add_metric_cols(
         # Apply the metric
         metric_df = metric_func(
             data["metric_inputs"],
-            show_progress=show_progress,
-            index=data.index,
+            show_progress,
+            data.index,
         )
         # Prefix returned names if needed to ensure uniqueness
         if prefix_cols:
@@ -122,7 +122,7 @@ def get_loss_metric(
 
 def forward_with_funcs(
     model: HookedTransformer,
-    funcs: Tuple[Optional[Callable], Optional[Callable]],
+    funcs: Optional[Tuple[Optional[Callable], Optional[Callable]]],
     *fwd_args,
     **fwd_kwargs,
 ):
@@ -208,27 +208,31 @@ def get_logprob_metric(
             if "kl_div" in agg_mode:
                 # Calculate KL div explicitly to avoid scipy dependency
                 # and use existing log-probs
-                logits_pq = [
-                    logits,
-                    forward_with_funcs(
-                        q_model, q_funcs, input=tokens, return_type="logits"
-                    ),
-                ]
-                logprobs_pq = [
-                    F.log_softmax(logits, dim=-1) for logits in logits_pq
-                ]
-                probs_pq = [
-                    torch.distributions.Categorical(logits=logits).probs
-                    for logits in logits_pq
-                ]
-                values["logprob_kl_div"] = (
-                    (probs_pq[0] * (logprobs_pq[0] - logprobs_pq[1]))
-                    .sum(axis=-1)
-                    .detach()
-                    .cpu()
-                    .numpy()
-                    .squeeze()
-                )
+                if q_model is not None:
+                    logits_pq = [
+                        logits,
+                        forward_with_funcs(
+                            q_model,
+                            q_funcs,
+                            input=tokens,
+                            return_type="logits",
+                        ),
+                    ]
+                    logprobs_pq = [
+                        F.log_softmax(logits, dim=-1) for logits in logits_pq
+                    ]
+                    probs_pq = [
+                        torch.distributions.Categorical(logits=logits).probs
+                        for logits in logits_pq
+                    ]
+                    values["logprob_kl_div"] = (
+                        (probs_pq[0] * (logprobs_pq[0] - logprobs_pq[1]))
+                        .sum(dim=-1)
+                        .detach()
+                        .cpu()
+                        .numpy()
+                        .squeeze()
+                    )
             values_list.append(values)
         return pd.DataFrame(values_list, index=index)
 

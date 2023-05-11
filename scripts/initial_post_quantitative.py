@@ -57,7 +57,9 @@ PNG_SCALE = 2.0
 # Load a model
 MODEL: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
-).to("cuda:1")
+).to(
+    "cuda:1"
+)  # type: ignore
 
 
 # %%[markdown]
@@ -98,7 +100,7 @@ rich_prompts = list(
         act_name=16,
         model=MODEL,
         pad_method="tokens_right",
-        custom_pad_id=MODEL.to_single_token(" "),
+        custom_pad_id=MODEL.to_single_token(" "),  # type: ignore
     ),
 )
 
@@ -203,7 +205,7 @@ for idx, row in tqdm(list(rich_prompts_df.iterrows())):
     probs = logits.get_normal_and_modified_token_probs(
         model=MODEL,
         prompts=[TEXT],
-        rich_prompts=row["rich_prompts"],
+        rich_prompts=list(row["rich_prompts"]),
     )
     results_list.append(
         {
@@ -260,7 +262,7 @@ for idx, row in tqdm(list(rich_prompts_df.iterrows())):
     probs = logits.get_normal_and_modified_token_probs(
         model=MODEL,
         prompts=[TEXT],
-        rich_prompts=row["rich_prompts"],
+        rich_prompts=list(row["rich_prompts"]),
     )
     results_list.append(
         {
@@ -329,7 +331,7 @@ texts = []
 for desc, filename in FILENAMES.items():
     with open(filename, "r", encoding="utf8") as file:
         sentences = [
-            "" + sentence for sentence in tokenizer.tokenize(file.read())
+            "" + sentence for sentence in tokenizer.tokenize(file.read())  # type: ignore
         ]
     texts.append(pd.DataFrame({"text": sentences, "topic": desc}))
 texts_df = pd.concat(texts).reset_index(drop=True)
@@ -484,7 +486,7 @@ tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 # sentiment of the review it was taken from.
 yelp_sample_sentences_list = []
 for idx, row in yelp_sample.iterrows():
-    sentences = tokenizer.tokenize(row["text"])
+    sentences = tokenizer.tokenize(row["text"])  # type: ignore
     yelp_sample_sentences_list.append(
         pd.DataFrame(
             {
@@ -699,7 +701,7 @@ metric_func = metrics.get_logprob_metric(
 logprobs_list = []
 for idx, row in tqdm(list(texts_df.iterrows())):
     # Convert to tokens
-    tokens = MODEL.to_tokens(row["text"])
+    tokens = MODEL.to_tokens(row["text"])  # type: ignore
     # Add prompt
     tokens = torch.concat(
         (
@@ -707,10 +709,10 @@ for idx, row in tqdm(list(texts_df.iterrows())):
             MODEL.to_tokens(" weddings", prepend_bos=False),
             tokens[:, 1:],
         ),
-        axis=-1,
+        dim=-1,
     )
     # Apply metric
-    logprobs_list.append(metric_func([tokens]).iloc[0, 0])
+    logprobs_list.append(metric_func([tokens]).iloc[0, 0])  # type: ignore
 prompted_comp_df = pd.DataFrame(
     {
         "normal_logprobs": mod_df.groupby("input_index")[

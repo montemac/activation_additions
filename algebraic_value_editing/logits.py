@@ -1,7 +1,7 @@
 """Functions for extracting and evaluating probability distributions
 over next tokens with and without activation injections."""
 
-from typing import List, Optional, Iterable, Union, Tuple, Any, Dict
+from typing import List, Optional, Union, Tuple, Any, Dict
 
 import torch
 import numpy as np
@@ -19,8 +19,8 @@ def logits_to_probs_numpy(
     both probabilities and logprobs as numpy arrays."""
     dist = torch.distributions.Categorical(logits=logits)
     return (
-        dist.probs.detach().cpu().numpy(),
-        dist.logits.detach().cpu().numpy(),
+        dist.probs.detach().cpu().numpy(),  # type: ignore
+        dist.logits.detach().cpu().numpy(),  # type: ignore
     )
 
 
@@ -109,9 +109,9 @@ def disruption(
 def get_effectiveness_and_disruption(
     probs: pd.DataFrame,
     rich_prompts: List[prompt_utils.RichPrompt],
-    steering_aligned_tokens: Dict[int, np.array],
+    steering_aligned_tokens: Dict[int, np.ndarray],
     mode: str = "mask_injection_pos",
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Calculate effectiveness and disruption of an activation injection
     defined by a model, input text, list of RichPrompts, and a dict
     specifying the steering-aligned next tokens at any token position in
@@ -149,8 +149,8 @@ def get_effectiveness_and_disruption(
 
 def plot_effectiveness_and_disruption(
     tokens_str: list[str],
-    eff: np.ndarray,
-    foc: np.ndarray,
+    eff: pd.DataFrame,
+    foc: pd.DataFrame,
     title: Optional[str] = None,
 ):
     """Plot previously calculated effectiveness and disruption scores."""
@@ -195,17 +195,17 @@ def plot_effectiveness_and_disruption(
             "tickmode": "array",
             "tickvals": plot_df["pos"],
             "ticktext": plot_df["tokens_str"],
-        }
+        },
+        yaxis_title="nats",
+        annotations=[],
     )
-    fig.layout["yaxis"]["title"] = "nats"
-    fig.layout["annotations"] = []
     return fig
 
 
 def get_token_probs(
     model: HookedTransformer,
     prompts: Union[
-        Union[str, torch.Tensor], Iterable[Union[str, torch.Tensor]]
+        Union[str, torch.Tensor], Union[List[str], List[torch.Tensor]]
     ],
     rich_prompts: Optional[List[prompt_utils.RichPrompt]] = None,
     return_positions_above: Optional[int] = None,
@@ -218,6 +218,8 @@ def get_token_probs(
     assert return_positions_above is None or isinstance(
         prompts, (str, torch.Tensor)
     ), "Can only return logits for multiple positions for a single prompt."
+    if return_positions_above is None:
+        return_positions_above = 0
     # Add hooks if provided
     if rich_prompts is not None:
         hook_fns = hook_utils.hook_fns_from_rich_prompts(
@@ -228,13 +230,18 @@ def get_token_probs(
             model.add_hook(act_name, hook_fn)
     # Try-except-finally to ensure hooks are cleaned up
     try:
-        if return_positions_above is not None:
+        if isinstance(prompts, (str, torch.Tensor)):
             if isinstance(prompts, str):
                 tokens = model.to_tokens(prompts).squeeze()
-            else:
+            elif isinstance(prompts, torch.Tensor):
                 tokens = prompts.squeeze()
+            else:
+                raise ValueError(
+                    "Only a single prompts can be provided "
+                    + "if return_positions_above is not None"
+                )
             probs_all, logprobs_all = logits_to_probs_numpy(
-                model.forward(tokens)[0, return_positions_above:, :]
+                model.forward(tokens)[0, return_positions_above:, :]  # type: ignore
             )
             index = pd.Index(
                 np.arange(return_positions_above, tokens.shape[-1]),
@@ -247,12 +254,14 @@ def get_token_probs(
                 (
                     probs_all[idx, :],
                     logprobs_all[idx, :],
-                ) = logits_to_probs_numpy(model.forward(prompt)[0, -1, :])
+                ) = logits_to_probs_numpy(
+                    model.forward(prompt)[0, -1, :]  # type: ignore
+                )
             try:
                 index = pd.Index(prompts, name="prompt")
             except TypeError:
                 index = pd.Index(
-                    [prompt.detach().cpu().numpy() for prompt in prompts],
+                    [prompt.detach().cpu().numpy() for prompt in prompts],  # type: ignore
                     name="prompt",
                 )
     except Exception as ex:
@@ -282,11 +291,9 @@ def get_for_tokens(
     in tokens will be ignored, as is the case when e.g. taking probs for
     actual tokens in a sequence. An optional value can be prepended to
     ensure the returned array has the same position-dimension size."""
-    inp_take = (
-        np.take_along_axis(
-            inp.values[:-1, :], tokens[1:, None], axis=-1
-        ).squeeze(),
-    )
+    inp_take: np.ndarray = np.take_along_axis(
+        inp.values[:-1, :], tokens[1:, None], axis=-1
+    ).squeeze()
     if prepend_first_pos is not None:
         inp_take = np.concatenate([[prepend_first_pos], inp_take])
     return inp_take
@@ -294,7 +301,7 @@ def get_for_tokens(
 
 def get_normal_and_modified_token_probs(
     model: HookedTransformer,
-    prompts: Iterable[str],
+    prompts: Union[str, List[str]],
     rich_prompts: List[prompt_utils.RichPrompt],
     return_positions_above: Optional[int] = None,
 ) -> pd.DataFrame:
@@ -341,7 +348,7 @@ def plot_probs_changes(probs_df: pd.DataFrame, num: int = 30):
     # for later px plotting.  Iterate over prompts and directions as
     # these will be the facet axes
     plot_datas = []
-    for prompt in probs_df.columns.levels[1]:
+    for prompt in probs_df.columns.levels[1]:  # type: ignore
         probs_df_this_prompt = probs_df.xs(prompt, axis="columns", level=1)
         prob_diff = (
             probs_df_this_prompt["mod"] - probs_df_this_prompt["normal"]

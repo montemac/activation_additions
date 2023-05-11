@@ -212,6 +212,6 @@ def pad_tokens_to_match_rich_prompts(
             ),
             tokens[:, 1:],
         ],
-        axis=1,
+        dim=1,
     )
     return tokens, rich_prompt_len

@@ -24,8 +24,8 @@ def run_corpus_logprob_experiment(
     model: HookedTransformer,
     labeled_texts: pd.DataFrame,
     x_vector_phrases: Tuple[str, str],
-    act_names: Union[str, np.ndarray],
-    coeffs: Union[float, np.ndarray],
+    act_names: Union[List[str], List[int], np.ndarray],
+    coeffs: Union[List[float], np.ndarray],
     method: str = "mask_injection_logprob",
     text_col: str = "text",
     label_col: str = "label",
@@ -150,11 +150,11 @@ def plot_corpus_logprob_experiment(
     labels = {
         "logprob_actual_next_token_diff_mean": "Mean change in log-probs"
     }
-    if x_name is not None:
+    if x_name is not None and x_qty is not None:
         labels[x_qty] = x_name
-    if color_name is not None:
+    if color_name is not None and color_qty is not None:
         labels[color_qty] = color_name
-    if facet_col_name is not None:
+    if facet_col_name is not None and facet_col_qty is not None:
         labels[facet_col_qty] = facet_col_name
     fig = px.line(
         results_grouped_df,
@@ -166,7 +166,7 @@ def plot_corpus_logprob_experiment(
         title=f"Average change in log-probabilities of tokens in {corpus_name}",
         **plot_kwargs,
     )
-    for annot in fig.layout.annotations:
+    for annot in fig.layout.annotations:  # type: ignore
         if "=" in annot.text:
             annot.update(
                 text=" ".join(annot.text.split("=")), font={"size": 16}
@@ -182,7 +182,7 @@ def show_token_probs(
     top_k: int,
     sort_mode: str = "prob",
     extra_title: str = "",
-    token_strs_to_ignore: Union[list, np.ndarray] = None,
+    token_strs_to_ignore: Optional[Union[list, np.ndarray]] = None,
 ):
     """Print probability changes of top-K tokens for a specific input
     sequence, sorted using a specific sorting mode.
@@ -232,6 +232,8 @@ def show_token_probs(
         y_values = kl_contrib[top_k_tokens]
         y_title = "Contribution to KL divergence (nats)"
         title = f"Contribution to KL divergence vs normal-model probabilities {extra_title}"
+    else:
+        raise ValueError(f"Unknown sort mode {sort_mode}")
 
     plot_df = pd.DataFrame(
         {
@@ -286,8 +288,8 @@ def compare_with_prompting(
     text: str,
     phrases: Tuple[str, str],
     coeff: float,
-    act_names: List[Union[int, str]],
-    pos: int,
+    act_names: Union[List[int], List[str]],
+    pos: Optional[int] = None,
 ):
     """Compare activation-injection at specified layers with prompting,
     using a space-padded input to make the techniques as directly
@@ -310,9 +312,9 @@ def compare_with_prompting(
     ).shape[-1]
     while tokens_padded.shape[-1] < text_tokens_len + rich_prompt_tokens_len:
         tokens_padded = torch.concat(
-            (model.to_tokens(" ", prepend_bos=False), tokens_padded), axis=-1
+            (model.to_tokens(" ", prepend_bos=False), tokens_padded), dim=-1
         )
-    tokens_padded = torch.concat((model.to_tokens(""), tokens_padded), axis=-1)
+    tokens_padded = torch.concat((model.to_tokens(""), tokens_padded), dim=-1)
 
     # Prompted
     tokens_prompted = torch.concat(
@@ -320,7 +322,7 @@ def compare_with_prompting(
             model.to_tokens(phrases[0]),
             model.to_tokens(text, prepend_bos=False),
         ),
-        axis=1,
+        dim=1,
     )
     probs_dict["prompted"] = (
         logits.get_token_probs(
@@ -349,7 +351,7 @@ def compare_with_prompting(
                         act_name=act_name,
                         model=model,
                         pad_method="tokens_right",
-                        custom_pad_id=model.to_single_token(" "),
+                        custom_pad_id=model.to_single_token(" "),  # type: ignore
                     )
                 ),
                 # pylint: enable=duplicate-code
