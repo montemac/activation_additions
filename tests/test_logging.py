@@ -37,12 +37,12 @@ def test_logging(model):
     results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
         model=model,
         rich_prompts=[
-            prompt_utils.RichPrompt(
+            prompt_utils.ActivationAddition(
                 prompt="Love",
                 act_name=prompt_utils.get_block_name(block_num=0),
                 coeff=1.0,
             ),
-            prompt_utils.RichPrompt(
+            prompt_utils.ActivationAddition(
                 prompt="Fear",
                 act_name=prompt_utils.get_block_name(block_num=0),
                 coeff=-1.0,

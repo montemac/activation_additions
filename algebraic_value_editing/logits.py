@@ -108,7 +108,7 @@ def disruption(
 
 def get_effectiveness_and_disruption(
     probs: pd.DataFrame,
-    rich_prompts: List[prompt_utils.RichPrompt],
+    rich_prompts: List[prompt_utils.ActivationAddition],
     steering_aligned_tokens: Dict[int, np.ndarray],
     mode: str = "mask_injection_pos",
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -207,7 +207,7 @@ def get_token_probs(
     prompts: Union[
         Union[str, torch.Tensor], Union[List[str], List[torch.Tensor]]
     ],
-    rich_prompts: Optional[List[prompt_utils.RichPrompt]] = None,
+    rich_prompts: Optional[List[prompt_utils.ActivationAddition]] = None,
     return_positions_above: Optional[int] = None,
 ) -> pd.DataFrame:
     """Make a forward pass on a model for each provided prompted,
@@ -302,7 +302,7 @@ def get_for_tokens(
 def get_normal_and_modified_token_probs(
     model: HookedTransformer,
     prompts: Union[str, List[str]],
-    rich_prompts: List[prompt_utils.RichPrompt],
+    rich_prompts: List[prompt_utils.ActivationAddition],
     return_positions_above: Optional[int] = None,
 ) -> pd.DataFrame:
     """Get normal and modified next-token probabilities for a range of

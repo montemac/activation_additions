@@ -10,14 +10,14 @@ from transformer_lens import ActivationCache
 from transformer_lens.HookedTransformer import HookedTransformer, Loss
 from transformer_lens.hook_points import HookPoint, LensHandle
 from algebraic_value_editing.prompt_utils import (
-    RichPrompt,
+    ActivationAddition,
     pad_tokens_to_match_rich_prompts,
     get_block_name,
 )
 
 
 def get_prompt_activations(  # TODO rename
-    model: HookedTransformer, rich_prompt: RichPrompt
+    model: HookedTransformer, rich_prompt: ActivationAddition
 ) -> Float[torch.Tensor, "batch pos d_model"]:
     """Takes a `RichPrompt` and returns the rescaled activations for that
     prompt, for the appropriate `act_name`. Rescaling is done by running
@@ -43,7 +43,7 @@ def get_prompt_activations(  # TODO rename
 
 
 def get_activation_dict(
-    model: HookedTransformer, rich_prompts: List[RichPrompt]
+    model: HookedTransformer, rich_prompts: List[ActivationAddition]
 ) -> Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]]:
     """Takes a list of `RichPrompt`s and returns a dictionary mapping
     activation names to lists of activations.
@@ -64,7 +64,7 @@ def get_activation_dict(
 
 # Get magnitudes
 def steering_vec_magnitudes(
-    act_adds: List[RichPrompt], model: HookedTransformer
+    act_adds: List[ActivationAddition], model: HookedTransformer
 ) -> Float[torch.Tensor, "pos"]:
     """Compute the magnitude of the net steering vector at each sequence
     position."""
@@ -134,7 +134,7 @@ def prompt_magnitudes(
 
 def steering_magnitudes_relative_to_prompt(
     prompt: str,
-    act_adds: List[RichPrompt],
+    act_adds: List[ActivationAddition],
     model: HookedTransformer,
 ) -> Float[torch.Tensor, "pos"]:
     """Get the prompt and steering vector magnitudes and return their
@@ -280,7 +280,7 @@ def hook_fns_from_act_dict(
 
 
 def hook_fns_from_rich_prompts(
-    model: HookedTransformer, rich_prompts: List[RichPrompt], **kwargs
+    model: HookedTransformer, rich_prompts: List[ActivationAddition], **kwargs
 ) -> Dict[str, Callable]:
     """Takes a list of `RichPrompt`s and makes a single activation-modifying forward hook.
 
@@ -311,7 +311,7 @@ def hook_fns_from_rich_prompts(
 
 def forward_with_rich_prompts(
     model: HookedTransformer,
-    rich_prompts: List[RichPrompt],
+    rich_prompts: List[ActivationAddition],
     input: Any,  # pylint: disable=redefined-builtin
     xvec_position: str = "front",
     injection_mode: str = "overlay",

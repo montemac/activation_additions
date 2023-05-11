@@ -7,7 +7,7 @@ import pytest
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from algebraic_value_editing import hook_utils, prompt_utils
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import ActivationAddition
 
 
 # Fixtures
@@ -134,7 +134,7 @@ def test_hook_fn_from_activations_mid_both_odd():
 def test_magnitudes_zeros(attn_2l_model):
     """Test that the magnitudes of a coeff-zero RichPrompt are zero."""
     # Create a RichPrompt with all zeros
-    act_add = RichPrompt(prompt="Test", coeff=0, act_name=0)
+    act_add = ActivationAddition(prompt="Test", coeff=0, act_name=0)
 
     # Get the magnitudes
     magnitudes: torch.Tensor = hook_utils.steering_vec_magnitudes(
@@ -149,9 +149,9 @@ def test_magnitudes_zeros(attn_2l_model):
 def test_magnitudes_cancels(attn_2l_model):
     """Test that the magnitudes are zero when the RichPrompts are exact opposites."""
     # Create a RichPrompt with all zeros
-    additions: List[RichPrompt] = [
-        RichPrompt(prompt="Test", coeff=1, act_name=0),
-        RichPrompt(prompt="Test", coeff=-1, act_name=0),
+    additions: List[ActivationAddition] = [
+        ActivationAddition(prompt="Test", coeff=1, act_name=0),
+        ActivationAddition(prompt="Test", coeff=-1, act_name=0),
     ]
 
     # Get the magnitudes
@@ -166,9 +166,9 @@ def test_magnitudes_cancels(attn_2l_model):
 def test_multi_layers_not_allowed(attn_2l_model):
     """Try injecting a RichPrompt with multiple layers, which should
     fail."""
-    additions: List[RichPrompt] = [
-        RichPrompt(prompt="Test", coeff=1, act_name=0),
-        RichPrompt(prompt="Test", coeff=1, act_name=1),
+    additions: List[ActivationAddition] = [
+        ActivationAddition(prompt="Test", coeff=1, act_name=0),
+        ActivationAddition(prompt="Test", coeff=1, act_name=1),
     ]
 
     with pytest.raises(NotImplementedError):
@@ -181,9 +181,9 @@ def test_multi_same_layer(attn_2l_model):
     """Try injecting a RichPrompt with multiple additions to the same
     layer, which should succeed, even if the injections have different
     tokenization lengths."""
-    additions_same: List[RichPrompt] = [
-        RichPrompt(prompt="Test", coeff=1, act_name=0),
-        RichPrompt(prompt="Test2521", coeff=1, act_name=0),
+    additions_same: List[ActivationAddition] = [
+        ActivationAddition(prompt="Test", coeff=1, act_name=0),
+        ActivationAddition(prompt="Test2521", coeff=1, act_name=0),
     ]
 
     magnitudes: torch.Tensor = hook_utils.steering_vec_magnitudes(
@@ -197,7 +197,7 @@ def test_multi_same_layer(attn_2l_model):
 def test_prompt_magnitudes(attn_2l_model):
     """Test that the magnitudes of a prompt are not zero."""
     # Create a RichPrompt with all zeros
-    act_add = RichPrompt(prompt="Test", coeff=1, act_name=0)
+    act_add = ActivationAddition(prompt="Test", coeff=1, act_name=0)
 
     # Get the steering vector magnitudes
     steering_magnitudes: torch.Tensor = hook_utils.steering_vec_magnitudes(
@@ -221,7 +221,7 @@ def test_prompt_magnitudes(attn_2l_model):
 def test_relative_mags_ones(attn_2l_model):
     """Test whether the relative magnitudes are one for a prompt and
     its own RichPrompt."""
-    act_add = RichPrompt(prompt="Test", coeff=1, act_name=0)
+    act_add = ActivationAddition(prompt="Test", coeff=1, act_name=0)
     rel_mags: torch.Tensor = hook_utils.steering_magnitudes_relative_to_prompt(
         prompt="Test",
         model=attn_2l_model,
@@ -240,8 +240,10 @@ def test_relative_mags_ones(attn_2l_model):
 def test_relative_mags_diff_shape(attn_2l_model):
     """Test that a long prompt and a short RichPrompt can be compared,
     and vice versa."""
-    long_add = RichPrompt(prompt="Test2521531lk dsa ;las", coeff=1, act_name=0)
-    short_add = RichPrompt(prompt="Test", coeff=1, act_name=0)
+    long_add = ActivationAddition(
+        prompt="Test2521531lk dsa ;las", coeff=1, act_name=0
+    )
+    short_add = ActivationAddition(prompt="Test", coeff=1, act_name=0)
     long_prompt: str = "Test2521531lk dsa ;las"
     short_prompt: str = "Test"
 

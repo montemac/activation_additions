@@ -13,7 +13,7 @@ from tqdm.auto import tqdm
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import metrics, logging, hook_utils
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import ActivationAddition
 from algebraic_value_editing.completion_utils import (
     gen_using_hooks,
     gen_using_rich_prompts,
@@ -74,7 +74,7 @@ def make_rich_prompts(
                         phrases_this, tokens_list
                     ):
                         rich_prompts_this.append(
-                            RichPrompt(
+                            ActivationAddition(
                                 coeff=init_coeff * coeff,
                                 act_name=act_name,
                                 tokens=tokens.squeeze(),
@@ -84,7 +84,7 @@ def make_rich_prompts(
                     # Create the RichPrompts using the phrase strings
                     for phrase, init_coeff in phrases_this:
                         rich_prompts_this.append(
-                            RichPrompt(
+                            ActivationAddition(
                                 coeff=init_coeff * coeff,
                                 act_name=act_name,
                                 prompt=phrase,
@@ -106,7 +106,7 @@ def make_rich_prompts(
 def sweep_over_prompts(
     model: HookedTransformer,
     prompts: Iterable[str],
-    rich_prompts: Iterable[List[RichPrompt]],
+    rich_prompts: Iterable[List[ActivationAddition]],
     num_normal_completions: int = 100,
     num_patched_completions: int = 100,
     tokens_to_generate: int = 40,
@@ -206,7 +206,7 @@ def sweep_over_prompts(
 def sweep_over_metrics(
     model: HookedTransformer,
     inputs: Union[Iterable[Any], pd.Series],
-    rich_prompts: Iterable[List[RichPrompt]],
+    rich_prompts: Iterable[List[ActivationAddition]],
     metrics_dict: Union[
         Dict[str, metrics.TextMetricFunc],
         Dict[str, metrics.TokensMetricFunc],

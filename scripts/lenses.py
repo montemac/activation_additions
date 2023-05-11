@@ -12,7 +12,7 @@ import numpy as np
 import torch
 
 from algebraic_value_editing import completion_utils
-from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
+from algebraic_value_editing.prompt_utils import ActivationAddition, get_x_vector
 from algebraic_value_editing.lenses import run_hooked_and_normal_with_cache, prediction_trajectories
 import algebraic_value_editing.hook_utils as hook_utils
 from plotly.subplots import make_subplots

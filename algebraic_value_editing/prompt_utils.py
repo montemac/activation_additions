@@ -16,7 +16,7 @@ def get_block_name(block_num: int) -> str:  # TODO remove
     return get_act_name(name="resid_pre", layer=block_num)
 
 
-class RichPrompt:
+class ActivationAddition:
     """Specifies a prompt (e.g. "Bob went") and a coefficient and a
     location in the model, with an `int` representing the block_num in the
     model. This comprises the information necessary to
@@ -74,7 +74,7 @@ class RichPrompt:
         return f"RichPrompt({self.tokens}, {self.coeff}, {self.act_name})"
 
     def __eq__(self, other) -> bool:
-        if not isinstance(other, RichPrompt):
+        if not isinstance(other, ActivationAddition):
             return False
         # If they don't both have prompt or tokens attribute
         if hasattr(self, "prompt") ^ hasattr(other, "prompt"):
@@ -99,7 +99,7 @@ def get_x_vector(
     model: Optional[HookedTransformer] = None,
     pad_method: Optional[str] = None,
     custom_pad_id: Optional[int] = None,
-) -> Tuple[RichPrompt, RichPrompt]:
+) -> Tuple[ActivationAddition, ActivationAddition]:
     """Take in two prompts and a coefficient and an activation name, and
     return two rich prompts spaced according to `pad_method`.
 
@@ -160,16 +160,18 @@ def get_x_vector(
 
         padded_tokens1, padded_tokens2 = map(pad_partial, [tokens1, tokens2])
 
-        end_point = RichPrompt(
+        end_point = ActivationAddition(
             tokens=padded_tokens1, coeff=coeff, act_name=act_name
         )
-        start_point = RichPrompt(
+        start_point = ActivationAddition(
             tokens=padded_tokens2, coeff=-1 * coeff, act_name=act_name
         )
         return end_point, start_point
 
-    end_point = RichPrompt(prompt=prompt1, coeff=coeff, act_name=act_name)
-    start_point = RichPrompt(
+    end_point = ActivationAddition(
+        prompt=prompt1, coeff=coeff, act_name=act_name
+    )
+    start_point = ActivationAddition(
         prompt=prompt2, coeff=-1 * coeff, act_name=act_name
     )
     return end_point, start_point
@@ -178,7 +180,7 @@ def get_x_vector(
 def pad_tokens_to_match_rich_prompts(
     model: HookedTransformer,
     tokens: Int[torch.Tensor, "batch pos"],
-    rich_prompts: List[RichPrompt],
+    rich_prompts: List[ActivationAddition],
 ) -> Tuple[Int[torch.Tensor, "batch pos"], int]:
     """Tokenize and space-pad the front of the provided string so that
     none of the RichPrompts will overlap with the unpadded text,

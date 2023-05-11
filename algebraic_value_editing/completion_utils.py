@@ -13,7 +13,7 @@ import einops
 
 from transformer_lens.HookedTransformer import HookedTransformer, Output
 
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import ActivationAddition
 from algebraic_value_editing import hook_utils, logging
 
 
@@ -204,7 +204,7 @@ def gen_using_hooks(
 @logging.loggable
 def gen_using_rich_prompts(
     model: HookedTransformer,
-    rich_prompts: List[RichPrompt],
+    rich_prompts: List[ActivationAddition],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     addition_location: str = "front",
     res_stream_slice: slice = slice(None),
@@ -358,7 +358,7 @@ def print_n_comparisons(
     model: HookedTransformer,
     num_comparisons: int = 5,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
-    rich_prompts: Optional[List[RichPrompt]] = None,
+    rich_prompts: Optional[List[ActivationAddition]] = None,
     addition_location: str = "front",
     res_stream_slice: slice = slice(None),
     **kwargs,

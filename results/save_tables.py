@@ -22,7 +22,10 @@ from transformer_lens.HookedTransformer import HookedTransformer
 from algebraic_value_editing.completion_utils import (
     gen_using_hooks,
 )
-from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
+from algebraic_value_editing.prompt_utils import (
+    ActivationAddition,
+    get_x_vector,
+)
 from algebraic_value_editing import hook_utils
 
 # %% [markdown]
@@ -91,7 +94,7 @@ def print_and_save_n_completions(
     language_model: HookedTransformer,
     num_comparisons: int = 5,
     addition_location: str = "front",
-    rich_prompts: List[RichPrompt] = [],
+    rich_prompts: List[ActivationAddition] = [],
     **kwargs,
 ) -> None:
     """Pretty-print generations from `LM` using the appropriate hook
@@ -181,7 +184,7 @@ def print_and_save_n_completions(
 # ## The love vector
 
 # %%
-love_minus_hate_prompts: List[RichPrompt] = [
+love_minus_hate_prompts: List[ActivationAddition] = [
     *get_x_vector_preset(prompt1="Love", prompt2="Hate", coeff=5, act_name=6)
 ]
 hate_prompt: str = "I hate you because"
@@ -250,7 +253,7 @@ print_and_save_n_completions(
 # ## Intent to praise
 
 # %%
-praise_minus_hurt_prompts: List[RichPrompt] = [
+praise_minus_hurt_prompts: List[ActivationAddition] = [
     *get_x_vector_preset(
         prompt1="Intent to praise",
         prompt2="Intent to hurt",
@@ -532,7 +535,7 @@ print_and_save_n_completions(
 )
 
 # %%
-calm_prompts_10: List[RichPrompt] = [
+calm_prompts_10: List[ActivationAddition] = [
     *get_x_vector_preset(
         prompt1=" angry", prompt2=" calm", coeff=-10, act_name=20
     )
@@ -557,7 +560,7 @@ print_and_save_n_completions(
 # are AVE's results (<2 minutes of optimization).
 
 # %%
-dragons_rp: List[RichPrompt] = [
+dragons_rp: List[ActivationAddition] = [
     *get_x_vector_preset(
         prompt1="Dragons live in Berkeley",
         prompt2="People live in Berkeley",
@@ -735,7 +738,7 @@ print_and_save_n_completions(
 
 # %% Wedding vectors work even when the prompt is about something else,
 # and disinclined to talk about weddings.
-wedding_additions_ngdp: List[RichPrompt] = [
+wedding_additions_ngdp: List[ActivationAddition] = [
     *get_x_vector_preset(
         prompt1="I talk about weddings constantly",
         prompt2="I do not talk about weddings constantly",
@@ -764,7 +767,7 @@ print_and_save_n_completions(
 # ## Conspiracy vector
 
 # %%
-bush_conspiracy_rps: List[RichPrompt] = [
+bush_conspiracy_rps: List[ActivationAddition] = [
     *get_x_vector_preset(
         prompt1="Bush did 9/11 because", prompt2="", coeff=1, act_name=23
     )
@@ -804,7 +807,9 @@ print_and_save_n_completions(
     ),
     tokens_to_generate=40,
     rich_prompts=[
-        RichPrompt(prompt="Fred is about to see Shrek", coeff=1, act_name=0)
+        ActivationAddition(
+            prompt="Fred is about to see Shrek", coeff=1, act_name=0
+        )
     ],
     num_comparisons=15,
     **default_kwargs,
@@ -813,8 +818,10 @@ print_and_save_n_completions(
 
 
 # %%
-geese_ufo_prompts: List[RichPrompt] = [
-    RichPrompt(prompt="Geese are chasing UFOs outside", coeff=2, act_name=0)
+geese_ufo_prompts: List[ActivationAddition] = [
+    ActivationAddition(
+        prompt="Geese are chasing UFOs outside", coeff=2, act_name=0
+    )
 ]
 
 print_and_save_n_completions(
@@ -838,7 +845,9 @@ print_and_save_n_completions(
 
 # %%
 induction_injection: str = " AAA BBB CCC"
-aaa_b_prompts = [RichPrompt(prompt=induction_injection, coeff=1, act_name=0)]
+aaa_b_prompts = [
+    ActivationAddition(prompt=induction_injection, coeff=1, act_name=0)
+]
 
 induction_test_prompt: str = (
     "Fred was tired of working from home all day. He walked outside and saw"
@@ -859,8 +868,8 @@ print_and_save_n_completions(
 
 # %%
 imagination_str: str = "Fred is a figment of Martha's imagination"
-figment_prompts: List[RichPrompt] = [
-    RichPrompt(prompt=imagination_str, coeff=3, act_name=0)
+figment_prompts: List[ActivationAddition] = [
+    ActivationAddition(prompt=imagination_str, coeff=3, act_name=0)
 ]
 
 martha_angry_str: str = (

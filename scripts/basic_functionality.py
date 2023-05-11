@@ -8,7 +8,10 @@ import torch
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from algebraic_value_editing import completion_utils, utils, hook_utils
-from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
+from algebraic_value_editing.prompt_utils import (
+    ActivationAddition,
+    get_x_vector,
+)
 
 utils.enable_ipython_reload()
 
@@ -32,7 +35,7 @@ for prompt in ("I love dogs", " wedding"):
     print(f"Greedy next tokens are {next_tokens_str}\n")
 
 # Test the corresponding ActivationAddition
-act_add = RichPrompt(prompt=" wedding", coeff=1.0, act_name=6)
+act_add = ActivationAddition(prompt=" wedding", coeff=1.0, act_name=6)
 hook_fns = hook_utils.hook_fns_from_rich_prompts(
     model=model, rich_prompts=[act_add]
 )
@@ -53,8 +56,8 @@ finally:
 # %%
 # Get top 5 tokens
 act_adds = [
-    RichPrompt(prompt="Love ", coeff=5.0, act_name=6),
-    RichPrompt(prompt="Hate", coeff=-5.0, act_name=6),
+    ActivationAddition(prompt="Love ", coeff=5.0, act_name=6),
+    ActivationAddition(prompt="Hate", coeff=-5.0, act_name=6),
 ]
 hook_fns = hook_utils.hook_fns_from_rich_prompts(
     model=model, rich_prompts=act_adds
@@ -77,7 +80,7 @@ finally:
     model.remove_all_hook_fns()
 
 # %%
-rich_prompts: List[RichPrompt] = [
+rich_prompts: List[ActivationAddition] = [
     *get_x_vector(
         prompt1="Happy",
         prompt2=" ",

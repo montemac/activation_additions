@@ -38,7 +38,7 @@ from typing import List, Dict
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from algebraic_value_editing import hook_utils, prompt_utils
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import ActivationAddition
 
 # %%
 device: str = "cpu"
@@ -123,7 +123,9 @@ import numpy as np
 def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
     """Plot a histogram of the residual stream magnitudes for each layer
     of the network."""
-    assert "Magnitude" in df.columns, "Dataframe must have a 'Magnitude' column"
+    assert (
+        "Magnitude" in df.columns
+    ), "Dataframe must have a 'Magnitude' column"
 
     df["LogMagnitude"] = np.log10(df["Magnitude"])
 
@@ -131,7 +133,9 @@ def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
     num_unique_activation_locations = df["Activation Location"].nunique()
 
     # Generate a color list that is long enough to accommodate all unique activation locations
-    extended_rainbow = px.colors.sequential.Rainbow * num_unique_activation_locations
+    extended_rainbow = (
+        px.colors.sequential.Rainbow * num_unique_activation_locations
+    )
     color_list = extended_rainbow[:num_unique_activation_locations]
 
     fig = px.histogram(
@@ -154,7 +158,6 @@ def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
     )
 
     return fig
-
 
 
 # %%
@@ -622,6 +625,7 @@ fig.show()
 # pass. It turns out that the zeroth position (the `<|endoftext|>` token) has a much larger
 # magnitude than the rest. (This possibly explains the outlier
 # magnitudes for the prompt histograms.)
+
 
 # %%
 def line_plot(
