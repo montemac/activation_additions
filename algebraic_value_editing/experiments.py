@@ -144,12 +144,30 @@ def plot_corpus_logprob_experiment(
     color_name: Optional[str] = None,
     facet_col_qty: Optional[str] = "act_name",
     facet_col_name: Optional[str] = None,
+    metric: str = "mean_logprob_diff",
     **plot_kwargs,
 ):
     """Plot the results of a previously run corpus experiment"""
-    labels = {
-        "logprob_actual_next_token_diff_mean": "Mean change in log-probs"
-    }
+    assert metric in [
+        "mean_logprob_diff",
+        "perplexity_ratio",
+    ], "Invalid metric specified."
+    if metric == "mean_logprob_diff":
+        results_grouped_df = results_grouped_df.assign(
+            y_value=results_grouped_df["logprob_actual_next_token_diff_mean"]
+        )
+        labels = {
+            "y_value": "Mean change in log-probs",
+        }
+    elif metric == "perplexity_ratio":
+        results_grouped_df = results_grouped_df.assign(
+            y_value=np.exp(
+                -results_grouped_df["logprob_actual_next_token_diff_mean"]
+            )
+        )
+        labels = {
+            "y_value": "Perplexity ratio",
+        }
     if x_name is not None and x_qty is not None:
         labels[x_qty] = x_name
     if color_name is not None and color_qty is not None:
@@ -158,7 +176,7 @@ def plot_corpus_logprob_experiment(
         labels[facet_col_qty] = facet_col_name
     fig = px.line(
         results_grouped_df,
-        y="logprob_actual_next_token_diff_mean",
+        y="y_value",
         x=x_qty,
         color=color_qty,
         facet_col=facet_col_qty,

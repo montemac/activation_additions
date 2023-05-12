@@ -52,6 +52,9 @@ PNG_WIDTH = 750
 PNG_HEIGHT = 400
 PNG_SCALE = 2.0
 
+# Other settings
+CORPUS_METRIC = "perplexity_ratio"
+
 
 # %%
 # Load a model
@@ -367,6 +370,7 @@ fig = experiments.plot_corpus_logprob_experiment(
     x_name="Injection layer",
     color_qty="topic",
     facet_col_qty=None,
+    metric=CORPUS_METRIC,
 )
 fig.show()
 fig.write_image(
@@ -418,6 +422,7 @@ fig = experiments.plot_corpus_logprob_experiment(
     facet_col_qty="act_name",
     facet_col_name="Layer",
     facet_col_spacing=0.05,
+    metric=CORPUS_METRIC,
 )
 # Manually set ticks
 fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3, 4]})
@@ -534,6 +539,7 @@ fig = experiments.plot_corpus_logprob_experiment(
     x_name="Injection layer",
     color_qty="sentiment",
     facet_col_qty=None,
+    metric=CORPUS_METRIC,
     category_orders={"sentiment": ["negative", "neutral", "positive"]},
     color_discrete_sequence=[
         px.colors.qualitative.Plotly[1],
@@ -541,7 +547,10 @@ fig = experiments.plot_corpus_logprob_experiment(
         px.colors.qualitative.Plotly[2],
     ],
 )
-fig.update_layout(yaxis_range=[-0.2, 0.1])
+if CORPUS_METRIC == "mean_logprob_diff":
+    fig.update_layout(yaxis_range=[-0.2, 0.1])
+else:
+    fig.update_layout(yaxis_range=[0.9, 1.2])
 fig.show()
 fig.write_image(
     "images/yelp_reviews_layers.png",
@@ -593,6 +602,7 @@ fig = experiments.plot_corpus_logprob_experiment(
     facet_col_qty="act_name",
     facet_col_name="Layer",
     facet_col_spacing=0.05,
+    metric=CORPUS_METRIC,
     category_orders={"sentiment": ["negative", "neutral", "positive"]},
     color_discrete_sequence=[
         px.colors.qualitative.Plotly[1],
@@ -602,7 +612,10 @@ fig = experiments.plot_corpus_logprob_experiment(
 )
 # Manually set ticks
 fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3]})
-fig.update_layout(yaxis_range=[-0.35, 0.1])
+if CORPUS_METRIC == "mean_logprob_diff":
+    fig.update_layout(yaxis_range=[-0.35, 0.1])
+else:
+    fig.update_layout(yaxis_range=[0.9, 1.4])
 fig.show()
 fig.write_image(
     "images/yelp_reviews_coeffs.png",
