@@ -4,7 +4,7 @@
 
 # %%
 from typing import List, Dict, Callable, Literal
-from transformer_lens.HookedTransformer import HookedTransformer
+from transformer_lens.HookedTransformer import HookedTransformer, ActivationCache
 
 from tuned_lens import TunedLens
 from tuned_lens.plotting import PredictionTrajectory
@@ -95,12 +95,6 @@ def plot_lens_diff(
     return fig
 
 
-# Main playground for lenses. Run with ctrl+enter
-
-coeffs = [2**i for i in range(20)]
-
-traj_list_by_coeff: Dict[str, PredictionTrajectory] = {}
-
 x_vector_template = dict(
     prompt1="Anger",
     prompt2="Calm",
@@ -111,6 +105,254 @@ x_vector_template = dict(
 )
 
 prompt = "Yesterday, my dog died."
+
+# %%
+# Get a single normal and modified trajectory with all the data
+
+rich_prompts = [*get_x_vector(**x_vector_template, coeff=10000)]
+
+(df_nom, df_mod), (cache_nom, cache_mod) = run_hooked_and_normal_with_cache(
+    model=model, rich_prompts=rich_prompts,
+    names_filter=None,
+    kw=dict(prompt_batch=[prompt] * 1, tokens_to_generate=0, top_p=0.3, seed=0),
+)
+len(cache_mod.keys())
+
+# %%
+# Examine the activation norms for each layer and position
+
+resids = [cache.accumulated_resid() for cache in (cache_mod, cache_nom)]
+# NORMALIZE (all ln2 are the same, no weights stored.)
+# resids = [model.blocks[30].ln2(resid.squeeze()) for resid in resids]
+
+
+norms = [np.linalg.norm(resid, axis=-1).squeeze() for resid in resids]
+# norms: (layer, pos)
+
+# Calculate global color scale
+zmin = np.min([np.log2(norm) for norm in norms])
+zmax = np.max([np.log2(norm) for norm in norms])
+
+fig = make_subplots(rows=1, cols=2, subplot_titles=("Modified", "Difference"), x_title="Token Position", y_title="Layer")
+fig = fig.update_layout(
+    title="Residual stream norms (log2)",
+)
+
+
+hm_opts = dict(
+    zmin=zmin,
+    zmax=zmax,
+    hovertemplate="Layer: %{y}<br>Position: %{x}<br>Norm: 2<sup>%{z:.1f}</sup><extra></extra>"
+)
+
+fig.add_trace(go.Heatmap(z=np.log2(norms[0]), **hm_opts), row=1, col=1)
+# fig.add_trace(go.Heatmap(z=np.log2(norms[1]), **hm_opts), row=1, col=2)
+fig.add_trace(go.Heatmap(z=np.log2(norms[0]) - np.log2(norms[1]), **hm_opts), row=1, col=2)
+
+fig.show()
+
+# %%
+# Explore attention patterns
+
+def visualize_attn(attn_pattern):
+    """
+    Visualize attention patterns for each head.
+    Args:
+        attn_pattern: attention pattern of shape (num_heads, seq_len, seq_len)
+    """
+    # number of heads and sequence length
+    num_heads, _, _ = attn_pattern.shape
+
+    # create frames for each head
+    frames = [go.Frame(
+        data=[go.Heatmap(
+            z=attn_pattern[i],
+            colorscale='Viridis')],
+        name=f'head {i}') 
+        for i in range(num_heads)]
+
+    # create slider steps
+    steps = [dict(
+        method="animate",
+        args=[[f'head {i}'],
+            dict(mode="immediate",
+                frame=dict(duration=500, redraw=True),
+                transition=dict(duration=0))],
+        label=f'head {i}') 
+        for i in range(num_heads)]
+
+    # create initial data
+    data = [go.Heatmap(
+        z=attn_pattern[0],
+        colorscale='Viridis')]
+
+    # create layout
+    layout = go.Layout(
+        title='Attention Pattern per Head',
+        width=600,
+        height=600,
+        # updatemenus=[dict(type='buttons',
+        #                 showactive=False,
+        #                 y=0,
+        #                 x=1.75,
+        #                 xanchor='right',
+        #                 yanchor='top',
+        #                 pad=dict(t=0, r=10),
+        #                 buttons=[dict(label='Play',
+        #                                 method='animate',
+        #                                 args=[None, 
+        #                                     dict(frame=dict(duration=500, 
+        #                                                     redraw=True),
+        #                                         fromcurrent=True, 
+        #                                         transition=dict(duration=0))])])],
+        sliders=[dict(steps=steps,
+                    active=0,
+                    currentvalue=dict(font=dict(size=20), 
+                                        prefix='Head: ', 
+                                        visible=True, 
+                                        xanchor='right'),
+                    transition=dict(duration=0, 
+                                    easing='cubic-in-out'),
+                    pad=dict(b=10), 
+                    len=0.9, 
+                    x=0.1, 
+                    y=0)])
+
+    # create figure
+    fig = go.Figure(data=data, layout=layout, frames=frames)
+    return fig
+
+def plot_attention_patterns(attn_pattern1, attn_pattern2):
+    # number of heads and sequence length
+    num_heads, seq_len, _ = attn_pattern1.shape
+
+    # create frames for each head
+    frames = [go.Frame(
+        data=[go.Heatmap(
+            z=attn_pattern1[i],
+            colorscale='Viridis',
+            zmin=0, zmax=1,
+            name='Pattern 1',
+            xaxis='x1',
+            yaxis='y1'),
+              go.Heatmap(
+            z=attn_pattern2[i],
+            colorscale='Viridis',
+            zmin=0, zmax=1,
+            name='Pattern 2',
+            xaxis='x2',
+            yaxis='y2')],
+        name=f'head {i}') 
+        for i in range(num_heads)]
+
+    # create slider steps
+    steps = [dict(
+        method="animate",
+        args=[[f'head {i}'],
+              dict(mode="immediate",
+                   frame=dict(duration=500, redraw=True),
+                   transition=dict(duration=0))],
+        label=f'head {i}') 
+        for i in range(num_heads)]
+
+    # create initial data
+    data = [go.Heatmap(
+                z=attn_pattern1[0],
+                colorscale='Viridis',
+                zmin=0, zmax=1,
+                name='Pattern 1',
+                xaxis='x1',
+                yaxis='y1'),
+            go.Heatmap(
+                z=attn_pattern2[0],
+                colorscale='Viridis',
+                zmin=0, zmax=1,
+                name='Pattern 2',
+                xaxis='x2',
+                yaxis='y2')]
+
+    # create layout
+    layout = go.Layout(
+        title='Attention Pattern per Head',
+        width=800,
+        height=400,
+        grid=dict(columns=2, rows=1),
+        sliders=[dict(steps=steps,
+                      active=0,
+                      currentvalue=dict(font=dict(size=20), 
+                                        prefix='Head: ', 
+                                        visible=True, 
+                                        xanchor='right'),
+                      transition=dict(duration=0, 
+                                      easing='cubic-in-out'),
+                      pad=dict(b=10), 
+                      len=0.9, 
+                      x=0.1, 
+                      y=0)])
+
+    # create figure
+    fig = go.Figure(data=data, layout=layout, frames=frames)
+
+    return fig
+
+# Call function with your attention patterns
+# plot_attention_patterns(attn_pattern1, attn_pattern2)
+
+
+
+# shape: (get_act_name, layer_index, layer_type)
+# visualize_attn(cache_nom['pattern', 20, 'attn'].squeeze(0))
+# visualize_attn(cache_mod['pattern', 20, 'attn'].squeeze(0)).show()
+
+# plot_attention_patterns(
+#     cache_nom['pattern', 30, 'attn'].squeeze(0),
+#     cache_mod['pattern', 30, 'attn'].squeeze(0),
+# ).show()
+
+# %%
+# Experiment with scaling the residual stream
+
+caches = []
+
+for coeff in [1, 10, 100, 1000, 10000, 100000]:
+    def hook_fn(resid, hook):
+        resid[:] *= coeff
+
+    cache, caching_hooks, _ = model.get_caching_hooks()
+    fwd_hooks = [('blocks.20.hook_resid_pre', hook_fn)]
+    with model.hooks(fwd_hooks=fwd_hooks + caching_hooks):
+        loss = model(prompt, return_type='loss')
+
+    print(f'coeff={coeff}\tloss={loss.item()}')
+    caches.append(ActivationCache(cache, model))
+
+# %%
+# Investigate attention patterns
+
+visualize_attn(
+    caches[0]['pattern', 21, 'attn'].squeeze(0)
+    -
+    caches[-1]['pattern', 21, 'attn'].squeeze(0)
+).show()
+
+# %%
+
+caches[0]['']
+
+# %%
+
+# np.allclose(
+#     caches[5]['pattern', 21, 'attn'],
+#     caches[0]['pattern', 21, 'attn']
+# )
+
+# %%
+# Compute trajectories for a range of coefficients
+
+coeffs = [2**i for i in range(20)]
+
+traj_list_by_coeff: Dict[str, PredictionTrajectory] = {}
+
 
 for coeff in tqdm(coeffs):
     rich_prompts = [*get_x_vector(**x_vector_template, coeff=coeff)]
