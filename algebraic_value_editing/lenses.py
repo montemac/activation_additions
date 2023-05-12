@@ -14,6 +14,7 @@ from tuned_lens import TunedLens
 from tuned_lens.plotting import PredictionTrajectory
 from algebraic_value_editing import completion_utils, hook_utils
 from transformers import AutoTokenizer
+from transformer_lens import ActivationCache
 
 # %%
 
@@ -75,7 +76,13 @@ def prediction_trajectories(
     ]
 
 
-def run_hooked_and_normal_with_cache(model, rich_prompts, kw, device=None):
+def run_hooked_and_normal_with_cache(
+    model,
+    rich_prompts,
+    kw,
+    device=None,
+    names_filter=lambda n: "resid_pre" in n,
+):
     """
     Run hooked and normal with cache.
 
@@ -100,7 +107,7 @@ def run_hooked_and_normal_with_cache(model, rich_prompts, kw, device=None):
 
     for fwd_hooks, is_modified in [([], False), (fwd_hooks, True)]:
         cache, caching_hooks, _ = model.get_caching_hooks(
-            names_filter=lambda n: "resid_pre" in n, device=device
+            names_filter=names_filter, device=device
         )
 
         # IMPORTANT: We call caching hooks *after* the value editing hooks.
@@ -108,6 +115,6 @@ def run_hooked_and_normal_with_cache(model, rich_prompts, kw, device=None):
             results_df = completion_utils.gen_using_model(model, **kw)
             results_df["is_modified"] = is_modified
         normal_and_modified_df.append(results_df)
-        normal_and_modified_cache.append(cache)
+        normal_and_modified_cache.append(ActivationCache(cache, model))
 
     return normal_and_modified_df, normal_and_modified_cache
