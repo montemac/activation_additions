@@ -70,8 +70,10 @@ class ActivationAddition:
 
     def __repr__(self) -> str:
         if hasattr(self, "prompt"):
-            return f"RichPrompt({self.prompt}, {self.coeff}, {self.act_name})"
-        return f"RichPrompt({self.tokens}, {self.coeff}, {self.act_name})"
+            return f"ActivationAddition({self.prompt}, {self.coeff}, {self.act_name})"
+        return (
+            f"ActivationAddition({self.tokens}, {self.coeff}, {self.act_name})"
+        )
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, ActivationAddition):
@@ -101,7 +103,7 @@ def get_x_vector(
     custom_pad_id: Optional[int] = None,
 ) -> Tuple[ActivationAddition, ActivationAddition]:
     """Take in two prompts and a coefficient and an activation name, and
-    return two rich prompts spaced according to `pad_method`.
+    return two activation additions spaced according to `pad_method`.
 
     Args:
         `prompt1`: The first prompt.
@@ -120,7 +122,7 @@ def get_x_vector(
         then use the model's pad token.
 
     Returns:
-        A tuple of two `RichPrompt`s, the first of which has the prompt
+        A tuple of two `ActivationAddition`s, the first of which has the prompt
         `prompt1` and the second of which has the prompt `prompt2`.
     """
     if pad_method == "tokens_left":
@@ -177,38 +179,40 @@ def get_x_vector(
     return end_point, start_point
 
 
-def pad_tokens_to_match_rich_prompts(
+def pad_tokens_to_match_activation_additions(
     model: HookedTransformer,
     tokens: Int[torch.Tensor, "batch pos"],
-    rich_prompts: List[ActivationAddition],
+    activation_additions: List[ActivationAddition],
 ) -> Tuple[Int[torch.Tensor, "batch pos"], int]:
     """Tokenize and space-pad the front of the provided string so that
-    none of the RichPrompts will overlap with the unpadded text,
+    none of the ActivationAdditions will overlap with the unpadded text,
     returning the padded tokens and the index at which the tokens from
     the original string begin.  Not that the padding is inserted AFTER
     the BOS and before the original-string-excluding-BOS."""
-    # Get the max token len of the RichPrompts
-    rich_prompt_len = 0
-    for rich_prompt in rich_prompts:
+    # Get the max token len of the ActivationAdditions
+    activation_addition_len = 0
+    for activation_addition in activation_additions:
         try:
-            rich_prompt_len = max(len(rich_prompt.tokens), rich_prompt_len)
+            activation_addition_len = max(
+                len(activation_addition.tokens), activation_addition_len
+            )
         except AttributeError:
-            rich_prompt_len = max(
-                len(model.to_tokens(rich_prompt.prompt).squeeze()),
-                rich_prompt_len,
+            activation_addition_len = max(
+                len(model.to_tokens(activation_addition.prompt).squeeze()),
+                activation_addition_len,
             )
     # Input tokens already has BOS prepended, so insert the padding
     # after that.
-    # Note that the RichPrompts always have BOS at the start, and we
+    # Note that the ActivationAdditions always have BOS at the start, and we
     # don't want to include this length in our padding as it's fine
-    # if the RichPrompt overlaps this location since it will have
-    # zero effect if the RichPrompts are proper x-vectors., so we
+    # if the ActivationAddition overlaps this location since it will have
+    # zero effect if the ActivationAdditions are proper x-vectors., so we
     # pad with pad_len - 1
     tokens = torch.concat(
         [
             tokens[:, :1],
             torch.full(
-                (1, rich_prompt_len - 1),
+                (1, activation_addition_len - 1),
                 model.to_single_token(" "),
                 device=model.cfg.device,
             ),
@@ -216,4 +220,4 @@ def pad_tokens_to_match_rich_prompts(
         ],
         dim=1,
     )
-    return tokens, rich_prompt_len
+    return tokens, activation_addition_len

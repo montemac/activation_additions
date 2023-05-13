@@ -11,41 +11,41 @@ from transformer_lens.HookedTransformer import HookedTransformer, Loss
 from transformer_lens.hook_points import HookPoint, LensHandle
 from algebraic_value_editing.prompt_utils import (
     ActivationAddition,
-    pad_tokens_to_match_rich_prompts,
+    pad_tokens_to_match_activation_additions,
     get_block_name,
 )
 
 
 def get_prompt_activations(  # TODO rename
-    model: HookedTransformer, rich_prompt: ActivationAddition
+    model: HookedTransformer, activation_addition: ActivationAddition
 ) -> Float[torch.Tensor, "batch pos d_model"]:
-    """Takes a `RichPrompt` and returns the rescaled activations for that
+    """Takes a `ActivationAddition` and returns the rescaled activations for that
     prompt, for the appropriate `act_name`. Rescaling is done by running
     the model forward with the prompt and then multiplying the
-    activations by the coefficient `rich_prompt.coeff`.
+    activations by the coefficient `activation_addition.coeff`.
     """
     # Get tokens for prompt
     tokens: Int[torch.Tensor, "seq"]
-    if hasattr(rich_prompt, "tokens"):
-        tokens = rich_prompt.tokens
+    if hasattr(activation_addition, "tokens"):
+        tokens = activation_addition.tokens
     else:
-        tokens = model.to_tokens(rich_prompt.prompt)
+        tokens = model.to_tokens(activation_addition.prompt)
 
     # Run the forward pass
     # ActivationCache is basically Dict[str, torch.Tensor]
     cache: ActivationCache = model.run_with_cache(
         tokens,
-        names_filter=lambda act_name: act_name == rich_prompt.act_name,
+        names_filter=lambda act_name: act_name == activation_addition.act_name,
     )[1]
 
     # Return cached activations times coefficient
-    return rich_prompt.coeff * cache[rich_prompt.act_name]
+    return activation_addition.coeff * cache[activation_addition.act_name]
 
 
 def get_activation_dict(
-    model: HookedTransformer, rich_prompts: List[ActivationAddition]
+    model: HookedTransformer, activation_additions: List[ActivationAddition]
 ) -> Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]]:
-    """Takes a list of `RichPrompt`s and returns a dictionary mapping
+    """Takes a list of `ActivationAddition`s and returns a dictionary mapping
     activation names to lists of activations.
     """
     # Make the dictionary
@@ -54,9 +54,9 @@ def get_activation_dict(
     ] = defaultdict(list)
 
     # Add activations for each prompt
-    for rich_prompt in rich_prompts:
-        activation_dict[rich_prompt.act_name].append(
-            get_prompt_activations(model, rich_prompt)
+    for activation_addition in activation_additions:
+        activation_dict[activation_addition.act_name].append(
+            get_prompt_activations(model, activation_addition)
         )
 
     return activation_dict
@@ -70,13 +70,13 @@ def steering_vec_magnitudes(
     position."""
     act_dict: Dict[
         str, List[Float[torch.Tensor, "batch pos d_model"]]
-    ] = get_activation_dict(model=model, rich_prompts=act_adds)
+    ] = get_activation_dict(model=model, activation_additions=act_adds)
     if len(act_dict) > 1:
         raise NotImplementedError(
             "Only one activation name is supported for now."
         )
 
-    # Get the RichPrompt activations from the dict
+    # Get the ActivationAddition activations from the dict
     activations_lst: List[Float[torch.Tensor, "batch pos d_model"]] = list(
         act_dict.values()
     )[0]
@@ -279,15 +279,17 @@ def hook_fns_from_act_dict(
     return hook_fns
 
 
-def hook_fns_from_rich_prompts(
-    model: HookedTransformer, rich_prompts: List[ActivationAddition], **kwargs
+def hook_fns_from_activation_additions(
+    model: HookedTransformer,
+    activation_additions: List[ActivationAddition],
+    **kwargs,
 ) -> Dict[str, Callable]:
-    """Takes a list of `RichPrompt`s and makes a single activation-modifying forward hook.
+    """Takes a list of `ActivationAddition`s and makes a single activation-modifying forward hook.
 
     args:
         `model`: `HookedTransformer` object, with hooks already set up
 
-        `rich_prompts`: List of `RichPrompt` objects
+        `activation_additions`: List of `ActivationAddition` objects
 
         `kwargs`: kwargs for `hook_fn_from_activations`
 
@@ -299,7 +301,7 @@ def hook_fns_from_rich_prompts(
     # Get the activation dictionary
     activation_dict: Dict[
         str, List[Float[torch.Tensor, "batch pos d_model"]]
-    ] = get_activation_dict(model, rich_prompts)
+    ] = get_activation_dict(model, activation_additions)
 
     # Make the hook functions
     hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(
@@ -309,9 +311,9 @@ def hook_fns_from_rich_prompts(
     return hook_fns
 
 
-def forward_with_rich_prompts(
+def forward_with_activation_additions(
     model: HookedTransformer,
-    rich_prompts: List[ActivationAddition],
+    activation_additions: List[ActivationAddition],
     input: Any,  # pylint: disable=redefined-builtin
     xvec_position: str = "front",
     injection_mode: str = "overlay",
@@ -324,12 +326,12 @@ def forward_with_rich_prompts(
 ]:
     """Convenience function to call the forward function of a provided
     transformer model, applying hook functions based on a provided list
-    of RichPrompts and tearing them down after in an exception-safe
-    manner. Several injection modes are possible for the RichPrompts:
-    overlay (default) simply injects the RichPrompts over the
+    of ActivationAdditions and tearing them down after in an exception-safe
+    manner. Several injection modes are possible for the ActivationAdditions:
+    overlay (default) simply injects the ActivationAdditions over the
     activations of the provided input, according xvec_position;
     pad space-pads the input first as needed so that the
-    RichPrompts don't overlap the input text; pad_remove is the same as
+    ActivationAdditions don't overlap the input text; pad_remove is the same as
     pad, but the return values of the forward call are modified to
     remove the padding token positions to make the padding transparent
     to the caller.  Option pad_remove cannot be used when loss is
@@ -355,12 +357,16 @@ def forward_with_rich_prompts(
     if injection_mode in ["pad", "pad_remove"]:
         (
             input_tokens,
-            rich_prompt_len,
-        ) = pad_tokens_to_match_rich_prompts(model, input_tokens, rich_prompts)
+            activation_addition_len,
+        ) = pad_tokens_to_match_activation_additions(
+            model, input_tokens, activation_additions
+        )
     # TODO: TransformerLens now has a hooks() context manager, should
     # move to latest version and use that to simplify this code
-    hook_fns = hook_fns_from_rich_prompts(
-        model=model, rich_prompts=rich_prompts, xvec_position=xvec_position
+    hook_fns = hook_fns_from_activation_additions(
+        model=model,
+        activation_additions=activation_additions,
+        xvec_position=xvec_position,
     )
     model.remove_all_hook_fns()
     try:
@@ -376,7 +382,8 @@ def forward_with_rich_prompts(
         def remove_pad(val):
             """Convenience function to remove padding."""
             return torch.concat(
-                [val[:, 0:1, ...], val[:, rich_prompt_len:, ...]], dim=1
+                [val[:, 0:1, ...], val[:, activation_addition_len:, ...]],
+                dim=1,
             )
 
         if return_type in ["logits", "loss"]:

@@ -48,7 +48,7 @@ def test_lenses(model, tuned_lens):
 
     prompt = "I hate you because"
 
-    rich_prompts = [
+    activation_additions = [
         *get_x_vector(
             prompt1="Love",
             prompt2="Hate",
@@ -62,8 +62,10 @@ def test_lenses(model, tuned_lens):
 
     dataframes, caches = lenses.run_hooked_and_normal_with_cache(
         model=model,
-        rich_prompts=rich_prompts,
+        activation_additions=activation_additions,
         kw=dict(prompt_batch=[prompt] * 1, seed=0),
     )
 
-    _ = lenses.prediction_trajectories(caches, dataframes, model.tokenizer, tuned_lens)
+    _ = lenses.prediction_trajectories(
+        caches, dataframes, model.tokenizer, tuned_lens
+    )

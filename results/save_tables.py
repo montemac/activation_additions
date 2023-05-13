@@ -94,13 +94,13 @@ def print_and_save_n_completions(
     language_model: HookedTransformer,
     num_comparisons: int = 5,
     addition_location: str = "front",
-    rich_prompts: List[ActivationAddition] = [],
+    activation_additions: List[ActivationAddition] = [],
     **kwargs,
 ) -> None:
     """Pretty-print generations from `LM` using the appropriate hook
     functions.
 
-    Takes keyword arguments for `gen_using_rich_prompts`.
+    Takes keyword arguments for `gen_using_activation_additions`.
 
     args:
         `prompt_str`: The prompt to use for completion.
@@ -111,7 +111,7 @@ def print_and_save_n_completions(
         "front", "back".
 
         `kwargs`: Keyword arguments to pass to
-        `gen_using_rich_prompts`.
+        `gen_using_activation_additions`.
     """
     assert num_comparisons > 0, "num_comparisons must be positive"
 
@@ -123,11 +123,13 @@ def print_and_save_n_completions(
     )
     data_frames: List[pd.DataFrame] = [normal_df]
 
-    # Iterate once if rich_prompts is empty
-    if rich_prompts != []:
-        hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
+    # Iterate once if activation_additions is empty
+    if activation_additions != []:
+        hook_fns: Dict[
+            str, Callable
+        ] = hook_utils.hook_fns_from_activation_additions(
             model=language_model,
-            rich_prompts=rich_prompts,
+            activation_additions=activation_additions,
             addition_location=addition_location,
         )
         mod_df: pd.DataFrame = gen_using_hooks(
@@ -142,7 +144,7 @@ def print_and_save_n_completions(
     results: pd.DataFrame = pd.concat(data_frames, ignore_index=True)
 
     # Write the activation addition information
-    for rp in rich_prompts:
+    for rp in activation_additions:
         if not hasattr(rp, "prompt"):
             # If the prompt is not a string, it's a list of tokens
             rp.prompt = str(language_model.to_string(rp.tokens[1:]))
@@ -163,7 +165,7 @@ def print_and_save_n_completions(
     )
 
     # Activation addition tokenizations
-    for rp in rich_prompts:
+    for rp in activation_additions:
         write_tokenization_row(
             toks=language_model.to_str_tokens(
                 rp.tokens if hasattr(rp, "tokens") else rp.prompt
@@ -192,7 +194,7 @@ hate_prompt: str = "I hate you because"
 print_and_save_n_completions(
     prompt_str=hate_prompt,
     tokens_to_generate=50,
-    rich_prompts=love_minus_hate_prompts,
+    activation_additions=love_minus_hate_prompts,
     num_comparisons=6,
     **default_kwargs,
     seed=0,
@@ -202,7 +204,7 @@ print_and_save_n_completions(
 print_and_save_n_completions(
     prompt_str="I hate you because",
     tokens_to_generate=40,
-    rich_prompts=love_minus_hate_prompts,
+    activation_additions=love_minus_hate_prompts,
     addition_location="back",
     num_comparisons=6,
     **default_kwargs,
@@ -266,7 +268,7 @@ praise_minus_hurt_prompts: List[ActivationAddition] = [
 print_and_save_n_completions(
     prompt_str="I want to kill you because you're such a",
     tokens_to_generate=50,
-    rich_prompts=praise_minus_hurt_prompts,
+    activation_additions=praise_minus_hurt_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -294,7 +296,7 @@ print_and_save_n_completions(
         "I really really really really want to kill you because youre such a"
     ),
     tokens_to_generate=50,
-    rich_prompts=praise_minus_hurt_prompts,
+    activation_additions=praise_minus_hurt_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -317,7 +319,7 @@ conversion_intent_prompts = [
 print_and_save_n_completions(
     prompt_str="I want to kill you because you're such a",
     tokens_to_generate=50,
-    rich_prompts=conversion_intent_prompts,
+    activation_additions=conversion_intent_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -343,7 +345,7 @@ print_and_save_n_completions(
         " way in time, and so sadly the rock"
     ),
     tokens_to_generate=80,
-    rich_prompts=harm_avoidance_rps,
+    activation_additions=harm_avoidance_rps,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -357,7 +359,7 @@ print_and_save_n_completions(
 print_and_save_n_completions(
     prompt_str="He slit his wrists and the blood",
     tokens_to_generate=80,
-    rich_prompts=harm_avoidance_rps,
+    activation_additions=harm_avoidance_rps,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -374,7 +376,7 @@ print_and_save_n_completions(
         " felt excited."
     ),
     tokens_to_generate=80,
-    rich_prompts=harm_avoidance_rps,
+    activation_additions=harm_avoidance_rps,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -394,7 +396,7 @@ print_and_save_n_completions(
         " her,"
     ),
     tokens_to_generate=80,
-    rich_prompts=harm_avoidance_rps,
+    activation_additions=harm_avoidance_rps,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -419,7 +421,7 @@ eiffel_tower_prompts = [
 print_and_save_n_completions(
     prompt_str="To see the eiffel tower, people flock to",
     tokens_to_generate=80,
-    rich_prompts=eiffel_tower_prompts,
+    activation_additions=eiffel_tower_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -448,7 +450,7 @@ print_and_save_n_completions(
         " that"
     ),
     tokens_to_generate=85,
-    rich_prompts=stay_alive_prompts,
+    activation_additions=stay_alive_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -475,7 +477,7 @@ print_and_save_n_completions(
         " things and explore the whole universe!"
     ),
     tokens_to_generate=85,
-    rich_prompts=want_to_die_prompts,
+    activation_additions=want_to_die_prompts,
     num_comparisons=5,
     **default_kwargs,
     seed=0,
@@ -494,7 +496,7 @@ Anger_prompts = [
 print_and_save_n_completions(
     prompt_str="I think you're",
     tokens_to_generate=90,
-    rich_prompts=Anger_prompts,
+    activation_additions=Anger_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -510,7 +512,7 @@ Calm_prompts = [
 print_and_save_n_completions(
     prompt_str="I think you're",
     tokens_to_generate=90,
-    rich_prompts=Calm_prompts,
+    activation_additions=Calm_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -528,7 +530,7 @@ anger_calm_prompts = [
 print_and_save_n_completions(
     prompt_str="I think you're",
     tokens_to_generate=90,
-    rich_prompts=anger_calm_prompts,
+    activation_additions=anger_calm_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -543,7 +545,7 @@ calm_prompts_10: List[ActivationAddition] = [
 print_and_save_n_completions(
     prompt_str="I think you're",
     tokens_to_generate=90,
-    rich_prompts=calm_prompts_10,
+    activation_additions=calm_prompts_10,
     num_comparisons=15,
     **default_kwargs,
 )
@@ -576,7 +578,7 @@ move_to_berkeley_prompt: str = (
 print_and_save_n_completions(
     prompt_str=move_to_berkeley_prompt,
     tokens_to_generate=80,
-    rich_prompts=dragons_rp,
+    activation_additions=dragons_rp,
     num_comparisons=15,
     **default_kwargs,
 )
@@ -613,7 +615,7 @@ mean_nice_prompts = [
 print_and_save_n_completions(
     prompt_str="When I look at you, I think",
     tokens_to_generate=50,
-    rich_prompts=mean_nice_prompts,
+    activation_additions=mean_nice_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -639,7 +641,7 @@ happy_sad_prompts = [
 print_and_save_n_completions(
     prompt_str="Today, I feel like",
     tokens_to_generate=100,
-    rich_prompts=happy_sad_prompts,
+    activation_additions=happy_sad_prompts,
     num_comparisons=6,
     **default_kwargs,
 )
@@ -657,7 +659,7 @@ print_and_save_n_completions(
         "Yesterday, my dog died. Today, I got denied for a raise. I'm feeling"
     ),
     tokens_to_generate=50,
-    rich_prompts=happy_prompts,
+    activation_additions=happy_prompts,
     num_comparisons=15,
     **default_kwargs,
 )
@@ -680,7 +682,7 @@ weddings_prompts_4 = [
 print_and_save_n_completions(
     prompt_str="I went up to my friend and said",
     tokens_to_generate=100,
-    rich_prompts=weddings_prompts_4,
+    activation_additions=weddings_prompts_4,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -690,7 +692,7 @@ print_and_save_n_completions(
 print_and_save_n_completions(
     prompt_str="Batman Begins starts off with a scene about",
     tokens_to_generate=70,
-    rich_prompts=weddings_prompts_4,
+    activation_additions=weddings_prompts_4,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -700,7 +702,7 @@ print_and_save_n_completions(
 print_and_save_n_completions(
     prompt_str="Did you hear? Apparently, Joe Biden loves eating",
     tokens_to_generate=100,
-    rich_prompts=weddings_prompts_4,
+    activation_additions=weddings_prompts_4,
     num_comparisons=15,
     **default_kwargs,
 )
@@ -721,7 +723,7 @@ weddings_prompts_2 = [
 print_and_save_n_completions(
     prompt_str="I went up to my friend and said",
     tokens_to_generate=100,
-    rich_prompts=weddings_prompts_2,
+    activation_additions=weddings_prompts_2,
     num_comparisons=15,
     **default_kwargs,
 )
@@ -730,7 +732,7 @@ print_and_save_n_completions(
 print_and_save_n_completions(
     prompt_str="I went up to my friend and said",
     tokens_to_generate=800,
-    rich_prompts=weddings_prompts_2,
+    activation_additions=weddings_prompts_2,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -759,7 +761,7 @@ print_and_save_n_completions(
         " different topic, like the impact of NGDP on the price of gold."
     ),
     tokens_to_generate=100,
-    rich_prompts=wedding_additions_ngdp,
+    activation_additions=wedding_additions_ngdp,
     num_comparisons=15,
     **default_kwargs,
 )
@@ -776,7 +778,7 @@ bush_conspiracy_rps: List[ActivationAddition] = [
 print_and_save_n_completions(
     prompt_str="Barack Obama was born in",
     tokens_to_generate=80,
-    rich_prompts=bush_conspiracy_rps,
+    activation_additions=bush_conspiracy_rps,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -806,7 +808,7 @@ print_and_save_n_completions(
         " and saw"
     ),
     tokens_to_generate=40,
-    rich_prompts=[
+    activation_additions=[
         ActivationAddition(
             prompt="Fred is about to see Shrek", coeff=1, act_name=0
         )
@@ -830,7 +832,7 @@ print_and_save_n_completions(
         " and saw"
     ),
     tokens_to_generate=40,
-    rich_prompts=geese_ufo_prompts,
+    activation_additions=geese_ufo_prompts,
     num_comparisons=15,
     **default_kwargs,
 )
@@ -859,7 +861,7 @@ for prompt in (induction_injection, induction_test_prompt):
 print_and_save_n_completions(
     prompt_str=induction_test_prompt,
     tokens_to_generate=40,
-    rich_prompts=aaa_b_prompts,
+    activation_additions=aaa_b_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -882,7 +884,7 @@ for prompt in (imagination_str, martha_angry_str):
 print_and_save_n_completions(
     prompt_str=martha_angry_str,
     tokens_to_generate=100,
-    rich_prompts=figment_prompts,
+    activation_additions=figment_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,
@@ -893,7 +895,7 @@ print_and_save_n_completions(
 print_and_save_n_completions(
     prompt_str=martha_angry_str,
     tokens_to_generate=50,
-    rich_prompts=figment_prompts,
+    activation_additions=figment_prompts,
     num_comparisons=15,
     **default_kwargs,
     seed=0,

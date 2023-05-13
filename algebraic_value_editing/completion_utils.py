@@ -1,5 +1,5 @@
 """ Functions for generating completions from a model, using a prompt
-and a list of RichPrompts. """
+and a list of ActivationAdditions. """
 
 from functools import wraps
 from typing import List, Optional, Dict, Callable, Union
@@ -202,20 +202,20 @@ def gen_using_hooks(
 
 
 @logging.loggable
-def gen_using_rich_prompts(
+def gen_using_activation_additions(
     model: HookedTransformer,
-    rich_prompts: List[ActivationAddition],
+    activation_additions: List[ActivationAddition],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     addition_location: str = "front",
     res_stream_slice: slice = slice(None),
     **kwargs,
 ) -> pd.DataFrame:
-    """Generate completions using the given rich prompts.
+    """Generate completions using the given ActivationAdditions.
 
     args:
         `model`: The model to use for completion.
 
-        `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
+        `activation_additions`: A list of `ActivationAddition`s to use to create hooks.
 
         `log`: To enable logging of this call to `wandb`, pass either
         `True`, or a dict contining any of ('tags', 'group', 'notes') to
@@ -240,9 +240,9 @@ def gen_using_rich_prompts(
     # Create the hook functions
     hook_fns: Dict[
         str, List[Callable]
-    ] = hook_utils.hook_fns_from_rich_prompts(
+    ] = hook_utils.hook_fns_from_activation_additions(
         model=model,
-        rich_prompts=rich_prompts,
+        activation_additions=activation_additions,
         addition_location=addition_location,
         res_stream_slice=res_stream_slice,
     )
@@ -358,7 +358,7 @@ def print_n_comparisons(
     model: HookedTransformer,
     num_comparisons: int = 5,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
-    rich_prompts: Optional[List[ActivationAddition]] = None,
+    activation_additions: Optional[List[ActivationAddition]] = None,
     addition_location: str = "front",
     res_stream_slice: slice = slice(None),
     **kwargs,
@@ -378,10 +378,10 @@ def print_n_comparisons(
         pass these keys to the wandb init call.  False to disable
         logging.
 
-        `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
+        `activation_additions`: A list of `ActivationAddition`s to use to create hooks.
 
         `addition_location`: Whether to add `activations` from
-        `rich_prompts` to the front-positioned
+        `activation_additions` to the front-positioned
         or back-positioned residual streams in the forward poss. Must be
         either "front" or "back".
 
@@ -402,11 +402,11 @@ def print_n_comparisons(
     data_frames: List[pd.DataFrame] = [normal_df]
 
     # Generate the completions from the modified model
-    if rich_prompts is not None:
-        mod_df: pd.DataFrame = gen_using_rich_prompts(
+    if activation_additions is not None:
+        mod_df: pd.DataFrame = gen_using_activation_additions(
             prompt_batch=prompt_batch,
             model=model,
-            rich_prompts=rich_prompts,
+            activation_additions=activation_additions,
             addition_location=addition_location,
             res_stream_slice=res_stream_slice,
             **kwargs,

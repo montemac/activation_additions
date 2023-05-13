@@ -94,7 +94,7 @@ def plot_lens_diff(
 
 prompt = "I hate you because"
 
-rich_prompts = [
+activation_additions = [
     *get_x_vector(
         prompt1="Love",
         prompt2="Hate",
@@ -107,7 +107,7 @@ rich_prompts = [
 ]
 
 dataframes, caches = run_hooked_and_normal_with_cache(
-    model=model, rich_prompts=rich_prompts,
+    model=model, activation_additions=activation_additions,
     kw=dict(prompt_batch=[prompt] * 1, tokens_to_generate=6, top_p=0.3, seed=0),
 )
 
@@ -129,7 +129,7 @@ completion_utils.print_n_comparisons(
     prompt=prompt,
     num_comparisons=5,
     model=model,
-    rich_prompts=rich_prompts,
+    activation_additions=activation_additions,
     seed=0,
     temperature=1,
     # freq_penalty=1,

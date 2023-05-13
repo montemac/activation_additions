@@ -34,9 +34,9 @@ def test_logging(model):
     # TODO: do this properly with pytest config
     pytest.skip("Logging testing is slow! Change this line to enable it.")
     # Perform a completion test
-    results: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+    results: pd.DataFrame = completion_utils.gen_using_activation_additions(
         model=model,
-        rich_prompts=[
+        activation_additions=[
             prompt_utils.ActivationAddition(
                 prompt="Love",
                 act_name=prompt_utils.get_block_name(block_num=0),
@@ -73,6 +73,6 @@ def test_positional_args(model):
         "I think you're ",
         model,
         num_comparisons=5,
-        rich_prompts=[],
+        activation_additions=[],
         seed=0,
     )

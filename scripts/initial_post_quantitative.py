@@ -92,7 +92,7 @@ steering_aligned_tokens = {
 }
 
 # The activation injection setup
-rich_prompts = list(
+activation_additions = list(
     prompt_utils.get_x_vector(
         prompt1=" weddings",
         prompt2="",
@@ -108,14 +108,14 @@ rich_prompts = list(
 probs = logits.get_normal_and_modified_token_probs(
     model=MODEL,
     prompts=TEXT,
-    rich_prompts=rich_prompts,
+    activation_additions=activation_additions,
     return_positions_above=0,
 )
 
 # Calculate effectiveness and disruption
 eff, foc = logits.get_effectiveness_and_disruption(
     probs=probs,
-    rich_prompts=rich_prompts,
+    activation_additions=activation_additions,
     steering_aligned_tokens=steering_aligned_tokens,
     mode="mask_injection_pos",
 )
@@ -192,7 +192,7 @@ is_steering_aligned[MODEL.to_single_token(" wedding")] = True
 
 # %%
 # Sweep over layers
-rich_prompts_df = sweeps.make_rich_prompts(
+activation_additions_df = sweeps.make_activation_additions(
     phrases=[[(" weddings", 1.0), ("", -1.0)]],
     act_names=list(range(0, 48, 1)),
     coeffs=[1],
@@ -201,11 +201,11 @@ rich_prompts_df = sweeps.make_rich_prompts(
 )
 
 results_list = []
-for idx, row in tqdm(list(rich_prompts_df.iterrows())):
+for idx, row in tqdm(list(activation_additions_df.iterrows())):
     probs = logits.get_normal_and_modified_token_probs(
         model=MODEL,
         prompts=[TEXT],
-        rich_prompts=list(row["rich_prompts"]),
+        activation_additions=list(row["activation_additions"]),
     )
     results_list.append(
         {
@@ -249,7 +249,7 @@ fig.write_image(
 
 # %%
 # Sweep over coeffs
-rich_prompts_df = sweeps.make_rich_prompts(
+activation_additions_df = sweeps.make_activation_additions(
     phrases=[[(" weddings", 1.0), ("", -1.0)]],
     act_names=[16],
     coeffs=np.linspace(-1, 4, 51),
@@ -258,11 +258,11 @@ rich_prompts_df = sweeps.make_rich_prompts(
 )
 
 results_list = []
-for idx, row in tqdm(list(rich_prompts_df.iterrows())):
+for idx, row in tqdm(list(activation_additions_df.iterrows())):
     probs = logits.get_normal_and_modified_token_probs(
         model=MODEL,
         prompts=[TEXT],
-        rich_prompts=list(row["rich_prompts"]),
+        activation_additions=list(row["activation_additions"]),
     )
     results_list.append(
         {
@@ -767,15 +767,15 @@ print(plot_df)
 # TEMP: kl debugging
 # from typing import List, Dict, Callable
 # from jaxtyping import Int, Float
-# from algebraic_value_editing.prompt_utils import RichPrompt
+# from algebraic_value_editing.prompt_utils import ActivationAddition
 
 # prompt = "I went up to my friend and said"
 # model = MODEL
 # act_name = 20
 
-# anger_calm_additions: List[RichPrompt] = [
-#     RichPrompt(prompt="Anger", coeff=1, act_name=act_name),
-#     RichPrompt(prompt="Calm", coeff=-1, act_name=act_name),
+# anger_calm_additions: List[ActivationAddition] = [
+#     ActivationAddition(prompt="Anger", coeff=1, act_name=act_name),
+#     ActivationAddition(prompt="Calm", coeff=-1, act_name=act_name),
 # ]
 
 # anger_vec: Float[
@@ -793,8 +793,8 @@ print(plot_df)
 
 # model_device: torch.device = next(model.parameters()).device
 
-# anger_hooks: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
-#     model=model, rich_prompts=anger_calm_additions
+# anger_hooks: Dict[str, Callable] = hook_utils.hook_fns_from_activation_additions(
+#     model=model, activation_additions=anger_calm_additions
 # )
 
 # anger_logits: Float[torch.Tensor, "batch seq vocab"] = model.run_with_hooks(

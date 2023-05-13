@@ -30,7 +30,7 @@ _ = MODEL.to("cuda:0")
 
 # %%
 # Generate some completions, with logging enabled
-rich_prompts: List[prompt_utils.ActivationAddition] = [
+activation_additions: List[prompt_utils.ActivationAddition] = [
     *prompt_utils.get_x_vector(
         prompt1=" weddings",
         prompt2="",
@@ -45,7 +45,7 @@ completion_utils.print_n_comparisons(
     prompt="Frozen starts off with a scene about",
     num_comparisons=5,
     model=MODEL,
-    rich_prompts=rich_prompts,
+    activation_additions=activation_additions,
     seed=0,
     temperature=1,
     freq_penalty=1,

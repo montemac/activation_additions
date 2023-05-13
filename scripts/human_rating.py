@@ -68,10 +68,10 @@ normal_df: pd.DataFrame = completion_utils.gen_using_hooks(
     **default_kwargs,
 )
 
-mod_df: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+mod_df: pd.DataFrame = completion_utils.gen_using_activation_additions(
     prompt_batch=prompt_batch,
     model=gpt2_xl,
-    rich_prompts=wedding_additions,
+    activation_additions=wedding_additions,
     **default_kwargs,
     seed=1,
     tokens_to_generate=60,
