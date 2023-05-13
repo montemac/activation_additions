@@ -184,7 +184,7 @@ def gen_using_hooks(
         for name, hook_fns in hook_fns.items()
         for hook_fn in hook_fns
     ]
-    with model.hooks(fwd_hooks=fwd_hooks):
+    with model.hooks(fwd_hooks=fwd_hooks):  # type: ignore
         results = gen_using_model(
             model,
             prompt_batch,

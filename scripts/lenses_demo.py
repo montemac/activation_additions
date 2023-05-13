@@ -1,7 +1,3 @@
-# %% 
-%load_ext autoreload
-%autoreload 2
-
 # %%
 from typing import List, Dict, Callable, Literal
 from transformer_lens.HookedTransformer import HookedTransformer
@@ -11,9 +7,15 @@ from tuned_lens.plotting import PredictionTrajectory
 import numpy as np
 import torch
 
-from algebraic_value_editing import completion_utils
-from algebraic_value_editing.prompt_utils import ActivationAddition, get_x_vector
-from algebraic_value_editing.lenses import run_hooked_and_normal_with_cache, prediction_trajectories
+from algebraic_value_editing import completion_utils, utils
+from algebraic_value_editing.prompt_utils import (
+    ActivationAddition,
+    get_x_vector,
+)
+from algebraic_value_editing.lenses import (
+    run_hooked_and_normal_with_cache,
+    prediction_trajectories,
+)
 import algebraic_value_editing.hook_utils as hook_utils
 from plotly.subplots import make_subplots
 from transformers import AutoModelForCausalLM
@@ -21,14 +23,19 @@ from transformers import AutoModelForCausalLM
 import torch
 import pandas as pd
 
+utils.enable_ipython_reload()
+
 
 # %%
 
-model_name = 'gpt2-xl'
+model_name = "gpt2-xl"
 
-if torch.has_cuda:  device = torch.device('cuda', 1)
-elif torch.has_mps: device = torch.device('cpu') # mps not working yet
-else: device = torch.device('cpu')
+if torch.has_cuda:
+    device = torch.device("cuda", 1)
+elif torch.has_mps:
+    device = torch.device("cpu")  # mps not working yet
+else:
+    device = torch.device("cpu")
 
 torch.set_grad_enabled(False)
 
@@ -51,12 +58,14 @@ model.eval()
 
 # NOTE: Hash mismatch on latest tuned lens. Seems fine to ignore, see issue:
 # https://github.com/AlignmentResearch/tuned-lens/issues/89
-tuned_lens = TunedLens.from_model_and_pretrained(hf_model, lens_resource_id=model_name).to(device)
+tuned_lens = TunedLens.from_model_and_pretrained(
+    hf_model, lens_resource_id=model_name
+).to(device)
 
 # %%
 # Library helpers
 
-Metric = Literal['entropy', 'forward_kl', 'max_probability']
+Metric = Literal["entropy", "forward_kl", "max_probability"]
 
 
 def apply_metric(metric: Metric, pt: PredictionTrajectory):
@@ -77,13 +86,23 @@ def plot_lens_diff(
         # subplot_titles=("Entropy", "Forward KL", "Cross Entropy", "Max Probability"),
     )
 
-    fig.update_layout(height=1000, width=800, title_text="Tokens visualized with the Tuned Lens")
+    fig.update_layout(
+        height=1000,
+        width=800,
+        title_text="Tokens visualized with the Tuned Lens",
+    )
 
-    trajectories = prediction_trajectories(caches, dataframes, model.tokenizer, tuned_lens)
+    trajectories = prediction_trajectories(
+        caches, dataframes, model.tokenizer, tuned_lens
+    )
 
     # Update heatmap data inside playground function
-    hm_normal = apply_metric(metric, trajectories[0]).heatmap(layer_stride=layer_stride)
-    hm_modified = apply_metric(metric, trajectories[1]).heatmap(layer_stride=layer_stride)
+    hm_normal = apply_metric(metric, trajectories[0]).heatmap(
+        layer_stride=layer_stride
+    )
+    hm_modified = apply_metric(metric, trajectories[1]).heatmap(
+        layer_stride=layer_stride
+    )
 
     fig.add_trace(hm_normal, row=1, col=1)
     fig.add_trace(hm_modified, row=2, col=1)
@@ -107,16 +126,21 @@ activation_additions = [
 ]
 
 dataframes, caches = run_hooked_and_normal_with_cache(
-    model=model, activation_additions=activation_additions,
-    kw=dict(prompt_batch=[prompt] * 1, tokens_to_generate=6, top_p=0.3, seed=0),
+    model=model,
+    activation_additions=activation_additions,
+    kw=dict(
+        prompt_batch=[prompt] * 1, tokens_to_generate=6, top_p=0.3, seed=0
+    ),
 )
 
-trajectories = prediction_trajectories(caches, dataframes, model.tokenizer, tuned_lens)
+trajectories = prediction_trajectories(
+    caches, dataframes, model.tokenizer, tuned_lens
+)
 
 fig = plot_lens_diff(
     caches=caches,
     dataframes=dataframes,
-    metric='entropy',
+    metric="entropy",
     layer_stride=2,
 )
 fig.show()

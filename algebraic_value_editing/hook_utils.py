@@ -119,7 +119,10 @@ def prompt_magnitudes(
     `act_name` in `model`'s forward pass on `prompt`."""
     cache: ActivationCache = model.run_with_cache(
         model.to_tokens(prompt),
-        names_filter=lambda act_name: act_name == act_name,
+        # TODO: the below filter does nothing because act_name is
+        # used twice; if we want/need this filtering, the argument to
+        # the lambda should be renamed to avoid this name collision.
+        # names_filter=lambda act_name: act_name == act_name,
     )[1]
     prompt_acts: Float[torch.Tensor, "batch pos d_model"] = cache[act_name]
     assert (
@@ -254,7 +257,7 @@ def hook_fn_from_activations(
 def hook_fns_from_act_dict(
     activation_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]],
     **kwargs,
-) -> Dict[str, Callable]:
+) -> Dict[str, List[Callable]]:
     """Takes a dictionary from injection positions to lists of prompt
     activations. Returns a dictionary from injection positions to
     hook functions that add the prompt activations to the existing
@@ -283,7 +286,7 @@ def hook_fns_from_activation_additions(
     model: HookedTransformer,
     activation_additions: List[ActivationAddition],
     **kwargs,
-) -> Dict[str, Callable]:
+) -> Dict[str, List[Callable]]:
     """Takes a list of `ActivationAddition`s and makes a single activation-modifying forward hook.
 
     args:
@@ -304,7 +307,7 @@ def hook_fns_from_activation_additions(
     ] = get_activation_dict(model, activation_additions)
 
     # Make the hook functions
-    hook_fns: Dict[str, Callable] = hook_fns_from_act_dict(
+    hook_fns: Dict[str, List[Callable]] = hook_fns_from_act_dict(
         activation_dict, **kwargs
     )
 

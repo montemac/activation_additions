@@ -1,6 +1,7 @@
 """ Tools for analyzing the results of algebraic value editing. """
 
 # %%
+from typing import List
 import html
 import numpy as np
 import pandas as pd
@@ -11,7 +12,7 @@ from IPython.display import display, clear_output
 def rate_completions(
     data_frame: pd.DataFrame,
     criterion: str = "happy",
-) -> None:
+) -> List:
     """Prompt the user to rate the generated completions, without
     indicating which condition they came from. Modifies the `data_frame`
     in place.
@@ -71,9 +72,9 @@ def rate_completions(
         data_frame.loc[data_idx, "rating"] = int(btn["new"])
 
         # Reset the rating buttons without retriggering observe
-        rating_buttons.unobserve(on_rating_button_clicked, names="value")
+        rating_buttons.unobserve(on_rating_button_clicked, names="value")  # type: ignore
         rating_buttons.value = None
-        rating_buttons.observe(on_rating_button_clicked, names="value")
+        rating_buttons.observe(on_rating_button_clicked, names="value")  # type: ignore
 
         # Increment if we aren't done
         if perm_idx < len(data_frame) - 1:
@@ -85,7 +86,7 @@ def rate_completions(
             for widget in displayed:
                 widget.close()
 
-    rating_buttons.observe(on_rating_button_clicked, names="value")
+    rating_buttons.observe(on_rating_button_clicked, names="value")  # type: ignore
 
     # Display all the widgets. saved for the end to make the structure more apparent
     displayed = [preamble, completion_box, rating_buttons]

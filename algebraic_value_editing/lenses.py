@@ -4,16 +4,17 @@ Wrappers to use tuned lens with AVE.
 The one nontrivial detal here: we want 'resid_pre' not post or mid, see the image in this readme:
 https://github.com/AlignmentResearch/tuned-lens
 """
+from typing import List, Dict
 
 import numpy as np
 import torch
-from typing import List, Dict
 import pandas as pd
 
 from tuned_lens import TunedLens
 from tuned_lens.plotting import PredictionTrajectory
-from algebraic_value_editing import completion_utils, hook_utils
 from transformers import AutoTokenizer
+
+from algebraic_value_editing import completion_utils, hook_utils
 
 # %%
 
@@ -62,7 +63,8 @@ def prediction_trajectories(
     tuned_lens: TunedLens,
 ) -> List[PredictionTrajectory]:
     """
-    Get prediction trajectories from caches and dataframes, typically obtained from `run_hooked_and_normal_with_cache`.
+    Get prediction trajectories from caches and dataframes, typically
+    obtained from `run_hooked_and_normal_with_cache`.
 
     Args:
         caches: A list of caches. must include 'resid_pre' tensors.
@@ -82,16 +84,16 @@ def prediction_trajectories(
                 trajectory_log_probs(tuned_lens, logits, cache)
             ),
             input_ids=np.array(
-                tokenizer.encode(prompt) + [tokenizer.eos_token_id]
+                tokenizer.encode(prompt) + [tokenizer.eos_token_id]  # type: ignore
             ),
-            tokenizer=tokenizer,
+            tokenizer=tokenizer,  # type: ignore
         )
         for prompt, logits, cache in zip(full_prompts, logits_list, caches)
     ]
 
 
 def run_hooked_and_normal_with_cache(
-    model, activation_additions, kw, device=None
+    model, activation_additions, gen_args, device=None
 ):
     """
     Run hooked and normal with cache.
@@ -99,7 +101,7 @@ def run_hooked_and_normal_with_cache(
     Args:
         model: The model to run.
         activation_additions: A list of ActivationAdditions.
-        kw: Keyword arguments to pass to `completion_utils.gen_using_model`.
+        gen_args: Keyword arguments to pass to `completion_utils.gen_using_model`.
             Must include `prompt_batch` and `tokens_to_generate`.
 
     Returns:
@@ -107,8 +109,8 @@ def run_hooked_and_normal_with_cache(
         normal_and_modified_cache: A list of two caches, one for normal and one for modified.
     """
     assert (
-        len(kw.get("prompt_batch", [])) == 1
-    ), f'Only one prompt is supported. Got {len(kw.get("prompt_batch", []))}'
+        len(gen_args.get("prompt_batch", [])) == 1
+    ), f'Only one prompt is supported. Got {len(gen_args.get("prompt_batch", []))}'
 
     activ_hooks = hook_utils.hook_fns_from_activation_additions(
         model, activation_additions
@@ -125,7 +127,7 @@ def run_hooked_and_normal_with_cache(
         # IMPORTANT: We call caching hooks *after* the value editing hooks.
         with model.hooks(fwd_hooks=fwd_hooks + caching_hooks):
             results_df = completion_utils.gen_using_model(
-                model, include_logits=True, **kw
+                model, include_logits=True, **gen_args
             )
             results_df["is_modified"] = is_modified
         normal_and_modified_df.append(results_df)

@@ -6,9 +6,9 @@ import torch
 
 from transformer_lens import HookedTransformer
 from tuned_lens import TunedLens
-from algebraic_value_editing.prompt_utils import get_x_vector
 from transformers import AutoModelForCausalLM
 
+from algebraic_value_editing.prompt_utils import get_x_vector
 from algebraic_value_editing import lenses, utils
 
 utils.enable_ipython_reload()
@@ -37,7 +37,7 @@ def fixture_tuned_lens(model: HookedTransformer) -> lenses.TunedLens:
     """Test fixture that returns a small pre-trained transformer used
     for fast logging testing."""
     return TunedLens.from_model_and_pretrained(
-        model.hf_model, lens_resource_id=MODEL, map_location="cpu"
+        model.hf_model, lens_resource_id=MODEL, map_location="cpu"  # type: ignore
     ).to("cpu")
 
 
@@ -63,7 +63,7 @@ def test_lenses(model, tuned_lens):
     dataframes, caches = lenses.run_hooked_and_normal_with_cache(
         model=model,
         activation_additions=activation_additions,
-        kw=dict(prompt_batch=[prompt] * 1, seed=0),
+        gen_args={"prompt_batch": [prompt] * 1, "seed": 0},
     )
 
     _ = lenses.prediction_trajectories(

@@ -225,7 +225,7 @@ def get_token_probs(
         return_positions_above = 0
     # Add hooks if provided
     if activation_additions is not None:
-        hook_fns_dict = hook_utils.hook_fns_from_rich_prompts(
+        hook_fns_dict = hook_utils.hook_fns_from_activation_additions(
             model=model,
             activation_additions=activation_additions,
         )
