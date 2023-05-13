@@ -47,7 +47,7 @@ def run_corpus_logprob_experiment(
             model,
             # agg_mode=["actual_next_token", "kl_div"],
             agg_mode=["actual_next_token"],
-            q_model=model,
+            # q_model=model,
             # q_funcs=(
             #     hook_utils.remove_and_return_hooks,
             #     hook_utils.add_hooks_from_dict,
@@ -116,7 +116,7 @@ def run_corpus_logprob_experiment(
         mod_df["logprob_actual_next_token_mod"]
         - mod_df["logprob_actual_next_token_norm"]
     )
-    # Create a loss mean column, optionally masking out the loss at
+    # Create a loss sum column, optionally masking out the loss at
     # positions that had activations injected
     if method in ["mask_injection_logprob", "pad"]:
         # NOTE: this assumes that the same phrases are used for all
@@ -126,18 +126,38 @@ def run_corpus_logprob_experiment(
         ].tokens.shape[-1]
     else:
         mask_pos = 0
-    mod_df["logprob_actual_next_token_diff_mean"] = mod_df[
+    mod_df["logprob_actual_next_token_diff_sum"] = mod_df[
         "logprob_actual_next_token_diff"
-    ].apply(lambda inp: inp[mask_pos:].mean())
+    ].apply(lambda inp: inp[mask_pos:].sum())
+    # Create a token count column, so we can take the proper token mean
+    # later. This count doesn't include any masked-out tokens (as it shouldn't)
+    mod_df["logprob_actual_next_token_count"] = mod_df[
+        "logprob_actual_next_token_diff"
+    ].apply(lambda inp: inp[mask_pos:].shape[0])
     # Create a KL div mean column, also masking
+    # TODO: fix this so we use the actual token mean, not
+    # within-sentence mean then over-sentence mean.
     # mod_df["logprob_kl_div_mean"] = mod_df["logprob_kl_div"].apply(
     #     lambda inp: inp[mask_pos:].mean()
     # )
-    # Group results by label, coeff and act_name
+    # Group results by label, coeff and act_name, and take the sum
     results_grouped_df = (
         mod_df.groupby(["act_name", "coeff", label_col])
-        .mean(numeric_only=True)
+        .sum(numeric_only=True)
         .reset_index()
+    )[
+        [
+            "act_name",
+            "coeff",
+            label_col,
+            "logprob_actual_next_token_diff_sum",
+            "logprob_actual_next_token_count",
+        ]
+    ]
+    # Calculate the mean
+    results_grouped_df["logprob_actual_next_token_diff_mean"] = (
+        results_grouped_df["logprob_actual_next_token_diff_sum"]
+        / results_grouped_df["logprob_actual_next_token_count"]
     )
     # Return the results
     return mod_df, results_grouped_df
@@ -152,12 +172,34 @@ def plot_corpus_logprob_experiment(
     color_name: Optional[str] = None,
     facet_col_qty: Optional[str] = "act_name",
     facet_col_name: Optional[str] = None,
+    metric: str = "mean_logprob_diff",
     **plot_kwargs,
 ):
     """Plot the results of a previously run corpus experiment"""
-    labels = {
-        "logprob_actual_next_token_diff_mean": "Mean change in log-probs"
-    }
+    assert metric in [
+        "mean_logprob_diff",
+        "perplexity_ratio",
+    ], "Invalid metric specified."
+    if metric == "mean_logprob_diff":
+        title = (
+            f"Average change in log-probabilities of tokens in {corpus_name}"
+        )
+        results_grouped_df = results_grouped_df.assign(
+            y_value=results_grouped_df["logprob_actual_next_token_diff_mean"]
+        )
+        labels = {
+            "y_value": "Mean change in log-probs",
+        }
+    elif metric == "perplexity_ratio":
+        title = f"(Modified model perplexity) / (normal model perplexity) on {corpus_name}"
+        results_grouped_df = results_grouped_df.assign(
+            y_value=np.exp(
+                -results_grouped_df["logprob_actual_next_token_diff_mean"]
+            )
+        )
+        labels = {
+            "y_value": "Perplexity ratio",
+        }
     if x_name is not None and x_qty is not None:
         labels[x_qty] = x_name
     if color_name is not None and color_qty is not None:
@@ -166,12 +208,12 @@ def plot_corpus_logprob_experiment(
         labels[facet_col_qty] = facet_col_name
     fig = px.line(
         results_grouped_df,
-        y="logprob_actual_next_token_diff_mean",
+        y="y_value",
         x=x_qty,
         color=color_qty,
         facet_col=facet_col_qty,
         labels=labels,
-        title=f"Average change in log-probabilities of tokens in {corpus_name}",
+        title=title,
         **plot_kwargs,
     )
     for annot in fig.layout.annotations:  # type: ignore
@@ -179,6 +221,9 @@ def plot_corpus_logprob_experiment(
             annot.update(
                 text=" ".join(annot.text.split("=")), font={"size": 16}
             )
+    # Add ratio=1 line if needed
+    if metric == "perplexity_ratio":
+        fig.add_hline(y=1.0, opacity=0.3)
     return fig
 
 
