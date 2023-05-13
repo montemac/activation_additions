@@ -1,5 +1,5 @@
 """ Functions for generating completions from a model, using a prompt
-and a list of RichPrompts. """
+and a list of ActivationAdditions. """
 
 from functools import wraps
 from typing import List, Optional, Dict, Callable, Union
@@ -11,9 +11,9 @@ import pandas as pd
 import prettytable
 import einops
 
-from transformer_lens.HookedTransformer import HookedTransformer
+from transformer_lens.HookedTransformer import HookedTransformer, Output
 
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import ActivationAddition
 from algebraic_value_editing import hook_utils, logging
 
 
@@ -37,19 +37,18 @@ def preserve_rng_state(func):
     return wrapper
 
 
-# Ensure that even if we set the seed, we don't change the RNG state globally
 @preserve_rng_state
 @logging.loggable
-def gen_using_hooks(
+def gen_using_model(
     model: HookedTransformer,
     prompt_batch: List[str],
-    hook_fns: Dict[str, Callable],
     tokens_to_generate: int = 40,
     seed: Optional[int] = None,
+    include_logits: bool = False,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     **sampling_kwargs,
 ) -> pd.DataFrame:
-    """Run `model` using the given `hook_fns`.
+    """Run `model` on `prompt_batch`
     Returns a `DataFrame` with the completions and losses.
 
     args:
@@ -57,11 +56,12 @@ def gen_using_hooks(
 
         `prompt_batch`: The prompt batch to use for completion.
 
-        `hook_fns`: A dictionary mapping activation names to hook.
-
         `tokens_to_generate`: The number of additional tokens to generate.
 
         `seed`: A random seed to use for generation.
+
+        `include_logits`: True to include the full logits tensors as a
+        column in the returned DataFrame.
 
         `log`: To enable logging of this call to wandb, pass either
         True, or a dict contining any of ('tags', 'group', 'notes') to
@@ -86,27 +86,26 @@ def gen_using_hooks(
     tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(
         prompt_batch
     )
-
-    # Modify the forward pass
-    try:
-        for act_name, hook_fn in hook_fns.items():
-            model.add_hook(act_name, hook_fn)
-
-        completions: Float[t.Tensor, "batch pos"] = model.generate(
-            input=tokenized_prompts,
-            max_new_tokens=tokens_to_generate,
-            verbose=False,
-            **sampling_kwargs,
-        )
-    finally:
-        model.remove_all_hook_fns()
+    completions: Float[t.Tensor, "batch pos"] = model.generate(
+        input=tokenized_prompts,
+        max_new_tokens=tokens_to_generate,
+        verbose=False,
+        **sampling_kwargs,
+    )
 
     # Compute the loss per token
-    loss: Float[t.Tensor, "batch pos"] = (
-        model(completions.clone(), return_type="loss", loss_per_token=True)
-        .detach()
-        .cpu()
-    )
+    if include_logits:
+        output: Output = model(
+            completions.clone(), return_type="both", loss_per_token=True
+        )
+        loss, logits = output.loss.detach().cpu(), output.logits.detach().cpu()
+    else:
+        loss = (
+            model(completions.clone(), return_type="loss", loss_per_token=True)
+            .detach()
+            .cpu()
+        )
+        logits = None
     average_loss: np.ndarray = einops.reduce(
         loss, "batch pos -> batch", "mean"
     ).numpy()  # NOTE why are we casting to numpy?
@@ -125,6 +124,77 @@ def gen_using_hooks(
         }
     )
 
+    if logits is not None:
+        results["logits"] = logits.tolist()
+
+    return results
+
+
+# Ensure that even if we set the seed, we don't change the RNG state globally
+@preserve_rng_state
+@logging.loggable
+def gen_using_hooks(
+    model: HookedTransformer,
+    prompt_batch: List[str],
+    hook_fns: Dict[str, List[Callable]],
+    tokens_to_generate: int = 40,
+    seed: Optional[int] = None,
+    include_logits: bool = False,
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
+    **sampling_kwargs,
+) -> pd.DataFrame:
+    """Run `model` using the given `hook_fns`.
+    Returns a `DataFrame` with the completions and losses.
+
+    args:
+        `model`: The model to use for completion.
+
+        `prompt_batch`: The prompt batch to use for completion.
+
+        `hook_fns`: A dictionary mapping activation names to hooks.
+
+        `tokens_to_generate`: The number of additional tokens to generate.
+
+        `seed`: A random seed to use for generation.
+
+        `include_logits`: True to include the full logits tensors as a
+        column in the returned DataFrame.
+
+        `log`: To enable logging of this call to wandb, pass either
+        True, or a dict contining any of ('tags', 'group', 'notes') to
+        pass these keys to the wandb init call.  False to disable logging.
+
+        `sampling_kwargs`: Keyword arguments to pass to the model's
+        `generate` function.
+
+    returns:
+        A `DataFrame` with the completions and losses. The `DataFrame`
+        has the following columns:
+                `prompts`: The prompts used for completion.
+                `completions`: The completions generated by the model.
+                `loss`: The loss of the completions.
+                `is_modified`: Whether the completion was modified by
+                    any hook functions.
+    """
+    # Feels a bit strong to deprecate this, but using gen_using_model is more flexible.
+    # warnings.warn("Deprecated: Use `gen_using_model` and `with model.hooks(...)` instead")
+
+    fwd_hooks = [
+        (name, hook_fn)
+        for name, hook_fns in hook_fns.items()
+        for hook_fn in hook_fns
+    ]
+    with model.hooks(fwd_hooks=fwd_hooks):  # type: ignore
+        results = gen_using_model(
+            model,
+            prompt_batch,
+            tokens_to_generate,
+            seed,
+            include_logits,
+            log,
+            **sampling_kwargs,
+        )
+
     # Mark the completions as modified or not
     results["is_modified"] = hook_fns != {}
 
@@ -132,20 +202,20 @@ def gen_using_hooks(
 
 
 @logging.loggable
-def gen_using_rich_prompts(
+def gen_using_activation_additions(
     model: HookedTransformer,
-    rich_prompts: List[RichPrompt],
+    activation_additions: List[ActivationAddition],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     addition_location: str = "front",
     res_stream_slice: slice = slice(None),
     **kwargs,
 ) -> pd.DataFrame:
-    """Generate completions using the given rich prompts.
+    """Generate completions using the given ActivationAdditions.
 
     args:
         `model`: The model to use for completion.
 
-        `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
+        `activation_additions`: A list of `ActivationAddition`s to use to create hooks.
 
         `log`: To enable logging of this call to `wandb`, pass either
         `True`, or a dict contining any of ('tags', 'group', 'notes') to
@@ -167,9 +237,12 @@ def gen_using_rich_prompts(
                 `completions`: The generated completions.
                 `loss`: The average loss per token of the completions.
     """
-    hook_fns: Dict[str, Callable] = hook_utils.hook_fns_from_rich_prompts(
+    # Create the hook functions
+    hook_fns: Dict[
+        str, List[Callable]
+    ] = hook_utils.hook_fns_from_activation_additions(
         model=model,
-        rich_prompts=rich_prompts,
+        activation_additions=activation_additions,
         addition_location=addition_location,
         res_stream_slice=res_stream_slice,
     )
@@ -285,7 +358,7 @@ def print_n_comparisons(
     model: HookedTransformer,
     num_comparisons: int = 5,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
-    rich_prompts: Optional[List[RichPrompt]] = None,
+    activation_additions: Optional[List[ActivationAddition]] = None,
     addition_location: str = "front",
     res_stream_slice: slice = slice(None),
     **kwargs,
@@ -305,10 +378,10 @@ def print_n_comparisons(
         pass these keys to the wandb init call.  False to disable
         logging.
 
-        `rich_prompts`: A list of `RichPrompt`s to use to create hooks.
+        `activation_additions`: A list of `ActivationAddition`s to use to create hooks.
 
         `addition_location`: Whether to add `activations` from
-        `rich_prompts` to the front-positioned
+        `activation_additions` to the front-positioned
         or back-positioned residual streams in the forward poss. Must be
         either "front" or "back".
 
@@ -329,11 +402,11 @@ def print_n_comparisons(
     data_frames: List[pd.DataFrame] = [normal_df]
 
     # Generate the completions from the modified model
-    if rich_prompts is not None:
-        mod_df: pd.DataFrame = gen_using_rich_prompts(
+    if activation_additions is not None:
+        mod_df: pd.DataFrame = gen_using_activation_additions(
             prompt_batch=prompt_batch,
             model=model,
-            rich_prompts=rich_prompts,
+            activation_additions=activation_additions,
             addition_location=addition_location,
             res_stream_slice=res_stream_slice,
             **kwargs,

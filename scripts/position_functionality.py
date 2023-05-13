@@ -1,17 +1,18 @@
 """ Compare different settings for where we add the steering vector, in
 terms of the residual streams to which activations are added. """
-# %% 
-%load_ext autoreload
-%autoreload 2
-
 # %%
 from typing import List, Dict, Callable
 import pandas as pd
 import torch
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import completion_utils
-from algebraic_value_editing.prompt_utils import RichPrompt, get_x_vector
+from algebraic_value_editing import completion_utils, utils
+from algebraic_value_editing.prompt_utils import (
+    ActivationAddition,
+    get_x_vector,
+)
+
+utils.enable_ipython_reload()
 
 
 # %%
@@ -23,29 +24,23 @@ _ = model.to("cuda")
 _ = torch.set_grad_enabled(False)
 
 # %%
-sampling_kwargs = {
-    "temperature": 1,
-    "top_p": 0.3,
-    "freq_penalty": 1.0
-}
+sampling_kwargs = {"temperature": 1, "top_p": 0.3, "freq_penalty": 1.0}
 
-wedding_additions: List[RichPrompt] = [
-    RichPrompt(prompt=" wedding", coeff=4.0, act_name=6),
-    RichPrompt(prompt=" ", coeff=-4.0, act_name=6),
+wedding_additions: List[ActivationAddition] = [
+    ActivationAddition(prompt=" wedding", coeff=4.0, act_name=6),
+    ActivationAddition(prompt=" ", coeff=-4.0, act_name=6),
 ]
 # %% Print out qualitative results
-for location in ('front', 'mid', 'back'):
+for location in ("front", "mid", "back"):
     print(completion_utils.bold_text(f"\nLocation: {location}"))
     completion_utils.print_n_comparisons(
-        prompt=(
-            "I went up to my friend and said"
-        ),
+        prompt=("I went up to my friend and said"),
         num_comparisons=10,
         addition_location=location,
         model=model,
-        rich_prompts=wedding_additions,
+        activation_additions=wedding_additions,
         seed=0,
-        **sampling_kwargs
+        **sampling_kwargs,
     )
 
 # %% Analyze how often wedding words show up under each condition
@@ -72,14 +67,17 @@ metrics_dict: Dict[str, Callable] = {
 
 dfs: List[pd.DataFrame] = []
 
-for location in ('front', 'mid', 'back'):
-    location_df: pd.DataFrame = completion_utils.gen_using_rich_prompts(
-        model=model,
-        prompt_batch=["I went up to my friend and said"] * wedding_completions,
-        rich_prompts=wedding_additions,
-        addition_location=location,
-        seed=0,
-        **sampling_kwargs,
+for location in ("front", "mid", "back"):
+    location_df: pd.DataFrame = (
+        completion_utils.gen_using_activation_additions(
+            model=model,
+            prompt_batch=["I went up to my friend and said"]
+            * wedding_completions,
+            activation_additions=wedding_additions,
+            addition_location=location,
+            seed=0,
+            **sampling_kwargs,
+        )
     )
 
     # Store the fraction of dims we modified
@@ -96,7 +94,7 @@ merged_df = metrics.add_metric_cols(data=merged_df, metrics_dict=metrics_dict)
 # immediately following the prompt. This is likely because the forward pass
 # is getting modified just before that position. In our experience,
 # directly modified positions have extremely different distributions
-# over output token logits.  
+# over output token logits.
 #
 # Let's see how many wedding words are present, on average, for each
 # addition location.
@@ -119,9 +117,7 @@ fig: go.Figure = px.bar(
         "(Average # of wedding words in completions) vs (Addition location)"
     ),
     labels={
-        "location": (
-            "Where we added the steering vector"
-        ),
+        "location": ("Where we added the steering vector"),
         "wedding_words_count": "Avg. # of wedding words",
     },
 )

@@ -1,18 +1,17 @@
 """ This script demonstrates how to use the algebraic_value_editing library to generate comparisons
 between two prompts. """
-# %%
-# %load_ext autoreload
-# %autoreload 2
 
 # %%
+from typing import List
 from funcy import partial
-from typing import List, Dict, Callable
 import pandas as pd
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import completion_utils, hook_utils
+from algebraic_value_editing import completion_utils, utils
 from algebraic_value_editing.analysis import rate_completions
 from algebraic_value_editing.prompt_utils import get_x_vector
+
+utils.enable_ipython_reload()
 
 
 # %%
@@ -27,7 +26,6 @@ default_kwargs = {
     "temperature": 1,
     "freq_penalty": 1,
     "top_p": 0.3,
-    "model": gpt2_xl,
 }
 
 get_x_vector_preset = partial(
@@ -62,18 +60,18 @@ prompt: str = (
 prompt_batch: List[str] = [prompt] * 5
 # Generate the completions from the normal model
 normal_df: pd.DataFrame = completion_utils.gen_using_hooks(
-    prompt_batch=prompt_batch,
     model=gpt2_xl,
+    prompt_batch=prompt_batch,
     hook_fns={},
     seed=1,
     tokens_to_generate=60,
     **default_kwargs,
 )
 
-mod_df: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+mod_df: pd.DataFrame = completion_utils.gen_using_activation_additions(
     prompt_batch=prompt_batch,
     model=gpt2_xl,
-    rich_prompts=wedding_additions,
+    activation_additions=wedding_additions,
     **default_kwargs,
     seed=1,
     tokens_to_generate=60,

@@ -142,6 +142,8 @@ wandb
 results
 *playground*
 artifacts
+openai_api_key.txt
+images
 *png
 *html
 scripts/KL_bug.py

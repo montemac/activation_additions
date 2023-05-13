@@ -32,14 +32,14 @@ def test_get_sentiment_metric():
         "I love chocolate",
         "I hate chocolate",
     ]
-    results: pd.DataFrame = metric(prompts)
+    results: pd.DataFrame = metric(prompts, False, pd.Index(["a", "b"]))
     target = pd.DataFrame(
         {
             "label": ["POSITIVE", "NEGATIVE"],
             "score": [0.999846, 0.998404],
             "is_positive": [True, False],
         },
-        index=prompts,
+        index=["a", "b"],
     )
     pd.testing.assert_frame_equal(results, target)
 
@@ -55,10 +55,9 @@ def test_get_word_count_metric():
         "Dogs and puppies are the best!",
         "Look at that cute dog with a puppy over there.",
     ]
-    results: pd.DataFrame = metric(prompts)
+    results: pd.DataFrame = metric(prompts, False, None)
     target = pd.DataFrame(
         {"count": [2, 2]},
-        index=prompts,
     )
     pd.testing.assert_frame_equal(results, target)
 
@@ -72,19 +71,15 @@ def test_openai_metric():
 
     metric: Callable = metrics.get_openai_metric("text-davinci-003", "happy")
     prompts: List[str] = ["I love chocolate!", "I hate chocolate!"]
-    results: pd.DataFrame = metric(prompts)
+    results: pd.DataFrame = metric(prompts, False, None)
     target = pd.DataFrame(
         {
             "rating": [5, 1],
             "reasoning": [
-                (
-                    "This text is very happy because it expresses a strong"
-                    " positive emotion towards something."
-                ),
-                (
-                    "This text is not very happy because it expresses a"
-                    " negative sentiment towards chocolate."
-                ),
+                "This text is very happy because it expresses"
+                + " a strong positive emotion towards something.",
+                "This text is not very happy because it expresses"
+                + " a negative sentiment towards chocolate.",
             ],
         },
         index=prompts,
@@ -99,7 +94,7 @@ def test_openai_metric_bulk():
         pytest.skip("OpenAI API key not found.")
 
     metric: Callable = metrics.get_openai_metric("text-davinci-003", "happy")
-    metric([""] * 21)  # The test is that this doesn't error!
+    metric([""] * 21, False, None)  # The test is that this doesn't error!
 
 
 def test_add_metric_cols(model):

@@ -1,5 +1,5 @@
 """ Test suite for sweeps.py """
-
+# %%
 import pickle
 from typing import Tuple
 import os
@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import sweeps, prompt_utils, utils
-from algebraic_value_editing.prompt_utils import RichPrompt
+from algebraic_value_editing.prompt_utils import ActivationAddition
 
 utils.enable_ipython_reload()
 
@@ -38,14 +38,14 @@ def load_cached_sweep_over_prompts():
         return pickle.load(file)
 
 
-def test_make_rich_prompts():
-    """Test for make_rich_prompts() function.  Provides a simple set of
+def test_make_activation_additions():
+    """Test for make_activation_additions() function.  Provides a simple set of
     phrases+coeffs, activation names and additional coeffs that the
     function under test will expand into all permutations, in the style
     of np.ndgrid.  The return value is compared against a pre-prepared
     reference output."""
     # Call the function under test
-    rich_prompts_df: pd.DataFrame = sweeps.make_rich_prompts(
+    activation_additions_df: pd.DataFrame = sweeps.make_activation_additions(
         phrases=[[("Good", 1.0), ("Bad", -1.0)], [("Amazing", 2.0)]],
         act_names=[
             prompt_utils.get_block_name(block_num=num) for num in [6, 7, 8]
@@ -53,7 +53,9 @@ def test_make_rich_prompts():
         coeffs=np.array([1.0, 5, 10.0, 20.0]),
     )
     # Compre to pre-defined target
-    pd.testing.assert_frame_equal(rich_prompts_df, MAKE_RICH_PROMPTS_TARGET)
+    pd.testing.assert_frame_equal(
+        activation_additions_df, MAKE_ACTIVATION_ADDITIONS_TARGET
+    )
 
 
 def do_sweep(
@@ -62,7 +64,7 @@ def do_sweep(
     """Convenience function to perform a small example sweep and return
     the resulting DataFrames"""
     act_name: str = prompt_utils.get_block_name(block_num=0)
-    rich_prompts_df = sweeps.make_rich_prompts(
+    activation_additions_df = sweeps.make_activation_additions(
         phrases=[[("Love", 1.0), ("Fear", -1.0)]],
         act_names=[act_name],
         coeffs=np.array([1.0, 10.0]),
@@ -74,13 +76,13 @@ def do_sweep(
             "The most powerful emotion is",
             "I feel",
         ],
-        rich_prompts=rich_prompts_df["rich_prompts"],
+        activation_additions=activation_additions_df["activation_additions"],
         num_normal_completions=4,
         num_patched_completions=4,
         seed=42,
         **sweep_kwargs
     )
-    return normal_df, patched_df, rich_prompts_df
+    return normal_df, patched_df, activation_additions_df
 
 
 def make_and_save_sweep_results(model):
@@ -89,16 +91,16 @@ def make_and_save_sweep_results(model):
     would render the existing cached targets incorrect.  New target
     results saved by this function should be verified for correctness
     when they are created."""
-    normal_df, patched_df, rich_prompts_df = do_sweep(model)
+    normal_df, patched_df, activation_additions_df = do_sweep(model)
     reduced_normal_df, reduced_patched_df = sweeps.reduce_sweep_results(
-        normal_df, patched_df, rich_prompts_df
+        normal_df, patched_df, activation_additions_df
     )
     with open(SWEEP_OVER_PROMPTS_CACHE_FN, "wb") as file:
         pickle.dump(
             (
                 normal_df,
                 patched_df,
-                rich_prompts_df,
+                activation_additions_df,
                 reduced_normal_df,
                 reduced_patched_df,
             ),
@@ -108,7 +110,7 @@ def make_and_save_sweep_results(model):
 
 def test_sweep_over_prompts(model):
     """Test for sweep_over_prompts().  Uses a toy model fixture, passes
-    a handful of RichPrompts and prompts, and compares results to a
+    a handful of ActivationAdditions and prompts, and compares results to a
     pre-cached reference output."""
     normal_df, patched_df, _ = do_sweep(model)
     normal_target, patched_target, _, _, _ = load_cached_sweep_over_prompts()
@@ -124,14 +126,14 @@ def test_reduce_sweep_results():
     (
         normal_df,
         patched_df,
-        rich_prompts_df,
+        activation_additions_df,
         reduced_normal_target,
         reduced_patched_target,
     ) = load_cached_sweep_over_prompts()
 
     # Reduce DataFrames and compare reductions to target
     reduced_normal_df, reduced_patched_df = sweeps.reduce_sweep_results(
-        normal_df, patched_df, rich_prompts_df
+        normal_df, patched_df, activation_additions_df
     )
     pd.testing.assert_frame_equal(reduced_normal_df, reduced_normal_target)
     pd.testing.assert_frame_equal(reduced_patched_df, reduced_patched_target)
@@ -165,232 +167,232 @@ def test_plot_sweep_results():
 
 
 # Assets
-MAKE_RICH_PROMPTS_TARGET = pd.DataFrame(
+MAKE_ACTIVATION_ADDITIONS_TARGET = pd.DataFrame(
     {
-        "rich_prompts": [
+        "activation_additions": [
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=1.0,
                     act_name="blocks.6.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-1.0,
                     act_name="blocks.6.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=5.0,
                     act_name="blocks.6.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-5.0,
                     act_name="blocks.6.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=10.0,
                     act_name="blocks.6.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-10.0,
                     act_name="blocks.6.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=20.0,
                     act_name="blocks.6.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-20.0,
                     act_name="blocks.6.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=1.0,
                     act_name="blocks.7.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-1.0,
                     act_name="blocks.7.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=5.0,
                     act_name="blocks.7.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-5.0,
                     act_name="blocks.7.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=10.0,
                     act_name="blocks.7.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-10.0,
                     act_name="blocks.7.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=20.0,
                     act_name="blocks.7.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-20.0,
                     act_name="blocks.7.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=1.0,
                     act_name="blocks.8.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-1.0,
                     act_name="blocks.8.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=5.0,
                     act_name="blocks.8.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-5.0,
                     act_name="blocks.8.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=10.0,
                     act_name="blocks.8.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-10.0,
                     act_name="blocks.8.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Good",
                     coeff=20.0,
                     act_name="blocks.8.hook_resid_pre",
                 ),
-                RichPrompt(
+                ActivationAddition(
                     prompt="Bad",
                     coeff=-20.0,
                     act_name="blocks.8.hook_resid_pre",
                 ),
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=2.0,
                     act_name="blocks.6.hook_resid_pre",
                 )
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=10.0,
                     act_name="blocks.6.hook_resid_pre",
                 )
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=20.0,
                     act_name="blocks.6.hook_resid_pre",
                 )
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=40.0,
                     act_name="blocks.6.hook_resid_pre",
                 )
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=2.0,
                     act_name="blocks.7.hook_resid_pre",
                 )
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=10.0,
                     act_name="blocks.7.hook_resid_pre",
                 )
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=20.0,
                     act_name="blocks.7.hook_resid_pre",
                 )
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=40.0,
                     act_name="blocks.7.hook_resid_pre",
                 )
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=2.0,
                     act_name="blocks.8.hook_resid_pre",
                 )
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=10.0,
                     act_name="blocks.8.hook_resid_pre",
                 )
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=20.0,
                     act_name="blocks.8.hook_resid_pre",
                 )
             ],
             [
-                RichPrompt(
+                ActivationAddition(
                     prompt="Amazing",
                     coeff=40.0,
                     act_name="blocks.8.hook_resid_pre",
