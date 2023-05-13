@@ -11,15 +11,18 @@ import torch
 from transformer_lens import HookedTransformer
 from typing import Dict, Union, List
 
+# %% [markdown]
+# ## Load the model
+
 # %%
-# Load the model
 
 torch.set_grad_enabled(False)  # save memory
 model = HookedTransformer.from_pretrained("gpt2-xl")
 model.eval()
+# %% [markdown]
+# ## Settings from qualitative notebook
 
 # %%
-# Settings copied from qualitative notebook
 
 SEED = 0
 sampling_kwargs = dict(temperature=1.0, top_p=0.3, freq_penalty=1.0)
@@ -36,18 +39,20 @@ prompt = "I hate you because"
 #
 # (PS: We tried padding by model.tokenizer.eos_token and got worse results compared to spaces. We don't know why this is yet.)
 
-# TODO: Use torch.pad - more readable, and works in token space(?)
-tlen = lambda prompt: model.to_tokens(prompt).shape[1]
-# in our repo this corresponds to pad_method="tokens_right",
-pad_right = lambda prompt, length: prompt + " " * (length - tlen(prompt))
+# %%
 
+tlen = lambda prompt: model.to_tokens(prompt).shape[1]
+pad_right = lambda prompt, length: prompt + " " * (length - tlen(prompt))
 l = max(tlen(prompt_add), tlen(prompt_sub))
 prompt_add, prompt_sub = pad_right(prompt_add, l), pad_right(prompt_sub, l)
 
 print(f"'{prompt_add}'", f"'{prompt_sub}'")
 
+
 # %% [markdown]
 # ## Get activations
+
+# %%
 
 
 def get_resid_pre(prompt: str, layer: int):
@@ -65,6 +70,8 @@ print(act_diff.shape)
 
 # %% [markdown]
 # ## Generate from the modified model
+
+# %%
 
 
 def ave_hook(resid_pre, hook):
