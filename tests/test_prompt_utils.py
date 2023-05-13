@@ -18,23 +18,23 @@ def fixture_model() -> HookedTransformer:
 
 
 def test_creation():
-    """Test that we can create a RichPrompt."""
-    rich_prompt = ActivationAddition(
+    """Test that we can create a ActivationAddition."""
+    activation_addition = ActivationAddition(
         prompt="Hello world!",
         act_name="encoder",
         coeff=1.0,
     )
-    assert rich_prompt.prompt == "Hello world!"
-    assert rich_prompt.act_name == "encoder"
-    assert rich_prompt.coeff == 1.0
+    assert activation_addition.prompt == "Hello world!"
+    assert activation_addition.act_name == "encoder"
+    assert activation_addition.coeff == 1.0
 
 
 def test_x_vector_creation():
-    """Test that we can create a RichPrompt's x_vector."""
-    rich_prompt_positive = ActivationAddition(
+    """Test that we can create a ActivationAddition's x_vector."""
+    activation_addition_positive = ActivationAddition(
         prompt="Hello world!", act_name="", coeff=1.0
     )
-    rich_prompt_negative = ActivationAddition(
+    activation_addition_negative = ActivationAddition(
         prompt="Goodbye world!", act_name="", coeff=-1.0
     )
 
@@ -45,10 +45,10 @@ def test_x_vector_creation():
         act_name="",
     )
 
-    # Check that the x_vectors are the same as the RichPrompts
+    # Check that the x_vectors are the same as the ActivationAdditions
     for xvec, rch_prompt in zip(
         [x_vector_positive, x_vector_negative],
-        [rich_prompt_positive, rich_prompt_negative],
+        [activation_addition_positive, activation_addition_negative],
     ):
         assert xvec.prompt == rch_prompt.prompt
         assert xvec.act_name == rch_prompt.act_name

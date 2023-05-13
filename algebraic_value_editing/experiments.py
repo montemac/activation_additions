@@ -54,8 +54,8 @@ def run_corpus_logprob_experiment(
             # ),
         )
     }
-    # Create the list of RichPrompts based on provided hyperparameters
-    rich_prompts_df = sweeps.make_rich_prompts(
+    # Create the list of ActivationAdditions based on provided hyperparameters
+    activation_additions_df = sweeps.make_activation_additions(
         phrases=[[(x_vector_phrases[0], 1.0), (x_vector_phrases[1], -1.0)]],
         act_names=act_names,
         coeffs=coeffs,
@@ -65,12 +65,16 @@ def run_corpus_logprob_experiment(
     # Create the texts to use, optinally including padding
     tokens_list = [model.to_tokens(text) for text in labeled_texts[text_col]]
     if method == "pad":
-        rich_prompts_all = []
-        for rich_prompts in rich_prompts_df["rich_prompts"]:
-            rich_prompts_all.extend(rich_prompts)
+        activation_additions_all = []
+        for activation_additions in activation_additions_df[
+            "activation_additions"
+        ]:
+            activation_additions_all.extend(activation_additions)
         tokens_list = [
-            prompt_utils.pad_tokens_to_match_rich_prompts(
-                model=model, tokens=tokens, rich_prompts=rich_prompts_all
+            prompt_utils.pad_tokens_to_match_activation_additions(
+                model=model,
+                tokens=tokens,
+                activation_additions=activation_additions_all,
             )[0]
             for tokens in tokens_list
         ]
@@ -86,11 +90,11 @@ def run_corpus_logprob_experiment(
         show_progress=True,
         prefix_cols=False,
     )
-    # Get the modified model logprobs over all the RichPrompts
+    # Get the modified model logprobs over all the ActivationAdditions
     mod_df = sweeps.sweep_over_metrics(
         model=model,
         inputs=tokens_df["tokens"],  # pylint: disable=unsubscriptable-object
-        rich_prompts=rich_prompts_df["rich_prompts"],
+        activation_additions=activation_additions_df["activation_additions"],
         metrics_dict=metrics_dict,
         prefix_cols=False,
     )
@@ -101,8 +105,10 @@ def run_corpus_logprob_experiment(
         lsuffix="_mod",
         rsuffix="_norm",
     )
-    # Join in the RichPrompt parameters
-    mod_df = mod_df.join(rich_prompts_df, on="rich_prompt_index")
+    # Join in the ActivationAddition parameters
+    mod_df = mod_df.join(
+        activation_additions_df, on="activation_addition_index"
+    )
     # Join in the input label
     mod_df = mod_df.join(labeled_texts[[label_col]], on="input_index")
     # Add loss diff column
@@ -114,8 +120,10 @@ def run_corpus_logprob_experiment(
     # positions that had activations injected
     if method in ["mask_injection_logprob", "pad"]:
         # NOTE: this assumes that the same phrases are used for all
-        # RichPrompts, which is currently the case, but may not always be!
-        mask_pos = rich_prompts_df.iloc[0]["rich_prompts"][0].tokens.shape[-1]
+        # ActivationAdditions, which is currently the case, but may not always be!
+        mask_pos = activation_additions_df.iloc[0]["activation_additions"][
+            0
+        ].tokens.shape[-1]
     else:
         mask_pos = 0
     mod_df["logprob_actual_next_token_diff_mean"] = mod_df[
@@ -307,10 +315,13 @@ def compare_with_prompting(
 
     tokens_padded = model.to_tokens(text, prepend_bos=False)
     text_tokens_len = tokens_padded.shape[-1]
-    rich_prompt_tokens_len = model.to_tokens(
+    activation_addition_tokens_len = model.to_tokens(
         phrases[0], prepend_bos=False
     ).shape[-1]
-    while tokens_padded.shape[-1] < text_tokens_len + rich_prompt_tokens_len:
+    while (
+        tokens_padded.shape[-1]
+        < text_tokens_len + activation_addition_tokens_len
+    ):
         tokens_padded = torch.concat(
             (model.to_tokens(" ", prepend_bos=False), tokens_padded), dim=-1
         )
@@ -343,7 +354,7 @@ def compare_with_prompting(
                 prompts=tokens_padded,
                 return_positions_above=0,
                 # pylint: disable=duplicate-code
-                rich_prompts=list(
+                activation_additions=list(
                     prompt_utils.get_x_vector(
                         prompt1=phrases[0],
                         prompt2=phrases[1],

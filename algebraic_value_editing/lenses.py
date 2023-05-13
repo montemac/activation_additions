@@ -90,13 +90,15 @@ def prediction_trajectories(
     ]
 
 
-def run_hooked_and_normal_with_cache(model, rich_prompts, kw, device=None):
+def run_hooked_and_normal_with_cache(
+    model, activation_additions, kw, device=None
+):
     """
     Run hooked and normal with cache.
 
     Args:
         model: The model to run.
-        rich_prompts: A list of RichPrompts.
+        activation_additions: A list of ActivationAdditions.
         kw: Keyword arguments to pass to `completion_utils.gen_using_model`.
             Must include `prompt_batch` and `tokens_to_generate`.
 
@@ -108,7 +110,9 @@ def run_hooked_and_normal_with_cache(model, rich_prompts, kw, device=None):
         len(kw.get("prompt_batch", [])) == 1
     ), f'Only one prompt is supported. Got {len(kw.get("prompt_batch", []))}'
 
-    activ_hooks = hook_utils.hook_fns_from_rich_prompts(model, rich_prompts)
+    activ_hooks = hook_utils.hook_fns_from_activation_additions(
+        model, activation_additions
+    )
     fwd_hooks = fwd_hooks_from_activ_hooks(activ_hooks)
     normal_and_modified_df = []
     normal_and_modified_cache = []

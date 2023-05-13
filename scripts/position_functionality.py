@@ -43,7 +43,7 @@ for location in ('front', 'mid', 'back'):
         num_comparisons=10,
         addition_location=location,
         model=model,
-        rich_prompts=wedding_additions,
+        activation_additions=wedding_additions,
         seed=0,
         **sampling_kwargs
     )
@@ -73,10 +73,10 @@ metrics_dict: Dict[str, Callable] = {
 dfs: List[pd.DataFrame] = []
 
 for location in ('front', 'mid', 'back'):
-    location_df: pd.DataFrame = completion_utils.gen_using_rich_prompts(
+    location_df: pd.DataFrame = completion_utils.gen_using_activation_additions(
         model=model,
         prompt_batch=["I went up to my friend and said"] * wedding_completions,
-        rich_prompts=wedding_additions,
+        activation_additions=wedding_additions,
         addition_location=location,
         seed=0,
         **sampling_kwargs,

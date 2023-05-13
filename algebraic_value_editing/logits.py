@@ -108,12 +108,12 @@ def disruption(
 
 def get_effectiveness_and_disruption(
     probs: pd.DataFrame,
-    rich_prompts: List[prompt_utils.ActivationAddition],
+    activation_additions: List[prompt_utils.ActivationAddition],
     steering_aligned_tokens: Dict[int, np.ndarray],
     mode: str = "mask_injection_pos",
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Calculate effectiveness and disruption of an activation injection
-    defined by a model, input text, list of RichPrompts, and a dict
+    defined by a model, input text, list of ActivationAdditions, and a dict
     specifying the steering-aligned next tokens at any token position in
     the input text for which the set should be non-null.
 
@@ -140,7 +140,8 @@ def get_effectiveness_and_disruption(
 
     if mode == "mask_injection_pos":
         mask_pos = max(
-            rich_prompt.tokens.shape[0] for rich_prompt in rich_prompts
+            activation_addition.tokens.shape[0]
+            for activation_addition in activation_additions
         )
         eff[:mask_pos] = np.nan
         foc[:mask_pos] = np.nan
@@ -207,11 +208,13 @@ def get_token_probs(
     prompts: Union[
         Union[str, torch.Tensor], Union[List[str], List[torch.Tensor]]
     ],
-    rich_prompts: Optional[List[prompt_utils.ActivationAddition]] = None,
+    activation_additions: Optional[
+        List[prompt_utils.ActivationAddition]
+    ] = None,
     return_positions_above: Optional[int] = None,
 ) -> pd.DataFrame:
     """Make a forward pass on a model for each provided prompted,
-    optionally including hooks generated from RichPrompts provided.
+    optionally including hooks generated from ActivationAdditions provided.
     Return value is a DataFrame with tokens on the columns, prompts as
     index.
     """
@@ -221,10 +224,10 @@ def get_token_probs(
     if return_positions_above is None:
         return_positions_above = 0
     # Add hooks if provided
-    if rich_prompts is not None:
+    if activation_additions is not None:
         hook_fns_dict = hook_utils.hook_fns_from_rich_prompts(
             model=model,
-            rich_prompts=rich_prompts,
+            activation_additions=activation_additions,
         )
         for act_name, hook_fns in hook_fns_dict.items():
             for hook_fn in hook_fns:
@@ -303,7 +306,7 @@ def get_for_tokens(
 def get_normal_and_modified_token_probs(
     model: HookedTransformer,
     prompts: Union[str, List[str]],
-    rich_prompts: List[prompt_utils.ActivationAddition],
+    activation_additions: List[prompt_utils.ActivationAddition],
     return_positions_above: Optional[int] = None,
 ) -> pd.DataFrame:
     """Get normal and modified next-token probabilities for a range of
@@ -316,7 +319,7 @@ def get_normal_and_modified_token_probs(
     mod_df = get_token_probs(
         model=model,
         prompts=prompts,
-        rich_prompts=rich_prompts,
+        activation_additions=activation_additions,
         return_positions_above=return_positions_above,
     )
     return pd.concat(

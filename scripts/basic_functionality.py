@@ -36,8 +36,8 @@ for prompt in ("I love dogs", " wedding"):
 
 # Test the corresponding ActivationAddition
 act_add = ActivationAddition(prompt=" wedding", coeff=1.0, act_name=6)
-hook_fns = hook_utils.hook_fns_from_rich_prompts(
-    model=model, rich_prompts=[act_add]
+hook_fns = hook_utils.hook_fns_from_activation_additions(
+    model=model, activation_additions=[act_add]
 )
 try:
     for act_name, hook_fn in hook_fns.items():
@@ -59,8 +59,8 @@ act_adds = [
     ActivationAddition(prompt="Love ", coeff=5.0, act_name=6),
     ActivationAddition(prompt="Hate", coeff=-5.0, act_name=6),
 ]
-hook_fns = hook_utils.hook_fns_from_rich_prompts(
-    model=model, rich_prompts=act_adds
+hook_fns = hook_utils.hook_fns_from_activation_additions(
+    model=model, activation_additions=act_adds
 )
 try:
     # for act_name, hook_fn in hook_fns.items():
@@ -80,7 +80,7 @@ finally:
     model.remove_all_hook_fns()
 
 # %%
-rich_prompts: List[ActivationAddition] = [
+activation_additions: List[ActivationAddition] = [
     *get_x_vector(
         prompt1="Happy",
         prompt2=" ",
@@ -97,7 +97,7 @@ completion_utils.print_n_comparisons(
     ),
     num_comparisons=5,
     model=model,
-    rich_prompts=rich_prompts,
+    activation_additions=activation_additions,
     seed=0,
     temperature=1,
     freq_penalty=1,

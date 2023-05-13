@@ -46,7 +46,7 @@ completion_utils.print_n_comparisons(
     model=MODEL,
     prompt="Frozen starts off with a scene about",
     tokens_to_generate=50,
-    rich_prompts=weddings_prompts,
+    activation_additions=weddings_prompts,
     num_comparisons=7,
     seed=0,
     temperature=1,
@@ -56,10 +56,10 @@ completion_utils.print_n_comparisons(
 
 
 # %%
-# Generate a set of RichPrompts over a range of phrases, layers and
+# Generate a set of ActivationAdditions over a range of phrases, layers and
 # coeffs
 # TODO: need to find a way to add padding specifications to these sweep inputs
-rich_prompts_df = sweeps.make_rich_prompts(
+activation_additions_df = sweeps.make_activation_additions(
     [
         [
             ("Anger", 1.0),
@@ -104,12 +104,12 @@ metrics_dict = {
 CACHE_FN = "sweeps_demo_cache.pkl"
 try:
     with open(CACHE_FN, "rb") as file:
-        normal_df, patched_df, rich_prompts_df = pickle.load(file)
+        normal_df, patched_df, activation_additions_df = pickle.load(file)
 except FileNotFoundError:
     normal_df, patched_df = sweeps.sweep_over_prompts(
         MODEL,
         prompts,
-        rich_prompts_df["rich_prompts"],
+        activation_additions_df["activation_additions"],
         num_normal_completions=100,
         num_patched_completions=100,
         seed=0,
@@ -119,14 +119,14 @@ except FileNotFoundError:
         top_p=0.3,
     )
     with open(CACHE_FN, "wb") as file:
-        pickle.dump((normal_df, patched_df, rich_prompts_df), file)
+        pickle.dump((normal_df, patched_df, activation_additions_df), file)
 
 # %%
 # Visualize
 
 # Reduce data
 reduced_normal_df, reduced_patched_df = sweeps.reduce_sweep_results(
-    normal_df, patched_df, rich_prompts_df
+    normal_df, patched_df, activation_additions_df
 )
 
 # Exlude the extreme coeffs, likely not that interesting

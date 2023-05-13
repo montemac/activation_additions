@@ -82,8 +82,8 @@ def make_widget(
     def do_injection(
         input_text, phrase_pos, phrase_neg, act_name, coeff, completion_seed
     ):
-        # Get the rich prompts
-        rich_prompts = list(
+        # Get the activation additions
+        activation_additions = list(
             prompt_utils.get_x_vector(
                 prompt1=phrase_pos,
                 prompt2=phrase_neg,
@@ -98,7 +98,7 @@ def make_widget(
         probs = logits.get_normal_and_modified_token_probs(
             model=model,
             prompts=input_text,
-            rich_prompts=rich_prompts,
+            activation_additions=activation_additions,
             return_positions_above=0,
         )
         # Show token probabilities figure
@@ -149,7 +149,7 @@ def make_widget(
             prompt=input_text,
             num_comparisons=num_completions,
             model=model,
-            rich_prompts=rich_prompts,
+            activation_additions=activation_additions,
             seed=completion_seed,
             temperature=1,
             freq_penalty=1,

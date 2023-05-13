@@ -93,7 +93,7 @@ print_n_comparisons(
     prompt="I hate you because",
     model=gpt2_xl,
     tokens_to_generate=100,
-    rich_prompts=[love_rp, hate_rp],
+    activation_additions=[love_rp, hate_rp],
     num_comparisons=15,
     seed=42,
     temperature=1, freq_penalty=1, top_p=.3
@@ -115,7 +115,7 @@ print_n_comparisons(
     prompt="I want to kill you because",
     model=gpt2_xl,
     tokens_to_generate=50,
-    rich_prompts=[praise_rp, hurt_rp],
+    activation_additions=[praise_rp, hurt_rp],
     num_comparisons=15,
     seed=0,
     temperature=1, freq_penalty=1, top_p=.3
