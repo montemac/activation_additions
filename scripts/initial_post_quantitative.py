@@ -360,17 +360,19 @@ else:
         method="mask_injection_logprob",
         label_col="topic",
     )
-results_grouped_df = results_grouped_df.sort_values(
-    ["act_name", "topic"], ascending=[True, False]
-)
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
-    corpus_name="weddings/shipping essays",
+    corpus_name="various essays",
     x_qty="act_name",
     x_name="Injection layer",
     color_qty="topic",
     facet_col_qty=None,
     metric=CORPUS_METRIC,
+    category_orders={"topic": ["not-weddings", "weddings"]},
+    color_discrete_sequence=[
+        px.colors.qualitative.Plotly[1],
+        px.colors.qualitative.Plotly[0],
+    ],
 )
 fig.show()
 fig.write_image(
@@ -385,6 +387,31 @@ fig.write_image(
 # TODO: use wandb instead of local caching
 with open(CACHE_FN, "wb") as file:
     pickle.dump((mod_df, results_grouped_df), file)
+
+# %%
+# Do some deeper investigation on certain specific sentences, for
+# interests sake!
+# for idx in range(30,40):
+for idx in range(5):
+    mod_df_sel = mod_df[
+        (mod_df["act_name"] == 16)
+        & (mod_df["coeff"] == 1.0)
+        & (mod_df["input_index"] == idx)
+    ]
+    text_token_strs = MODEL.to_string(mod_df_sel["input"].item().T)[1:]
+    logprob_diff = mod_df_sel["logprob_actual_next_token_diff"].item()
+    logprob_diff[:2] = np.NaN  # Mask off injection zone
+    prob_ratio = np.exp(logprob_diff)
+    fig = px.line(y=prob_ratio, title=texts_df.loc[idx, "text"][:50] + "...")
+    fig.update_xaxes(
+        {
+            "tickmode": "array",
+            "tickvals": np.arange(len(text_token_strs)),
+            "ticktext": text_token_strs,
+        }
+    )
+    fig.add_hline
+    fig.show()
 
 
 # %%
@@ -410,12 +437,9 @@ else:
         method="mask_injection_logprob",
         label_col="topic",
     )
-results_grouped_df = results_grouped_df.sort_values(
-    ["coeff", "act_name", "topic"], ascending=[True, True, False]
-)
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
-    corpus_name="weddings/shipping essays",
+    corpus_name="various essays",
     x_qty="coeff",
     x_name="Injection coefficient",
     color_qty="topic",
@@ -423,6 +447,11 @@ fig = experiments.plot_corpus_logprob_experiment(
     facet_col_name="Layer",
     facet_col_spacing=0.05,
     metric=CORPUS_METRIC,
+    category_orders={"topic": ["not-weddings", "weddings"]},
+    color_discrete_sequence=[
+        px.colors.qualitative.Plotly[1],
+        px.colors.qualitative.Plotly[0],
+    ],
 )
 # Manually set ticks
 fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3, 4]})
@@ -540,17 +569,17 @@ fig = experiments.plot_corpus_logprob_experiment(
     color_qty="sentiment",
     facet_col_qty=None,
     metric=CORPUS_METRIC,
-    category_orders={"sentiment": ["negative", "neutral", "positive"]},
+    category_orders={"sentiment": ["positive", "neutral", "negative"]},
     color_discrete_sequence=[
-        px.colors.qualitative.Plotly[1],
-        px.colors.qualitative.Plotly[0],
         px.colors.qualitative.Plotly[2],
+        px.colors.qualitative.Plotly[0],
+        px.colors.qualitative.Plotly[1],
     ],
 )
 if CORPUS_METRIC == "mean_logprob_diff":
     fig.update_layout(yaxis_range=[-0.2, 0.1])
 else:
-    fig.update_layout(yaxis_range=[0.9, 1.2])
+    fig.update_layout(yaxis_range=[0.95, 1.15])
 fig.show()
 fig.write_image(
     "images/yelp_reviews_layers.png",
@@ -603,19 +632,15 @@ fig = experiments.plot_corpus_logprob_experiment(
     facet_col_name="Layer",
     facet_col_spacing=0.05,
     metric=CORPUS_METRIC,
-    category_orders={"sentiment": ["negative", "neutral", "positive"]},
+    category_orders={"sentiment": ["positive", "neutral", "negative"]},
     color_discrete_sequence=[
-        px.colors.qualitative.Plotly[1],
-        px.colors.qualitative.Plotly[0],
         px.colors.qualitative.Plotly[2],
+        px.colors.qualitative.Plotly[0],
+        px.colors.qualitative.Plotly[1],
     ],
 )
 # Manually set ticks
 fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3]})
-if CORPUS_METRIC == "mean_logprob_diff":
-    fig.update_layout(yaxis_range=[-0.35, 0.1])
-else:
-    fig.update_layout(yaxis_range=[0.9, 1.4])
 fig.show()
 fig.write_image(
     "images/yelp_reviews_coeffs.png",
@@ -707,6 +732,7 @@ for name, fig in figs.items():
 
 # Explicitly calculate for prompted version
 # Create metrics
+MASK_POS = 2
 metric_func = metrics.get_logprob_metric(
     MODEL,
     agg_mode=["actual_next_token"],
@@ -734,30 +760,37 @@ prompted_comp_df = pd.DataFrame(
     }
 )
 prompted_comp_df["prompted_logprobs"] = logprobs_list
-prompted_comp_df["mean_logprob_diff"] = (
+prompted_comp_df["sum_logprob_diff"] = (
     prompted_comp_df["prompted_logprobs"] - prompted_comp_df["normal_logprobs"]
-).apply(lambda inp: inp[2:].mean())
+).apply(lambda inp: inp[MASK_POS:].sum())
+prompted_comp_df["count_logprob_diff"] = (
+    prompted_comp_df["prompted_logprobs"] - prompted_comp_df["normal_logprobs"]
+).apply(lambda inp: inp[MASK_POS:].shape[0])
 prompted_comp_df["topic"] = texts_df["topic"]
 prompted_comp_results_df = (
-    prompted_comp_df.groupby(["topic"]).mean(numeric_only=True).reset_index()
+    prompted_comp_df.groupby(["topic"]).sum(numeric_only=True).reset_index()
+)
+prompted_comp_results_df["mean_logprob_diff"] = (
+    prompted_comp_results_df["sum_logprob_diff"]
+    / prompted_comp_results_df["count_logprob_diff"]
 )
 
 plot_df = pd.concat(
     [
         pd.DataFrame(
             {
-                "mean_logprob_diff": results_grouped_df[
-                    "logprob_actual_next_token_diff_mean"
-                ],
+                "perplexity_ratio": np.exp(
+                    -results_grouped_df["logprob_actual_next_token_diff_mean"]
+                ),
                 "topic": results_grouped_df["topic"],
                 "method": "activation injection",
             }
         ),
         pd.DataFrame(
             {
-                "mean_logprob_diff": prompted_comp_results_df[
-                    "mean_logprob_diff"
-                ],
+                "perplexity_ratio": np.exp(
+                    -prompted_comp_results_df["mean_logprob_diff"]
+                ),
                 "topic": prompted_comp_results_df["topic"],
                 "method": "prompting",
             }
