@@ -410,7 +410,7 @@ for idx in range(5):
             "ticktext": text_token_strs,
         }
     )
-    fig.add_hline
+    # fig.add_hline
     fig.show()
 
 
