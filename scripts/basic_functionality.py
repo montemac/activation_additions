@@ -36,12 +36,13 @@ for prompt in ("I love dogs", " wedding"):
 
 # Test the corresponding ActivationAddition
 act_add = ActivationAddition(prompt=" wedding", coeff=1.0, act_name=6)
-hook_fns = hook_utils.hook_fns_from_activation_additions(
+hook_fns_dict = hook_utils.hook_fns_from_activation_additions(
     model=model, activation_additions=[act_add]
 )
 try:
-    for act_name, hook_fn in hook_fns.items():
-        model.add_hook(act_name, hook_fn)
+    for act_name, hook_fns in hook_fns_dict.items():
+        for hook_fn in hook_fns:
+            model.add_hook(act_name, hook_fn)
 
     tokens: torch.Tensor = model.to_tokens("I love dogs")
     output_logits = model(tokens)

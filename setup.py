@@ -28,6 +28,7 @@ setup(
         "nbformat",
         "Ipython",
         "ipywidgets",
+        "tuned_lens",
     ],
     extras_require={
         "dev": [
