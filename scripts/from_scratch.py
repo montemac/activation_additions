@@ -48,9 +48,6 @@ print(f"'{prompt_add}'", f"'{prompt_sub}'")
 
 # %% [markdown]
 # ## Get activations
-# For those not familiar with TransformerLens, here's a quick primer: TODO
-
-# TODO: Do from scratch with the note that transformerlens has built in caching hooks for this?
 
 
 def get_resid_pre(prompt: str, layer: int):
@@ -93,7 +90,8 @@ def hooked_generate(prompt_batch: List[str], fwd_hooks=[], seed=None, **kwargs):
 
 
 editing_hooks = [(f"blocks.{act_name}.hook_resid_pre", ave_hook)]
-res = hooked_generate([prompt] * 1, editing_hooks, seed=SEED, **sampling_kwargs)
+res = hooked_generate([prompt] * 4, editing_hooks, seed=SEED, **sampling_kwargs)
 
-res_str = model.to_string(res)
-print("\n--------------------\n".join(res_str))
+# Print results, removing the ugly beginning of sequence token
+res_str = model.to_string(res[:, 1:])
+print(("\n\n" + "-" * 80 + "\n\n").join(res_str))
