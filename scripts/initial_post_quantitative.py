@@ -400,9 +400,15 @@ COLOR_DEF = {
     "max": dict(val=4.6, clr=np.array([0x80, 0xFF, 0x80])),
 }
 
+inds_by_topic = {"weddings": np.arange(9), "not-weddings": np.arange(6)}
+
 for topic in texts_df["topic"].unique():
     html_strs = []
-    for text_index, row in texts_df[texts_df["topic"] == topic].iterrows():
+    for text_index, row in (
+        texts_df[texts_df["topic"] == topic]
+        .iloc[inds_by_topic[topic]]
+        .iterrows()
+    ):
         mod_df_sel = mod_df[
             (mod_df["act_name"] == 16)
             & (mod_df["coeff"] == 1.0)
@@ -467,12 +473,13 @@ for topic in texts_df["topic"].unique():
 
     final_html_str = (
         # '<div style="background-color:#FFFFFF; color:black; white-space: pre-line;"><p>'
-        f'<div style="background-color:#FFFFFF; color:black; font-size:12px;"><h3>Topic: {topic}</h3>'
+        f'<div style="background-color:#FFFFFF; color:black; font-size:18px; padding:10px"><h3>Topic: {topic}</h3>'
         + "".join(html_strs)
         + "</div>"
     )
     final_html = HTML(final_html_str)
     display(final_html)
+
 
 # %%
 # Perform a coefficients-dense experiment and show results
