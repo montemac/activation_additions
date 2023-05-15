@@ -79,8 +79,8 @@ def do_sweep(
         activation_additions=activation_additions_df["activation_additions"],
         num_normal_completions=4,
         num_patched_completions=4,
-        seed=42,
-        **sweep_kwargs
+        temperature=0.0,
+        **sweep_kwargs,
     )
     return normal_df, patched_df, activation_additions_df
 
