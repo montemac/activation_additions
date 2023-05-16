@@ -1,7 +1,7 @@
 """Functions for extracting and evaluating probability distributions
 over next tokens with and without activation injections."""
 
-from typing import List, Optional, Union, Tuple, Any, Dict
+from typing import List, Optional, Union, Tuple, Any, Dict, Callable
 
 import torch
 import numpy as np
@@ -108,8 +108,11 @@ def disruption(
 
 def get_effectiveness_and_disruption(
     probs: pd.DataFrame,
-    activation_additions: List[prompt_utils.ActivationAddition],
-    steering_aligned_tokens: Dict[int, np.ndarray],
+    activation_additions: Optional[
+        List[prompt_utils.ActivationAddition]
+    ] = None,
+    mask_pos: Optional[int] = None,
+    steering_aligned_tokens: Optional[Dict[int, np.ndarray]] = None,
     mode: str = "mask_injection_pos",
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Calculate effectiveness and disruption of an activation injection
@@ -122,9 +125,18 @@ def get_effectiveness_and_disruption(
     set these values to NaN at positions that overlap the activation
     injection position(s)."""
     assert mode in ["all", "mask_injection_pos"], "Invalid mode"
+    if mode == "mask_injection_pos":
+        assert (
+            (activation_additions is not None) + (mask_pos is not None)
+        ) == 1, (
+            "Must include one of activation additions or masking position"
+            + "if mode is mask_injection_pos"
+        )
 
     eff_list = []
     foc_list = []
+    if steering_aligned_tokens is None:
+        steering_aligned_tokens = {}
     for pos in np.arange(probs.shape[0]):
         is_steering_aligned = np.zeros(
             probs["normal", "probs"].shape[1], dtype=bool
@@ -139,10 +151,11 @@ def get_effectiveness_and_disruption(
     foc = pd.concat(foc_list)
 
     if mode == "mask_injection_pos":
-        mask_pos = max(
-            activation_addition.tokens.shape[0]
-            for activation_addition in activation_additions
-        )
+        if mask_pos is None:
+            mask_pos = max(
+                activation_addition.tokens.shape[0]
+                for activation_addition in activation_additions
+            )
         eff[:mask_pos] = np.nan
         foc[:mask_pos] = np.nan
     return eff, foc
@@ -211,6 +224,7 @@ def get_token_probs(
     activation_additions: Optional[
         List[prompt_utils.ActivationAddition]
     ] = None,
+    hook_fns: Optional[List[Tuple[str, Callable]]] = None,
     return_positions_above: Optional[int] = None,
 ) -> pd.DataFrame:
     """Make a forward pass on a model for each provided prompted,
@@ -218,22 +232,26 @@ def get_token_probs(
     Return value is a DataFrame with tokens on the columns, prompts as
     index.
     """
+    assert (
+        activation_additions is None or hook_fns is None
+    ), "Only one of activation additions or hook functions can be provided"
     assert return_positions_above is None or isinstance(
         prompts, (str, torch.Tensor)
     ), "Can only return logits for multiple positions for a single prompt."
     if return_positions_above is None:
         return_positions_above = 0
     # Add hooks if provided
+    if hook_fns is None:
+        hook_fns = []
     if activation_additions is not None:
         hook_fns_dict = hook_utils.hook_fns_from_activation_additions(
             model=model,
             activation_additions=activation_additions,
         )
-        for act_name, hook_fns in hook_fns_dict.items():
-            for hook_fn in hook_fns:
-                model.add_hook(act_name, hook_fn)
-    # Try-except-finally to ensure hooks are cleaned up
-    try:
+        for act_name, hook_fns_this in hook_fns_dict.items():
+            for hook_fn in hook_fns_this:
+                hook_fns.append((act_name, hook_fn))
+    with model.hooks(fwd_hooks=hook_fns):
         if isinstance(prompts, (str, torch.Tensor)):
             if isinstance(prompts, str):
                 tokens = model.to_tokens(prompts).squeeze()
@@ -268,10 +286,6 @@ def get_token_probs(
                     [prompt.detach().cpu().numpy() for prompt in prompts],  # type: ignore
                     name="prompt",
                 )
-    except Exception as ex:
-        raise ex
-    finally:
-        model.remove_all_hook_fns()
     # all_tokens = [
     #     model.tokenizer.decode(ii) for ii in range(model.cfg.d_vocab_out)
     # ]
@@ -306,11 +320,17 @@ def get_for_tokens(
 def get_normal_and_modified_token_probs(
     model: HookedTransformer,
     prompts: Union[str, List[str]],
-    activation_additions: List[prompt_utils.ActivationAddition],
+    activation_additions: Optional[
+        List[prompt_utils.ActivationAddition]
+    ] = None,
+    hook_fns: Optional[List[Tuple[str, Callable]]] = None,
     return_positions_above: Optional[int] = None,
 ) -> pd.DataFrame:
     """Get normal and modified next-token probabilities for a range of
     prompts, returning a DataFrame containing both"""
+    assert (
+        (activation_additions is not None) + (hook_fns is not None)
+    ) == 1, "Must include one of activation additions or hook functions"
     normal_df = get_token_probs(
         model=model,
         prompts=prompts,
@@ -320,6 +340,7 @@ def get_normal_and_modified_token_probs(
         model=model,
         prompts=prompts,
         activation_additions=activation_additions,
+        hook_fns=hook_fns,
         return_positions_above=return_positions_above,
     )
     return pd.concat(
