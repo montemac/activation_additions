@@ -62,31 +62,6 @@ def test_get_word_count_metric():
     pd.testing.assert_frame_equal(results, target)
 
 
-def test_openai_metric():
-    """Test for get_openai_metric(). Creates an OpenAI metric, applies
-    it to some strings, and checks the results against pre-defined
-    constants."""
-    if openai.api_key is None:
-        pytest.skip("OpenAI API key not found.")
-
-    metric: Callable = metrics.get_openai_metric("text-davinci-003", "happy")
-    prompts: List[str] = ["I love chocolate!", "I hate chocolate!"]
-    results: pd.DataFrame = metric(prompts, False, None)
-    target = pd.DataFrame(
-        {
-            "rating": [5, 1],
-            "reasoning": [
-                "This text is very happy because it expresses"
-                + " a strong positive emotion towards something.",
-                "This text is not very happy because it expresses"
-                + " a negative sentiment towards chocolate.",
-            ],
-        },
-        index=prompts,
-    )
-    pd.testing.assert_frame_equal(results, target)
-
-
 def test_openai_metric_bulk():
     """Test for get_openai_metric(). Creates an OpenAI metric, applies it to >20 strings,
     and makes sure it doesn't error (20 is the limit for one OAI request)"""
@@ -95,6 +70,9 @@ def test_openai_metric_bulk():
 
     metric: Callable = metrics.get_openai_metric("text-davinci-003", "happy")
     metric([""] * 21, False, None)  # The test is that this doesn't error!
+
+
+# Note that we can't test the metric output because OpenAI API calls are non-deterministic
 
 
 def test_add_metric_cols(model):
