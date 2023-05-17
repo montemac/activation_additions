@@ -10,11 +10,13 @@
 import pickle
 import textwrap  # pylint: disable=unused-import
 import os
+import gc
 
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from tqdm.auto import tqdm
 import plotly.express as px
 import plotly as py
@@ -116,6 +118,7 @@ USE_CACHE = True
 if USE_CACHE:
     with open(CACHE_FN, "rb") as file:
         steering_vector = pickle.load(file).to(MODEL.cfg.device)
+        steering_vector.requires_grad_(False)
 
 else:
     # Create the steering vector parameter, and an associated hook
@@ -166,8 +169,15 @@ else:
                 losses[topic].append(batch_loss)
                 print(f"Epoch: {epoch}, Topic: {topic}, Loss: {batch_loss}")
 
+    # Don't need grad any more after this!
+    steering_vector.requires_grad_(False)
+
     with open(CACHE_FN, "wb") as file:
         pickle.dump(steering_vector.detach().cpu(), file)
+
+# Disable gradients to save memory during inference, optimization is
+# done now
+_ = torch.set_grad_enabled(False)
 
 # %%
 # Test the optimized steering vector on a single sentence
@@ -296,17 +306,76 @@ optim_comp_results_df["perplexity_ratio"] = np.exp(
 optim_comp_results_df
 
 # %%
-# # Get activations at layer of interesting for all space-padded
-# # single-token (+ BOS) injections, so we can see which token is closest
-# # to our optimized vector
-# TOKEN_BATCH_SIZE = 1000
-# # for start_token in range(0, MODEL.cfg.d_vocab, TOKEN_BATCH_SIZE):
-# for start_token in range(0, 2000, TOKEN_BATCH_SIZE):
-#     tokens_this = torch.arange(
-#         start_token, min(start_token + TOKEN_BATCH_SIZE, MODEL.cfg.d_vocab)
-#     )
-#     input_tensor = torch.zeros((tokens_this.shape[0], 2), dtype=torch.long)
-#     input_tensor[:, 0] = MODEL.to_single_token(MODEL.tokenizer.bos_token)
-#     input_tensor[:, 1] = tokens_this
-#     _, act_dict = MODEL.run_with_cache(input_tensor, return_cache_object=False)
-#     print(act_dict)
+# Get activations at layer of interesting for all space-padded
+# single-token (+ BOS) injections, so we can see which token is closest
+# to our optimized vector
+TOKEN_BATCH_SIZE = 1000
+
+
+def get_activation_for_tokens(model, tokens, act_name):
+    """Take a 1D tensor of tokens, get the activation at a specific
+    layer when the model is run with each token in position 1, with BOS
+    prepended, one batch entry per provided token.  Returned tensor only
+    has batch and d_model dimensions."""
+    input_tensor = torch.zeros((tokens.shape[0], 2), dtype=torch.long)
+    input_tensor[:, 0] = MODEL.to_single_token(MODEL.tokenizer.bos_token)
+    input_tensor[:, 1] = tokens
+    _, act_dict = MODEL.run_with_cache(
+        input_tensor,
+        names_filter=lambda act_name_arg: act_name_arg == act_name,
+        return_cache_object=False,
+    )
+    return act_dict[act_name][:, 1, :]
+
+
+space_act = get_activation_for_tokens(
+    MODEL, MODEL.to_tokens(" ")[0, [1]], ACT_NAME
+)
+
+act_diffs_list = []
+# for start_token in tqdm(range(0, 2000, TOKEN_BATCH_SIZE)):
+for start_token in tqdm(range(0, MODEL.cfg.d_vocab, TOKEN_BATCH_SIZE)):
+    tokens_this = torch.arange(
+        start_token, min(start_token + TOKEN_BATCH_SIZE, MODEL.cfg.d_vocab)
+    )
+    acts_this = get_activation_for_tokens(MODEL, tokens_this, ACT_NAME)
+    act_diffs_this = acts_this - space_act
+    act_diffs_list.append(act_diffs_this)
+
+act_diffs_all = torch.concat(act_diffs_list)
+
+# %%
+# Compare the identified vector to possible single-token
+# space-padded-negative prompts, in various ways.
+
+# Compare with absolute distance to start with
+abs_dist_optim_to_tokens = torch.norm(
+    act_diffs_all - steering_vector, p=2, dim=1
+)
+print(
+    f"Abs distance nearest token input: {MODEL.to_string(torch.argmin(abs_dist_optim_to_tokens))}"
+)
+
+# What about cosine similarity?
+cosine_sim_optim_to_tokens = F.cosine_similarity(
+    act_diffs_all, steering_vector, dim=1
+)
+print(
+    f"Best cosine sim token input: {MODEL.to_string(torch.argmax(cosine_sim_optim_to_tokens))}"
+)
+best_cosine_sim_tokens = torch.argsort(
+    cosine_sim_optim_to_tokens, descending=True
+)
+plot_df = pd.DataFrame(
+    {
+        "token": best_cosine_sim_tokens.detach().cpu().numpy(),
+        "token_str": MODEL.to_string(best_cosine_sim_tokens[:, None]),
+        "cosine_sim": cosine_sim_optim_to_tokens[best_cosine_sim_tokens]
+        .detach()
+        .cpu()
+        .numpy(),
+    }
+)
+fig = px.line(plot_df.iloc[:40], y="cosine_sim", text="token_str")
+fig.update_traces(textposition="middle right")
+fig.show()
