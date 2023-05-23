@@ -33,6 +33,7 @@ from algebraic_value_editing import (
     sweeps,
     experiments,
     logits,
+    optimize,
 )
 
 lt.monkey_patch()
@@ -40,6 +41,7 @@ utils.enable_ipython_reload()
 
 # Enable saving of plots in HTML notebook exports
 py.offline.init_notebook_mode()
+
 
 # %%
 # Load a model
@@ -49,7 +51,6 @@ MODEL: HookedTransformer = HookedTransformer.from_pretrained(
     "cuda:0"
 )  # type: ignore
 
-# %%
 # Disable gradients on all existing parameters
 for name, param in MODEL.named_parameters():
     param.requires_grad_(False)
@@ -58,129 +59,52 @@ for name, param in MODEL.named_parameters():
 # %%
 # Try optimizing a vector over a corpus (the weddings corpus in this
 # case)
+
+_ = torch.set_grad_enabled(True)
+
+# Load and pre-process the input texts
 CONTEXT_LEN = 32
 STRIDE = 4
 
 FILENAMES = {
-    "weddings": "../data/chatgpt_wedding_essay_20230423.txt",
-    "not-weddings": "../data/chatgpt_shipping_essay_20230423.txt",
+    "weddings": ["../data/chatgpt_wedding_essay_20230423.txt"],
+    "not-weddings": ["../data/chatgpt_shipping_essay_20230423.txt"],
     # "macedonia": "../data/wikipedia_macedonia.txt",
     # "banana_bread": "../data/vegan_banana_bread.txt",
 }
 
-# Create datasets
-data_dict = {}
-for desc, filename in FILENAMES.items():
-    with open(filename, "r", encoding="utf8") as file:
-        text = file.read()
-        tokens = MODEL.to_tokens(text)
-        inds = (
-            torch.arange(CONTEXT_LEN)[None, :]
-            + torch.arange(0, tokens.shape[1] - CONTEXT_LEN, STRIDE)[:, None]
-        )
-        token_snippets = tokens[0, :][inds]
-        data_dict[desc] = token_snippets
+tokens_by_label = optimize.corpus_to_token_batches(
+    model=MODEL, filenames=FILENAMES, context_len=CONTEXT_LEN, stride=STRIDE
+)
 
-# %%
-# Do a forward pass on the normal model to cache the per-token losses on
-# the normal model
-NORMAL_BATCH_SIZE = 20
-normal_losses_dict = {}
-for topic, tokens_all in data_dict.items():
-    normal_losses_dict[topic] = []
-    for batch, start_idx in enumerate(
-        tqdm(range(0, tokens_all.shape[0], NORMAL_BATCH_SIZE))
-    ):
-        tokens_batch = tokens_all[
-            start_idx : (start_idx + NORMAL_BATCH_SIZE), :
-        ]
-        loss_per_token = MODEL(
-            tokens_batch, return_type="loss", loss_per_token=True
-        )
-        normal_losses_dict[topic].append(loss_per_token)
-    normal_losses_dict[topic] = torch.concat(normal_losses_dict[topic])
-
-
-# %%
-# Try training a steering vector on just the "wedding-related" texts as
-# a starting point
+# Learn the steering vector
 ACT_NAME = "blocks.16.hook_resid_pre"
-LR = 0.1
-NUM_EPOCHS = 50
+LR = 0.03
+NUM_EPOCHS = 10
 BATCH_SIZE = 20
-WEIGHT_DECAY = 0.001
-ALIGNED_TOPICS = ["weddings"]
+WEIGHT_DECAY = 0.03
+ALIGNED_LABELS = ["weddings"]
 
-CACHE_FN = "latest_steering_vector.pkl"
-USE_CACHE = True
+steering_vector = optimize.learn_activation_addition(
+    model=MODEL,
+    tokens_by_label=tokens_by_label,
+    aligned_labels=ALIGNED_LABELS,
+    act_name=ACT_NAME,
+    lr=LR,
+    weight_decay=WEIGHT_DECAY,
+    num_epochs=NUM_EPOCHS,
+    batch_size=BATCH_SIZE,
+    use_wandb=False,
+)
 
 
-if USE_CACHE:
-    with open(CACHE_FN, "rb") as file:
-        steering_vector = pickle.load(file).to(MODEL.cfg.device)
-        steering_vector.requires_grad_(False)
-
-else:
-    # Create the steering vector parameter, and an associated hook
-    # function
-    steering_vector = nn.Parameter(
-        torch.randn(MODEL.cfg.d_model, device=MODEL.cfg.device),
-        requires_grad=True,
-    )
-
-    def hook_fn(activation, hook):
-        activation[:, 0, :] += steering_vector
-        return activation
-
-    # Create an optimizer
-    optimizer = torch.optim.AdamW(
-        [steering_vector],
-        lr=LR,
-        weight_decay=WEIGHT_DECAY,
-    )
-
-    losses = {topic: [] for topic in data_dict}
-    with MODEL.hooks(fwd_hooks=[(ACT_NAME, hook_fn)]):
-        for epoch in tqdm(range(1, NUM_EPOCHS + 1)):
-            for topic, tokens_all in data_dict.items():
-                batch_losses = []
-                for batch, start_idx in enumerate(
-                    range(0, tokens_all.shape[0], BATCH_SIZE)
-                ):
-                    tokens_batch = tokens_all[
-                        start_idx : (start_idx + BATCH_SIZE), :
-                    ]
-                    loss_per_token = MODEL(
-                        tokens_batch, return_type="loss", loss_per_token=True
-                    )
-                    normal_loss_per_token = normal_losses_dict[topic][
-                        start_idx : (start_idx + BATCH_SIZE), :
-                    ]
-                    relative_loss = loss_per_token - normal_loss_per_token
-                    if topic in ALIGNED_TOPICS:
-                        loss = relative_loss.mean()
-                    else:
-                        loss = torch.abs(relative_loss).mean()
-                    loss.backward()
-                    optimizer.step()
-                    optimizer.zero_grad()
-                    batch_losses.append(loss.item())
-                batch_loss = np.array(batch_losses).mean()
-                losses[topic].append(batch_loss)
-                print(f"Epoch: {epoch}, Topic: {topic}, Loss: {batch_loss}")
-
-    # Don't need grad any more after this!
-    steering_vector.requires_grad_(False)
-
-    with open(CACHE_FN, "wb") as file:
-        pickle.dump(steering_vector.detach().cpu(), file)
+# %%
+# Test the optimized steering vector on a single sentence
 
 # Disable gradients to save memory during inference, optimization is
 # done now
 _ = torch.set_grad_enabled(False)
 
-# %%
-# Test the optimized steering vector on a single sentence
 TEXT = "I'm excited because I'm going to a"
 
 
@@ -379,3 +303,30 @@ plot_df = pd.DataFrame(
 fig = px.line(plot_df.iloc[:40], y="cosine_sim", text="token_str")
 fig.update_traces(textposition="middle right")
 fig.show()
+
+# %%
+# Compare with some specific tokens
+token_str_to_check = " Wedding"
+token_to_check = MODEL.to_single_token(token_str_to_check)
+act_diff = act_diffs_all[token_to_check]
+act_diff_unit = act_diff / act_diff.norm()
+steering_vector_unit = steering_vector / steering_vector.norm()
+plot_df = pd.concat(
+    [
+        pd.DataFrame(
+            {
+                "value": act_diff_unit.cpu().numpy(),
+                "vector": token_str_to_check,
+            }
+        ),
+        pd.DataFrame(
+            {
+                "value": steering_vector_unit.cpu().numpy(),
+                "vector": "optimized",
+            }
+        ),
+    ]
+).reset_index(names="d_model")
+px.line(
+    plot_df[plot_df["d_model"] < 50], x="d_model", y="value", color="vector"
+).show()
