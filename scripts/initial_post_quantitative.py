@@ -79,7 +79,7 @@ MODEL: HookedTransformer = HookedTransformer.from_pretrained(
 # The input text
 TEXT = (
     "I'm excited because I'm going to a wedding this weekend."
-    + " Two of my old friends from school are getting married"
+    " Two of my old friends from school are getting married"
 )
 
 # Steering-aligned token sets at specific positions
@@ -799,12 +799,3 @@ plot_df = pd.concat(
 ).reset_index(drop=True)
 
 print(plot_df)
-
-# Plot a simple bar chart of the results
-# fig.show()
-# fig.write_image(
-#     "images/prompt_cmp_weddings.png",
-#     width=PNG_WIDTH,
-#     height=PNG_HEIGHT,
-#     scale=PNG_SCALE,
-# )
