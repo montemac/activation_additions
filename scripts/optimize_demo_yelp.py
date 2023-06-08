@@ -6,15 +6,23 @@
 
 # %%
 # Imports, etc.
+# Imports, etc
+import pickle
+import textwrap  # pylint: disable=unused-import
+import os
+import gc
+
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from tqdm.auto import tqdm
 import plotly.express as px
 import plotly as py
+import nltk
+import nltk.data
 import lovely_tensors as lt
-from IPython.display import display
 
 from transformer_lens import HookedTransformer
 
@@ -54,26 +62,24 @@ for name, param in MODEL.named_parameters():
 
 _ = torch.set_grad_enabled(True)
 
-# Load and pre-process the input texts
-LABEL_COL = "topic"
-FILENAMES = {
-    "weddings": ["../data/chatgpt_wedding_essay_20230423.txt"],
-    "not-weddings": ["../data/chatgpt_shipping_essay_20230423.txt"],
-    # "macedonia": "../data/wikipedia_macedonia.txt",
-    # "banana_bread": "../data/vegan_banana_bread.txt",
-}
-
-texts_df = optimize.load_corpus_from_files(
-    filenames=FILENAMES,
-    label_col=LABEL_COL,
+# Load pre-processed
+yelp_data = pd.read_csv("../data/restaurant_proc.csv").drop(
+    "Unnamed: 0", axis="columns"
 )
 
+# Pull the first N reviews of each sentiment
+NUM_EACH_SENTIMENT = 20
+OFFSET = 0
+yelp_texts = {
+    sentiment: yelp_data["text"][yelp_data["sentiment"] == sentiment]
+    .iloc[OFFSET : (OFFSET + NUM_EACH_SENTIMENT)]
+    .to_list()
+    # for sentiment in ["positive", "neutral", "negative"]
+    for sentiment in ["neutral", "negative"]
+}
+
 tokens_by_label = optimize.corpus_to_token_batches(
-    model=MODEL,
-    texts=texts_df,
-    context_len=32,
-    stride=4,
-    label_col=LABEL_COL,
+    model=MODEL, texts=yelp_texts, context_len=32, stride=4
 )
 
 # Learn the steering vector
@@ -81,63 +87,114 @@ ACT_NAME = "blocks.16.hook_resid_pre"
 
 steering_vector = optimize.learn_activation_addition(
     model=MODEL,
-    corpus_name="Weddings essays",
-    act_name=ACT_NAME,
+    corpus_name="Yelp reviews",
     tokens_by_label=tokens_by_label,
-    aligned_labels=["weddings"],
-    lr=0.1,
+    aligned_labels=["negative"],
+    # opposed_labels=["negative"],
+    act_name=ACT_NAME,
+    lr=0.01,
     weight_decay=0.03,
     neutral_loss_method="abs_of_mean",
     neutral_loss_beta=1.0,
-    num_epochs=20,
+    num_epochs=200,
     batch_size=20,
-    seed=0,
-    use_wandb=False,
-)
-
-# Disable gradients to save memory during inference, optimization is
-# done now
-_ = torch.set_grad_enabled(False)
-
-
-# %%
-# Test the optimized steering vector on a single sentence
-
-TEXT = "I'm excited because I'm going to a"
-
-# Steering-aligned token sets at specific positions
-STEERING_ALIGNED_TOKENS = {
-    9: np.array(
-        [
-            MODEL.to_single_token(token_str)
-            for token_str in [
-                " wedding",
-            ]
-        ]
-    ),
-}
-
-figs = experiments.test_activation_addition_on_text(
-    model=MODEL,
-    text=TEXT,
-    act_name=ACT_NAME,
-    activation_addition=steering_vector[None, :],
-    steering_aligned_tokens=STEERING_ALIGNED_TOKENS,
+    use_wandb=True,
 )
 
 
 # %%
-# Test over the wedding/shipping essays
-sentence_df = experiments.texts_to_sentences(texts_df, label_col=LABEL_COL)
+# Test
+yelp_sample = pd.concat(
+    [
+        yelp_data[yelp_data["sentiment"] == "positive"].iloc[
+            OFFSET : (OFFSET + NUM_EACH_SENTIMENT)
+        ],
+        yelp_data[yelp_data["sentiment"] == "neutral"].iloc[
+            OFFSET : (OFFSET + NUM_EACH_SENTIMENT)
+        ],
+        yelp_data[yelp_data["sentiment"] == "negative"].iloc[
+            OFFSET : (OFFSET + NUM_EACH_SENTIMENT)
+        ],
+    ]
+).reset_index(drop=True)
 
-experiments.test_activation_addition_on_texts(
-    model=MODEL,
-    texts=sentence_df,
-    act_name=ACT_NAME,
-    activation_addition=steering_vector[None, :],
-    label_col=LABEL_COL,
+# Set up the tokenizer
+nltk.download("punkt")
+tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
+
+# Tokenize each review, poplating a DataFrame of sentences, each assigned the
+# sentiment of the review it was taken from.
+yelp_sample_sentences_list = []
+for idx, row in yelp_sample.iterrows():
+    sentences = tokenizer.tokenize(row["text"])  # type: ignore
+    yelp_sample_sentences_list.append(
+        pd.DataFrame(
+            {
+                "text": sentences,
+                "sentiment": row["sentiment"],
+                "review_sample_index": idx,
+            }
+        )
+    )
+yelp_sample_sentences = pd.concat(yelp_sample_sentences_list).reset_index(
+    drop=True
 )
 
+# Filter out super short sentences
+MIN_LEN = 6
+yelp_sample_sentences = yelp_sample_sentences[
+    yelp_sample_sentences["text"].str.len() >= MIN_LEN
+]
+
+
+def hook_fn_pos_2(activation, hook):
+    """Hook function that applies the steering vector to the second
+    position, to avoid overlapping BOS"""
+    activation[:, 1, :] += steering_vector
+    return activation
+
+
+hook_fns = [(ACT_NAME, hook_fn_pos_2)]
+
+MASK_POS = 2
+metric_func = metrics.get_logprob_metric(
+    MODEL,
+    agg_mode=["actual_next_token"],
+)
+optim_logprobs_list = []
+normal_logprobs_list = []
+for idx, row in tqdm(list(yelp_sample_sentences.iterrows())):
+    # Convert to tokens
+    tokens = MODEL.to_tokens(row["text"])  # type: ignore
+    # Apply metric with and without hooks
+    normal_logprobs_list.append(metric_func([tokens]).iloc[0, 0])
+    with MODEL.hooks(fwd_hooks=hook_fns):
+        optim_logprobs_list.append(metric_func([tokens]).iloc[0, 0])  # type: ignore
+optim_comp_df = pd.DataFrame(
+    {
+        "normal_logprobs": normal_logprobs_list,
+        "optim_logprobs": optim_logprobs_list,
+    }
+)
+optim_comp_df["sum_logprob_diff"] = (
+    optim_comp_df["optim_logprobs"] - optim_comp_df["normal_logprobs"]
+).apply(lambda inp: inp[MASK_POS:].sum())
+optim_comp_df["count_logprob_diff"] = (
+    optim_comp_df["optim_logprobs"] - optim_comp_df["normal_logprobs"]
+).apply(lambda inp: inp[MASK_POS:].shape[0])
+optim_comp_df["sentiment"] = yelp_sample_sentences["sentiment"]
+optim_comp_results_df = (
+    optim_comp_df.groupby(["sentiment"]).sum(numeric_only=True).reset_index()
+)
+optim_comp_results_df["mean_logprob_diff"] = (
+    optim_comp_results_df["sum_logprob_diff"]
+    / optim_comp_results_df["count_logprob_diff"]
+)
+optim_comp_results_df["perplexity_ratio"] = np.exp(
+    -optim_comp_results_df["mean_logprob_diff"]
+)
+
+optim_comp_results_df
 
 # %%
 # Get activations at layer of interesting for all space-padded

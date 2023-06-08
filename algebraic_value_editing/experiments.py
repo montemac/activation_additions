@@ -9,6 +9,10 @@ import pandas as pd
 import torch
 import plotly.express as px
 import plotly.graph_objects as go
+from jaxtyping import Float
+import nltk
+import nltk.data
+from tqdm.auto import tqdm
 
 from transformer_lens import HookedTransformer
 
@@ -458,3 +462,187 @@ def compare_with_prompting(
         show_by_name(name)
 
     return figs_dict
+
+
+def _make_hook_fn(
+    activation_addition: Float[torch.Tensor, "pos d_model"],
+    addition_position: int,
+):
+    """Make an activation addition hook function."""
+
+    def hook_fn(activation, hook):
+        """Hook function that applies the steering vector to the second
+        position, to avoid overlapping BOS"""
+        activation[
+            :,
+            addition_position : (
+                addition_position + activation_addition.shape[0]
+            ),
+            :,
+        ] += activation_addition
+        return activation
+
+    return hook_fn
+
+
+def test_activation_addition_on_text(
+    model: HookedTransformer,
+    text: str,
+    act_name: str,
+    activation_addition: Float[torch.Tensor, "pos d_model"],
+    addition_position: int = 1,
+    steering_aligned_tokens: Optional[dict[int, np.array]] = None,
+    show_figs: bool = True,
+):
+    hook_fn = _make_hook_fn(
+        activation_addition=activation_addition,
+        addition_position=addition_position,
+    )
+
+    hook_fns = [(act_name, hook_fn)]
+
+    # Calculate normal and modified token probabilities
+    probs = logits.get_normal_and_modified_token_probs(
+        model=model,
+        prompts=text,
+        hook_fns=hook_fns,
+        return_positions_above=0,
+    )
+
+    fig_token_probs, probs_plot_df = show_token_probs(
+        model, probs["normal", "probs"], probs["mod", "probs"], -1, 10
+    )
+
+    fig_token_probs_kl, kl_div_plot_df = show_token_probs(
+        model,
+        probs["normal", "probs"],
+        probs["mod", "probs"],
+        -1,
+        10,
+        sort_mode="kl_div",
+    )
+
+    for idx, row in kl_div_plot_df.iterrows():
+        print(row["text"], f'{row["y_values"]:.4f}')
+
+    # Calculate effectiveness and disruption
+    eff, foc = logits.get_effectiveness_and_disruption(
+        probs=probs,
+        mask_pos=2,
+        steering_aligned_tokens=steering_aligned_tokens,
+        mode="mask_injection_pos",
+    )
+
+    # Plot!
+    fig_eff_foc = logits.plot_effectiveness_and_disruption(
+        tokens_str=model.to_str_tokens(text),
+        eff=eff,
+        foc=foc,
+        title="Effectiveness and disruption scores",
+    )
+    fig_eff_foc.update_layout(height=600)
+
+    figs = (fig_token_probs, fig_token_probs_kl, fig_eff_foc)
+    if show_figs:
+        _ = [fig.show() for fig in figs]
+
+    return figs
+
+
+def texts_to_sentences(
+    texts: pd.DataFrame, label_col: str = "label"
+) -> pd.DataFrame:
+    """Function to convert a DataFrame of labeled texts to one of
+    labeled sentences by splitting each text into sentences."""
+    nltk.download("punkt")
+    tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
+    sentences = []
+    for idx, row in texts.iterrows():
+        sentences.extend(
+            [
+                {label_col: row[label_col], "text": sentence}
+                for sentence in tokenizer.tokenize(row["text"])
+            ]
+        )
+    return pd.DataFrame(sentences)
+
+
+def test_activation_addition_on_texts(
+    model: HookedTransformer,
+    texts: pd.DataFrame,
+    act_name: str,
+    activation_addition: Float[torch.Tensor, "pos d_model"],
+    addition_position: int = 1,
+    label_col: str = "label",
+    do_mask_addition_pos: bool = True,
+):
+    """Test an activation addition on a set of labelled texts."""
+    # Make a hook function
+    hook_fn = _make_hook_fn(
+        activation_addition=activation_addition,
+        addition_position=addition_position,
+    )
+
+    hook_fns = [(act_name, hook_fn)]
+
+    # Set mask slice
+    if do_mask_addition_pos:
+        mask_start = addition_position
+        mask_stop = addition_position + activation_addition.shape[0]
+    else:
+        mask_start = 0
+        mask_stop = 0
+
+    # Create metric func
+    metric_func = metrics.get_logprob_metric(
+        model,
+        agg_mode=["actual_next_token"],
+    )
+
+    # Iterate over the provided texts, applying the metric with and
+    # without hooks
+    optim_logprobs_list = []
+    normal_logprobs_list = []
+    for idx, row in tqdm(list(texts.iterrows())):
+        # Convert to tokens
+        tokens = model.to_tokens(row["text"])  # type: ignore
+        # Apply metric with and without hooks
+        normal_logprobs_list.append(metric_func([tokens]).iloc[0, 0])
+        with model.hooks(fwd_hooks=hook_fns):
+            optim_logprobs_list.append(metric_func([tokens]).iloc[0, 0])  # type: ignore
+
+    # Combine into a DataFrame
+    optim_comp_df = pd.DataFrame(
+        {
+            "normal_logprobs": normal_logprobs_list,
+            "optim_logprobs": optim_logprobs_list,
+        }
+    )
+
+    # Add diff, sum and count columns
+    optim_comp_df["logprob_diff"] = (
+        optim_comp_df["optim_logprobs"] - optim_comp_df["normal_logprobs"]
+    )
+    optim_comp_df["sum_logprob_diff"] = optim_comp_df["logprob_diff"].apply(
+        lambda inp: inp[:mask_start].sum() + inp[mask_stop:].sum()
+    )
+    optim_comp_df["count_logprob_diff"] = optim_comp_df["logprob_diff"].apply(
+        lambda inp: inp.shape[0] - (mask_stop - mask_start)
+    )
+
+    # Add label column
+    optim_comp_df[label_col] = texts[label_col]
+
+    # Group, and calculate final quantities of interest
+    optim_comp_results_df = (
+        optim_comp_df.groupby([label_col]).sum(numeric_only=True).reset_index()
+    )
+    optim_comp_results_df["mean_logprob_diff"] = (
+        optim_comp_results_df["sum_logprob_diff"]
+        / optim_comp_results_df["count_logprob_diff"]
+    )
+    optim_comp_results_df["perplexity_ratio"] = np.exp(
+        -optim_comp_results_df["mean_logprob_diff"]
+    )
+
+    return optim_comp_results_df
