@@ -6,10 +6,22 @@ import numpy as np
 import pandas as pd
 import torch
 from tqdm.auto import tqdm
-import plotly.express as px
-import plotly as py
-import nltk
-import nltk.data
+
+try:
+    import plotly.express as px
+    import plotly as py
+except ImportError:
+    %pip install plotly
+    import plotly.express as px
+    import plotly as py
+
+try:
+    import nltk
+    import nltk.data
+except ImportError:
+    %pip install nltk
+    import nltk
+    import nltk.data
 
 from transformer_lens import HookedTransformer
 
@@ -18,6 +30,8 @@ from algebraic_value_editing import (
     experiments,
 )
 
+
+# %%
 utils.enable_ipython_reload()
 _ = torch.set_grad_enabled(False)
 py.offline.init_notebook_mode()
@@ -29,7 +43,6 @@ PNG_HEIGHT = 400
 PNG_SCALE = 2.0
 CORPUS_METRIC = "perplexity_ratio"
 
-# %%
 MODEL: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
 ).to(
