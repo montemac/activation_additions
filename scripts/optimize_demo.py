@@ -14,17 +14,12 @@ from tqdm.auto import tqdm
 import plotly.express as px
 import plotly as py
 import lovely_tensors as lt
-from IPython.display import display
 
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import (
-    prompt_utils,
     utils,
-    metrics,
-    sweeps,
     experiments,
-    logits,
     optimize,
 )
 

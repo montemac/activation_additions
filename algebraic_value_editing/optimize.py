@@ -1,10 +1,11 @@
 """Module implenting activation addition optimization."""
 import os
 import shutil
-from typing import Optional, Any, Iterable
+from typing import Optional, Any, Iterable, Callable
 from contextlib import nullcontext
 
 import pandas as pd
+import numpy as np
 from tqdm.auto import tqdm
 import torch as t
 import torch.nn as nn
@@ -31,6 +32,37 @@ def load_corpus_from_files(
     return pd.DataFrame(texts)
 
 
+def split_corpus(
+    texts: pd.DataFrame,
+    num_each_label_train: int,
+    num_each_label_test: int,
+    rng: Optional[np.random.Generator] = None,
+    label_col: str = "label",
+    labels_to_use: Optional[list[str]] = None,
+) -> pd.DataFrame:
+    """Split a set of labeled texts into train/test subsets, balanced
+    across labels."""
+    if labels_to_use is None:
+        labels_to_use = list(texts[label_col].unique())
+    train_texts = []
+    test_texts = []
+    for label in labels_to_use:
+        inds_this = rng.permutation((texts[label_col] == label).sum())
+        inds_train = inds_this[:num_each_label_train]
+        inds_test = inds_this[
+            num_each_label_train : (num_each_label_train + num_each_label_test)
+        ]
+        train_texts_this, test_texts_this = [
+            texts[["text", label_col]][texts[label_col] == label].iloc[inds]
+            for inds in [inds_train, inds_test]
+        ]
+        train_texts.append(train_texts_this)
+        test_texts.append(test_texts_this)
+    train_texts_df = pd.concat(train_texts, names="text_ind")
+    test_texts_df = pd.concat(test_texts, names="text_ind")
+    return train_texts_df, test_texts_df
+
+
 def corpus_to_token_batches(
     model: HookedTransformer,
     texts: pd.DataFrame,
@@ -47,7 +79,7 @@ def corpus_to_token_batches(
         {"text": model.tokenizer.eos_token.join}
     )["text"]
     for label, text in grouped_texts.items():
-        tokens = model.to_tokens(text)
+        tokens = model.to_tokens(text, truncate=False)
         inds = (
             t.arange(context_len)[None, :]
             + t.arange(0, tokens.shape[1] - context_len, stride)[:, None]
@@ -149,6 +181,9 @@ def learn_activation_addition(
     use_wandb: bool = False,
     wandb_project_name: Optional[str] = None,
     wandb_additional_config: Optional[dict[str, Any]] = None,
+    test_every_epochs: int = 50,
+    test_func: Optional[Callable] = None,
+    run_group: Optional[str] = None,
 ) -> nn.Parameter:
     """Function to learn an activation addition vector (aka steering
     vector) over a specific set of labelled inputs."""
@@ -177,6 +212,7 @@ def learn_activation_addition(
             project=wandb_project_name,
             config=wandb_config,
             reinit=True,
+            group=run_group,
         )
         run_name = wandb.run.name
         os.mkdir(run_name)
@@ -225,10 +261,10 @@ def learn_activation_addition(
         )
 
         # Iterate over epochs, with hook applied via context manager
-        with model.hooks(fwd_hooks=[(act_name, hook_fn)]):
-            for epoch in tqdm(range(num_epochs)):
-                epoch_loss = 0.0
-                batch_cnt = 0
+        for epoch in tqdm(range(num_epochs)):
+            epoch_loss = 0.0
+            batch_cnt = 0
+            with model.hooks(fwd_hooks=[(act_name, hook_fn)]):
                 for batch in dataloader:
                     loss_per_token = model(
                         batch["tokens"],
@@ -268,16 +304,25 @@ def learn_activation_addition(
                                 "steering_vector_norm": steering_vector.norm(),
                             }
                         )
-                if do_print:
-                    print(f"Epoch: {epoch}, Loss: {epoch_loss/batch_cnt}")
-                if use_wandb:
-                    # Save checkpoint of steering vector
-                    filename = os.path.join(
-                        wandb.run.name, f"steering_vector_epoch_{epoch:04d}.pt"
-                    )
-                    with open(filename, "wb") as file:
-                        t.save(steering_vector.detach(), file)
-                    wandb.save(filename)
+            if do_print:
+                print(f"Epoch: {epoch}, Loss: {epoch_loss/batch_cnt}")
+            if use_wandb:
+                # Save checkpoint of steering vector
+                filename = os.path.join(
+                    wandb.run.name, f"steering_vector_epoch_{epoch:04d}.pt"
+                )
+                with open(filename, "wb") as file:
+                    t.save(steering_vector.detach(), file)
+                wandb.save(filename)
+
+                # Save results of application to "test set", if required
+                if test_func is not None and (
+                    ((epoch % test_every_epochs) == test_every_epochs - 1)
+                    or epoch == (num_epochs - 1)
+                ):
+                    test_results = test_func(steering_vector.detach())
+                    test_table = wandb.Table(dataframe=test_results)
+                    wandb.log({"test_result": test_table})
 
     if use_wandb:
         shutil.rmtree(run_name)
