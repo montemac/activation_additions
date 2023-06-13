@@ -23,6 +23,11 @@ except ImportError:
     import nltk
     import nltk.data
 
+try:
+    import kaleido
+except ImportError:
+    %pip install kaleido
+
 from transformer_lens import HookedTransformer
 
 from algebraic_value_editing import (
@@ -52,7 +57,7 @@ tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
 # Sample and tokenize
 df = pd.read_csv("./validation.csv")
-df_sample = df.sample(10, random_state=0)
+df_sample = df.sample(100, random_state=0)
 texts = []
 for row in df_sample.itertuples():
     for col in ["ctx_a", "ctx_b", "endings"]:
@@ -68,14 +73,14 @@ texts_df = pd.concat(texts).reset_index(drop=True)
 def count_tokens(text):
     return len(text.split())
 texts_df["token_count"] = texts_df["text"].apply(count_tokens)
-texts_df = texts_df[texts_df['token_count'] > 2]
+texts_df = texts_df[texts_df['token_count'] > 5]
 
 # %%
 # Layers-dense experiment
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
         model=MODEL,
         labeled_texts=texts_df[["text", "topic"]],
-        x_vector_phrases=(" weddings", ""),
+        x_vector_phrases=("a24z", ""),
         act_names=list(range(0, 48, 1)),
         coeffs=[1],
         method="mask_injection_logprob",
