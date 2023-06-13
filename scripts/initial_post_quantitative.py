@@ -38,9 +38,8 @@ py.offline.init_notebook_mode()
 if not os.path.exists("images"):
     os.mkdir("images")
 
-PNG_WIDTH = 750
-PNG_HEIGHT = 400
-PNG_SCALE = 2.0
+SVG_WIDTH = 750
+SVG_HEIGHT = 400
 CORPUS_METRIC = "perplexity_ratio"
 
 MODEL: HookedTransformer = HookedTransformer.from_pretrained(
@@ -64,6 +63,12 @@ for row in df_sample.itertuples():
             ]
             texts.append(pd.DataFrame({"text": sentences, "topic": "NLI"}))
 texts_df = pd.concat(texts).reset_index(drop=True)
+
+# Separate out the short tokenized text
+def count_tokens(text):
+    return len(text.split())
+texts_df["token_count"] = texts_df["text"].apply(count_tokens)
+texts_df = texts_df[texts_df['token_count'] > 2]
 
 # %%
 # Layers-dense experiment
@@ -92,10 +97,9 @@ fig = experiments.plot_corpus_logprob_experiment(
 )
 fig.show()
 fig.write_image(
-    "images/NLI_steering_layers.png",
-    width=PNG_WIDTH,
-    height=PNG_HEIGHT,
-    scale=PNG_SCALE,
+    "images/NLI_steering_layers.svg",
+    width=SVG_WIDTH,
+    height=SVG_HEIGHT,
 )
 
 # %%
@@ -156,8 +160,7 @@ fig = experiments.plot_corpus_logprob_experiment(
 fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3, 4]})
 fig.show()
 fig.write_image(
-    "images/weddings_essays_coeffs.png",
-    width=PNG_WIDTH,
-    height=PNG_HEIGHT,
-    scale=PNG_SCALE,
+    "images/weddings_essays_coeffs.svg",
+    width=SVG_WIDTH,
+    height=SVG_HEIGHT,
 )
