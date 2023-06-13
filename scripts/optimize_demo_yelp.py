@@ -104,26 +104,27 @@ def test_func(steering_vector):
 ACT_NAME = "blocks.16.hook_resid_pre"
 
 RUN_GROUP = datetime.datetime.utcnow().strftime("yelp_%Y%m%dT%H%M%S")
-for weight_decay in [0.01, 0.03, 0.1]:
-    steering_vector = optimize.learn_activation_addition(
-        model=MODEL,
-        corpus_name="Yelp reviews",
-        act_name=ACT_NAME,
-        tokens_by_label=tokens_by_label,
-        aligned_labels=["negative"],
-        # opposed_labels=["positive"],
-        lr=0.03,
-        weight_decay=weight_decay,
-        neutral_loss_method="abs_of_mean",
-        neutral_loss_beta=1.0,
-        num_epochs=50,
-        batch_size=20,
-        seed=SEED,
-        use_wandb=True,
-        test_every_epochs=50,
-        test_func=test_func,
-        run_group=RUN_GROUP,
-    )
+for lr in [0.03, 0.1, 0.3]:
+    for weight_decay in [0.01, 0.03, 0.1]:
+        steering_vector = optimize.learn_activation_addition(
+            model=MODEL,
+            corpus_name="Yelp reviews",
+            act_name=ACT_NAME,
+            tokens_by_label=tokens_by_label,
+            aligned_labels=["negative"],
+            # opposed_labels=["positive"],
+            lr=lr,
+            weight_decay=weight_decay,
+            neutral_loss_method="abs_of_mean",
+            neutral_loss_beta=1.0,
+            num_epochs=10,
+            batch_size=20,
+            seed=SEED,
+            use_wandb=True,
+            test_every_epochs=50,
+            test_func=test_func,
+            run_group=RUN_GROUP,
+        )
 
 # Disable gradients to save memory during inference, optimization is
 # done now
