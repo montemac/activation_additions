@@ -1,4 +1,3 @@
-# %%
 import pickle
 import os
 
@@ -6,37 +5,17 @@ import numpy as np
 import pandas as pd
 import torch
 from tqdm.auto import tqdm
-
-try:
-    import plotly.express as px
-    import plotly as py
-except ImportError:
-    %pip install plotly
-    import plotly.express as px
-    import plotly as py
-
-try:
-    import nltk
-    import nltk.data
-except ImportError:
-    %pip install nltk
-    import nltk
-    import nltk.data
-
-try:
-    import kaleido
-except ImportError:
-    %pip install kaleido
-
+import plotly.express as px
+import plotly as py
+import nltk
+import nltk.data
 from transformer_lens import HookedTransformer
-
 from algebraic_value_editing import (
     utils,
     experiments,
 )
 
 
-# %%
 utils.enable_ipython_reload()
 _ = torch.set_grad_enabled(False)
 py.offline.init_notebook_mode()
@@ -55,9 +34,9 @@ MODEL: HookedTransformer = HookedTransformer.from_pretrained(
 nltk.download("punkt")
 tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
-# Sample and tokenize
+# Sampling and tokenizing dataset text
 df = pd.read_csv("./validation.csv")
-df_sample = df.sample(100, random_state=0)
+df_sample = df.sample(1000, random_state=0)
 texts = []
 for row in df_sample.itertuples():
     for col in ["ctx_a", "ctx_b", "endings"]:
@@ -69,18 +48,17 @@ for row in df_sample.itertuples():
             texts.append(pd.DataFrame({"text": sentences, "topic": "NLI"}))
 texts_df = pd.concat(texts).reset_index(drop=True)
 
-# Separate out the short tokenized text
+# Remove short texts
 def count_tokens(text):
     return len(text.split())
 texts_df["token_count"] = texts_df["text"].apply(count_tokens)
 texts_df = texts_df[texts_df['token_count'] > 5]
 
-# %%
-# Layers-dense experiment
+# Sweep activation-addition over all model layers
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
         model=MODEL,
         labeled_texts=texts_df[["text", "topic"]],
-        x_vector_phrases=("a24z", ""),
+        x_vector_phrases=(" weddings", ""),
         act_names=list(range(0, 48, 1)),
         coeffs=[1],
         method="mask_injection_logprob",
@@ -107,32 +85,7 @@ fig.write_image(
     height=SVG_HEIGHT,
 )
 
-# %%
-# Specific sentences
-for idx in range(5):
-    mod_df_sel = mod_df[
-        (mod_df["act_name"] == 16)
-        & (mod_df["coeff"] == 1.0)
-        & (mod_df["input_index"] == idx)
-    ]
-    text_token_strs = MODEL.to_string(mod_df_sel["input"].item().T)[1:]
-    logprob_diff = mod_df_sel["logprob_actual_next_token_diff"].item()
-    logprob_diff[:2] = np.NaN  # Mask off injection zone
-    prob_ratio = np.exp(logprob_diff)
-    fig = px.line(y=prob_ratio, title=texts_df.loc[idx, "text"][:50] + "...")
-    fig.update_xaxes(
-        {
-            "tickmode": "array",
-            "tickvals": np.arange(len(text_token_strs)),
-            "ticktext": text_token_strs,
-        }
-    )
-    # fig.add_hline
-    fig.show()
-
-
-# %%
-# Coefficients-dense experiment/results
+# Sweep activation-addition over all coefficients
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
         model=MODEL,
         labeled_texts=texts_df[["text", "topic"]],
@@ -161,7 +114,7 @@ fig = experiments.plot_corpus_logprob_experiment(
         px.colors.qualitative.Plotly[0],
     ],
 )
-# Set tick marks
+# Set Plotly tick marks
 fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3, 4]})
 fig.show()
 fig.write_image(
