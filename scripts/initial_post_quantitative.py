@@ -36,7 +36,7 @@ tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
 # Sampling and tokenizing dataset text
 df = pd.read_csv("./HellaSwag.csv")
-df_sample = df #.sample(10, random_state=0) # Sets number samples used
+df_sample = df.sample(1000, random_state=0) # Sets number samples used
 texts = []
 for row in df_sample.itertuples():
     for col in ["ctx_a", "ctx_b", "endings"]:
@@ -80,7 +80,7 @@ fig = experiments.plot_corpus_logprob_experiment(
 )
 # fig.show() # Don't show() when running in a tmux session
 fig.write_image(
-    "images/weddings_steering_layers_sweep.svg",
+    "images/1kweddings_steering_layers_sweep.svg",
     width=SVG_WIDTH,
     height=SVG_HEIGHT,
 )
@@ -118,7 +118,7 @@ fig = experiments.plot_corpus_logprob_experiment(
 fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3, 4]})
 # fig.show() # Don't show when running in a tmux session
 fig.write_image(
-    "images/weddings_steering_coeffs_sweep.svg",
+    "images/1kweddings_steering_coeffs_sweep.svg",
     width=SVG_WIDTH,
     height=SVG_HEIGHT,
 )
