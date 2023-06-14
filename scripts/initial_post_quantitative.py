@@ -36,7 +36,7 @@ tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
 # Sampling and tokenizing dataset text
 df = pd.read_csv("./HellaSwag.csv")
-df_sample = df.sample(10, random_state=0) # Sets number samples used
+df_sample = df #.sample(10, random_state=0) # Sets number samples used
 texts = []
 for row in df_sample.itertuples():
     for col in ["ctx_a", "ctx_b", "endings"]:
