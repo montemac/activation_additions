@@ -35,8 +35,8 @@ nltk.download("punkt")
 tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
 # Sampling and tokenizing dataset text
-df = pd.read_csv("./validation.csv")
-df_sample = df.sample(1000, random_state=0)
+df = pd.read_csv("./HellaSwag.csv")
+df_sample = df.sample(10, random_state=0) # Sets number samples used
 texts = []
 for row in df_sample.itertuples():
     for col in ["ctx_a", "ctx_b", "endings"]:
@@ -48,13 +48,13 @@ for row in df_sample.itertuples():
             texts.append(pd.DataFrame({"text": sentences, "topic": "NLI"}))
 texts_df = pd.concat(texts).reset_index(drop=True)
 
-# Remove short texts
+# Remove too-short texts
 def count_tokens(text):
     return len(text.split())
 texts_df["token_count"] = texts_df["text"].apply(count_tokens)
 texts_df = texts_df[texts_df['token_count'] > 5]
 
-# Sweep activation-addition over all model layers
+# Sweep an activation-addition over all model layers
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
         model=MODEL,
         labeled_texts=texts_df[["text", "topic"]],
@@ -66,7 +66,7 @@ texts_df = texts_df[texts_df['token_count'] > 5]
     )
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
-    corpus_name="HellaSwag NLI Dataset",
+    corpus_name="HellaSwag",
     x_qty="act_name",
     x_name="Injection layer",
     color_qty="topic",
@@ -78,14 +78,14 @@ fig = experiments.plot_corpus_logprob_experiment(
         px.colors.qualitative.Plotly[0],
     ],
 )
-fig.show()
+# fig.show() # Don't show() when running in a tmux session
 fig.write_image(
-    "images/NLI_steering_layers.svg",
+    "images/weddings_steering_layers_sweep.svg",
     width=SVG_WIDTH,
     height=SVG_HEIGHT,
 )
 
-# Sweep activation-addition over all coefficients
+# Sweep an activation-addition over all coefficients
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
         model=MODEL,
         labeled_texts=texts_df[["text", "topic"]],
@@ -100,7 +100,7 @@ fig.write_image(
     )
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
-    corpus_name="HellaSwag NLI Dataset",
+    corpus_name="HellaSwag",
     x_qty="coeff",
     x_name="Injection coefficient",
     color_qty="topic",
@@ -114,11 +114,11 @@ fig = experiments.plot_corpus_logprob_experiment(
         px.colors.qualitative.Plotly[0],
     ],
 )
-# Set Plotly tick marks
+# Sets the Plotly graph ticks
 fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3, 4]})
-fig.show()
+# fig.show() # Don't show when running in a tmux session
 fig.write_image(
-    "images/weddings_essays_coeffs.svg",
+    "images/weddings_steering_coeffs_sweep.svg",
     width=SVG_WIDTH,
     height=SVG_HEIGHT,
 )
