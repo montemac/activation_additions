@@ -292,8 +292,7 @@ def learn_activation_addition(
                     loss /= relative_loss.numel()
                     # Continue with optimization step
                     loss.backward()
-                    if use_wandb:
-                        steering_vector_prev = steering_vector.detach()
+                    grad_norm = steering_vector.grad.detach().norm().item()
                     optimizer.step()
                     optimizer.zero_grad()
                     epoch_loss += loss.item()
@@ -304,9 +303,7 @@ def learn_activation_addition(
                                 "loss": loss.item(),
                                 "epoch": epoch,
                                 "steering_vector_norm": steering_vector.norm(),
-                                "steering_vector_step_norm": (
-                                    steering_vector - steering_vector_prev
-                                ).norm(),
+                                "grad_norm": grad_norm,
                             }
                         )
             if do_print:
