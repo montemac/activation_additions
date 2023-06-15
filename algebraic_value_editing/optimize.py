@@ -1,7 +1,7 @@
 """Module implenting activation addition optimization."""
 import os
 import shutil
-from typing import Optional, Any, Iterable, Callable
+from typing import Optional, Any, Iterable, Callable, Union
 from contextlib import nullcontext
 
 import pandas as pd
@@ -184,6 +184,7 @@ def learn_activation_addition(
     test_every_epochs: int = 50,
     test_func: Optional[Callable] = None,
     run_group: Optional[str] = None,
+    scheduler_func: Optional[Callable] = None,
 ) -> nn.Parameter:
     """Function to learn an activation addition vector (aka steering
     vector) over a specific set of labelled inputs."""
@@ -252,6 +253,10 @@ def learn_activation_addition(
             lr=lr,
             weight_decay=weight_decay,
         )
+        if scheduler_func is not None:
+            scheduler = scheduler_func(optimizer)
+        else:
+            scheduler = None
 
         # Create a dataloader
         generator = t.Generator()
@@ -309,6 +314,7 @@ def learn_activation_addition(
             if do_print:
                 print(f"Epoch: {epoch}, Loss: {epoch_loss/batch_cnt}")
             if use_wandb:
+                wandb.log({"lr": optimizer.param_groups[0]["lr"]})
                 # Save checkpoint of steering vector
                 filename = os.path.join(
                     wandb.run.name, f"steering_vector_epoch_{epoch:04d}.pt"
@@ -325,6 +331,8 @@ def learn_activation_addition(
                     test_results = test_func(steering_vector.detach())
                     test_table = wandb.Table(dataframe=test_results)
                     wandb.log({"test_result": test_table})
+            if scheduler is not None:
+                scheduler.step()
 
     if use_wandb:
         shutil.rmtree(run_name)
