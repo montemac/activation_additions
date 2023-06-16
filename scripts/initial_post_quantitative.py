@@ -1,10 +1,10 @@
-import pickle
 import os
 
+import lzma
+from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
 import torch
-from tqdm.auto import tqdm
 import plotly.express as px
 import plotly as py
 import nltk
@@ -28,36 +28,28 @@ CORPUS_METRIC = "perplexity_ratio"
 
 MODEL: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
-).to(
-    "cuda:0"
-)  # type: ignore
+).to("cuda:0")  # type: ignore
 nltk.download("punkt")
 tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
-# Sampling and tokenizing dataset text
-df = pd.read_csv("./HellaSwag.csv")
-df_sample = df.sample(1000, random_state=0) # Sets number samples used
-texts = []
-for row in df_sample.itertuples():
-    for col in ["ctx_a", "ctx_b", "endings"]:
-        value = getattr(row, col)
-        if isinstance(value, str):
-            sentences = [
-                "" + sentence for sentence in tokenizer.tokenize(getattr(row, col)) # type: ignore
-            ]
-            texts.append(pd.DataFrame({"text": sentences, "topic": "NLI"}))
-texts_df = pd.concat(texts).reset_index(drop=True)
+# Parsing, sampling, and tokenizing the dataset text
+with lzma.open('openwebtext_1.xz', 'rt') as f:
+    html_content = f.read()
+soup = BeautifulSoup(html_content, 'html.parser')
+text = soup.get_text()
+sentences = ["" + sentence for sentence in tokenizer.tokenize(text)]
+df = pd.DataFrame({"text": sentences, "topic": "Masked prediction"})
 
 # Remove too-short texts
 def count_tokens(text):
     return len(text.split())
-texts_df["token_count"] = texts_df["text"].apply(count_tokens)
-texts_df = texts_df[texts_df['token_count'] > 5]
+df["token_count"] = df["text"].apply(count_tokens)
+df = df[df['token_count'] > 5]
 
 # Sweep an activation-addition over all model layers
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
         model=MODEL,
-        labeled_texts=texts_df[["text", "topic"]],
+        labeled_texts=df[["text", "topic"]],
         x_vector_phrases=(" weddings", ""),
         act_names=list(range(0, 48, 1)),
         coeffs=[1],
@@ -66,21 +58,21 @@ texts_df = texts_df[texts_df['token_count'] > 5]
     )
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
-    corpus_name="HellaSwag",
+    corpus_name="OpenWebText",
     x_qty="act_name",
     x_name="Injection layer",
     color_qty="topic",
     facet_col_qty=None,
     metric=CORPUS_METRIC,
-    category_orders={"topic": ["NLI"]},
+    category_orders={"topic": ["Masked prediction"]},
     color_discrete_sequence=[
         px.colors.qualitative.Plotly[1],
         px.colors.qualitative.Plotly[0],
     ],
 )
-# fig.show() # Don't show() when running in a tmux session
+fig.show() # Don't show() when running in a tmux session
 fig.write_image(
-    "images/1kweddings_steering_layers_sweep.svg",
+    "images/steering_layers_sweep.svg",
     width=SVG_WIDTH,
     height=SVG_HEIGHT,
 )
@@ -88,19 +80,16 @@ fig.write_image(
 # Sweep an activation-addition over all coefficients
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
         model=MODEL,
-        labeled_texts=texts_df[["text", "topic"]],
+        labeled_texts=df[["text", "topic"]],
         x_vector_phrases=(" weddings", ""),
         act_names=[6, 16],
-        # act_names=[6],
         coeffs=np.linspace(-1, 4, 101),
-        # coeffs=np.linspace(-2, 2, 11),
-        # coeffs=[0, 1],
         method="mask_injection_logprob",
         label_col="topic",
     )
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
-    corpus_name="HellaSwag",
+    corpus_name="OpenWebText",
     x_qty="coeff",
     x_name="Injection coefficient",
     color_qty="topic",
@@ -108,17 +97,16 @@ fig = experiments.plot_corpus_logprob_experiment(
     facet_col_name="Layer",
     facet_col_spacing=0.05,
     metric=CORPUS_METRIC,
-    category_orders={"topic": ["NLI"]},
+    category_orders={"topic": ["Masked prediction"]},
     color_discrete_sequence=[
         px.colors.qualitative.Plotly[1],
         px.colors.qualitative.Plotly[0],
     ],
 )
-# Sets the Plotly graph ticks
 fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3, 4]})
-# fig.show() # Don't show when running in a tmux session
+fig.show() # Don't show when running in a tmux session
 fig.write_image(
-    "images/1kweddings_steering_coeffs_sweep.svg",
+    "images/steering_coeffs_sweep.svg",
     width=SVG_WIDTH,
     height=SVG_HEIGHT,
 )
