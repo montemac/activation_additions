@@ -11,20 +11,23 @@ import nltk
 import nltk.data
 from transformer_lens import HookedTransformer
 from algebraic_value_editing import (
+    prompt_utils,
     utils,
     experiments,
+    logits,
 )
 
+
+RUNNING_IN_TMUX = False
+SVG_WIDTH = 750
+SVG_HEIGHT = 400
+CORPUS_METRIC = "perplexity_ratio"
 
 utils.enable_ipython_reload()
 _ = torch.set_grad_enabled(False)
 py.offline.init_notebook_mode()
 if not os.path.exists("images"):
     os.mkdir("images")
-
-SVG_WIDTH = 750
-SVG_HEIGHT = 400
-CORPUS_METRIC = "perplexity_ratio"
 
 MODEL: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
@@ -45,6 +48,58 @@ def count_tokens(text):
     return len(text.split())
 df["token_count"] = df["text"].apply(count_tokens)
 df = df[df['token_count'] > 5]
+
+# Find and show the most impacted tokens in sampled texts
+POS = 9
+TOP_K = 10
+SAMPLE_SIZE = 100
+SEED = 0
+activation_additions = list(
+    prompt_utils.get_x_vector(
+        prompt1=" weddings",
+        prompt2="",
+        coeff=1.0,
+        act_name=16,
+        model=MODEL,
+        pad_method="tokens_right",
+        custom_pad_id=MODEL.to_single_token(" "),  # type: ignore
+    ),
+)
+df_sample = df.sample(n=SAMPLE_SIZE, random_state=SEED)
+for prompt in df_sample["text"]:
+    probs = logits.get_normal_and_modified_token_probs(
+        model=MODEL,
+        prompts=prompt,
+        activation_additions=activation_additions,
+        return_positions_above=0,
+    )
+fig, probs_plot_df = experiments.show_token_probs(
+    MODEL, probs["normal", "probs"], probs["mod", "probs"], POS, TOP_K
+)
+if not RUNNING_IN_TMUX:
+    fig.show()
+fig.write_image(
+    "images/zoom_in_top_k.png",
+    width=SVG_WIDTH,
+    height=SVG_HEIGHT,
+)
+fig, kl_div_plot_df = experiments.show_token_probs(
+    MODEL,
+    probs["normal", "probs"],
+    probs["mod", "probs"],
+    POS,
+    TOP_K,
+    sort_mode="kl_div",
+)
+if not RUNNING_IN_TMUX:
+    fig.show()
+fig.write_image(
+    "images/zoom_in_top_k_kl_div.png",
+    width=SVG_WIDTH,
+    height=SVG_HEIGHT,
+)
+for idx, row in kl_div_plot_df.iterrows():
+    print(row["text"], f'{row["y_values"]:.4f}')
 
 # Sweep an activation-addition over all model layers
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
@@ -70,7 +125,8 @@ fig = experiments.plot_corpus_logprob_experiment(
         px.colors.qualitative.Plotly[0],
     ],
 )
-fig.show() # Don't show() when running in a tmux session
+if not RUNNING_IN_TMUX:
+    fig.show()
 fig.write_image(
     "images/steering_layers_sweep.svg",
     width=SVG_WIDTH,
@@ -104,7 +160,8 @@ fig = experiments.plot_corpus_logprob_experiment(
     ],
 )
 fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3, 4]})
-fig.show() # Don't show when running in a tmux session
+if not RUNNING_IN_TMUX:
+    fig.show()
 fig.write_image(
     "images/steering_coeffs_sweep.svg",
     width=SVG_WIDTH,
