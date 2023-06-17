@@ -52,7 +52,7 @@ df = df[df['token_count'] > 5]
 # Find and show the most impacted tokens in sampled texts
 POS = 9
 TOP_K = 10
-SAMPLE_SIZE = 100
+SAMPLE_SIZE = 15
 SEED = 0
 activation_additions = list(
     prompt_utils.get_x_vector(
@@ -66,40 +66,42 @@ activation_additions = list(
     ),
 )
 df_sample = df.sample(n=SAMPLE_SIZE, random_state=SEED)
-for prompt in df_sample["text"]:
+for index, prompt in enumerate(df_sample["text"]):
     probs = logits.get_normal_and_modified_token_probs(
         model=MODEL,
         prompts=prompt,
         activation_additions=activation_additions,
         return_positions_above=0,
     )
-fig, probs_plot_df = experiments.show_token_probs(
-    MODEL, probs["normal", "probs"], probs["mod", "probs"], POS, TOP_K
-)
-if not RUNNING_IN_TMUX:
-    fig.show()
-fig.write_image(
-    "images/zoom_in_top_k.png",
-    width=SVG_WIDTH,
-    height=SVG_HEIGHT,
-)
-fig, kl_div_plot_df = experiments.show_token_probs(
-    MODEL,
-    probs["normal", "probs"],
-    probs["mod", "probs"],
-    POS,
-    TOP_K,
-    sort_mode="kl_div",
-)
-if not RUNNING_IN_TMUX:
-    fig.show()
-fig.write_image(
-    "images/zoom_in_top_k_kl_div.png",
-    width=SVG_WIDTH,
-    height=SVG_HEIGHT,
-)
-for idx, row in kl_div_plot_df.iterrows():
-    print(row["text"], f'{row["y_values"]:.4f}')
+    fig, probs_plot_df = experiments.show_token_probs(
+        MODEL,
+        probs["normal", "probs"],
+        probs["mod", "probs"],
+        POS,
+        TOP_K,
+    )
+    if not RUNNING_IN_TMUX:
+        fig.show()
+    fig.write_image(
+        f"images/top_k_tokens_{index}.svg",
+        width=SVG_WIDTH,
+        height=SVG_HEIGHT,
+    )
+    fig, kl_div_plot_df = experiments.show_token_probs(
+        MODEL,
+        probs["normal", "probs"],
+        probs["mod", "probs"],
+        POS,
+        TOP_K,
+        sort_mode="kl_div",
+    )
+    if not RUNNING_IN_TMUX:
+        fig.show()
+    fig.write_image(
+        f"images/top_k_div_tokens_{index}.svg",
+        width=SVG_WIDTH,
+        height=SVG_HEIGHT,
+    )
 
 # Sweep an activation-addition over all model layers
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
