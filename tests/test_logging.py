@@ -3,7 +3,6 @@
 
 import pytest
 
-import numpy as np
 import pandas as pd
 from transformer_lens import HookedTransformer
 
@@ -53,13 +52,10 @@ def test_logging(model):
     )
     # Download the artifact data and convert to a DataFrame
     results_logged = logging.get_objects_from_run(
-        logging.last_run_info["path"], flatten=True
-    )[0]
+        logging.last_run_info["path"],
+    )["gen_using_activation_additions"]
 
-    # Change the dtype of the loss column; seems that wandb doesn't
-    # track dtypes in uploaded tables, which likely doesn't matter but
-    # is annoying for perfect round-trip reproduction.
-    results_logged["loss"] = results_logged["loss"].astype(np.float32)
+    print(results, results_logged)
 
     # Compare with the reference DataFrame
     pd.testing.assert_frame_equal(results, results_logged)

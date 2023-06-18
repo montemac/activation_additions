@@ -4,10 +4,9 @@ from typing import Optional, Dict, Tuple, Any, Callable, List
 from contextlib import nullcontext
 from warnings import warn
 import os
-import datetime
+import pickle
 import inspect
 
-import pandas as pd
 from decorator import decorate
 from transformer_lens.HookedTransformer import HookedTransformer
 import wandb
@@ -77,50 +76,31 @@ def get_or_init_run(
     return run, manager
 
 
-def log_artifact(
+def log_object(
     run: wandb.wandb_sdk.wandb_run.Run,  # type: ignore
-    objects_to_log: Dict[str, Any],
-    artifact_name: Optional[str] = None,
-    artifact_type: str = "unspecified",
-    artifact_description: Optional[str] = None,
-    artifact_metadata: Optional[dict] = None,
+    obj: Any,
+    logged_name: str,
 ):
-    """Log objects to a new artifact in the provided run, converting
-    them if needed."""
-    artifact = wandb.Artifact(
-        name=f"{run.name}_"
-        + (artifact_name if artifact_name is not None else "")
-        + datetime.datetime.utcnow().strftime("_%Y%m%dT%H%M%S"),
-        type=artifact_type,
-        description=artifact_description,
-        metadata=artifact_metadata,
-    )
-    for name, obj in objects_to_log.items():
-        if obj is not None:  # Don't log None return values
-            # Convert objects if needed based on type
-            if isinstance(obj, pd.DataFrame):
-                obj = wandb.Table(dataframe=obj)
-            # Log, catching errors if objects don't have valid type
-            try:
-                artifact.add(obj, name)
-            except ValueError:
-                warn(f"Object {name} is of unsupported type {type(obj)}")
-                artifact.add(wandb.Html(f"unsupported type {type(obj)}"), name)
-    run.log_artifact(artifact)
+    """Save object to a file in the directory of the provided run,
+    which will be automatically uploaded at the end of the run."""
+    folder = os.path.join(run.dir, "logged_objects")
+    try:
+        os.mkdir(folder)
+    except FileExistsError:
+        pass
+    with open(os.path.join(folder, f"{logged_name}.pkl"), "wb") as file:
+        pickle.dump(obj, file)
 
 
-def get_or_init_run_and_log_artifact(
+def get_or_init_run_and_log_object(
     job_type: str,
     config: Dict[str, Any],
-    objects_to_log: Dict[str, Any],
-    artifact_name: Optional[str] = None,
-    artifact_type: str = "unspecified",
-    artifact_description: Optional[str] = None,
-    artifact_metadata: Optional[dict] = None,
+    obj: Any,
+    logged_name: str,
     run_args: Optional[Dict[str, Any]] = None,
 ):
-    """Function to get or init a wandb run, set the config, log some
-    objects, and finish the run (if it was created) in a single call."""
+    """Function to get or init a wandb run, set the config, log an
+    object, and finish the run (if it was created) in a single call."""
     if run_args is None:
         run_args = {}
     # Get the wandb run
@@ -134,14 +114,7 @@ def get_or_init_run_and_log_artifact(
     # Wrap in a context manager for exception-safety, and log the
     # results of this call
     with manager:
-        log_artifact(
-            run,
-            objects_to_log,
-            artifact_name,
-            artifact_type,
-            artifact_description,
-            artifact_metadata,
-        )
+        log_object(run, obj, logged_name)
 
 
 def convert_object_to_wandb_config(obj: Any) -> Any:
@@ -215,19 +188,10 @@ def _loggable(func: Callable, *args, **kwargs) -> Any:
         with manager:
             # Call the wrapped function
             func_return = func(*args, **kwargs)
-            # Log returned objects, splitting up tuple if needed
-            if isinstance(func_return, tuple):
-                objects_to_log = {
-                    f"return_{index}": obj
-                    for index, obj in enumerate(func_return)
-                }
-            else:
-                objects_to_log = {"return": func_return}
-            log_artifact(
+            log_object(
                 run,
-                objects_to_log,
-                artifact_name=func.__name__,
-                artifact_type=func.__name__ + "_return",
+                func_return,
+                logged_name=func.__name__,
             )
     # Return the wrapped function return value
     return func_return
@@ -242,27 +206,21 @@ def loggable(func):
     return decorate(func, _loggable)  # type: ignore
 
 
-def get_objects_from_run(run_path: str, flatten: bool = False):
+def get_objects_from_run(run_path: str):
     """Extract all stored objects from all artifacts produced by the run
-    at the provided path. If flatten==False (the default), a nested dict
-    will be returned including artifact and objects names; If
-    flatten==True, a single list of objects will be returned, the
-    concatenation of all objects from all artifacts."""
+    at the provided path."""
     api = wandb.Api()
     run = api.run(run_path)
     objects = {}
-    for art in run.logged_artifacts():
-        objects_this = {}
-        for file in art.files():
-            obj = art.get(file.name)
-            # Convert objects if needed based on type
-            if isinstance(obj, wandb.data_types.Table):  # type: ignore
-                obj = pd.DataFrame(data=obj.data, columns=obj.columns)
-            objects_this[file.name] = obj
-        objects[art.name] = objects_this
-    if flatten:
-        objects_list = []
-        for _, art_objects in objects.items():
-            objects_list.extend(art_objects.values())
-        objects = objects_list
+    for file in run.files():
+        if os.path.split(file.name)[0] == "logged_objects":
+            folder = os.path.join("wandb_restored_files", run.name)
+            rest_file = wandb.restore(
+                file.name, run_path=run_path, replace=False, root=folder
+            )
+            rest_file.close()
+            with open(os.path.join(folder, file.name), "rb") as open_file:
+                obj = pickle.load(open_file)
+                name = os.path.splitext(os.path.split(file.name)[1])[0]
+                objects[name] = obj
     return objects
