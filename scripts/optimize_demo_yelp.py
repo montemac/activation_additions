@@ -68,7 +68,7 @@ for seed in range(5):
         num_each_label_test=NUM_EACH_SENTIMENT_TEST,
         rng=rng,
         label_col=LABEL_COL,
-        labels_to_use=["negative", "neutral"],
+        labels_to_use=["negative", "neutral", "positive"],
     )
 
     # Tokenize training texts
@@ -103,14 +103,14 @@ for seed in range(5):
 
     # Learn the steering vector
     ACT_NAME = "blocks.16.hook_resid_pre"
-    for weight_decay in [0.0, 0.01]:
+    for weight_decay in [0.01]:
         steering_vector = optimize.learn_activation_addition(
             model=MODEL,
             corpus_name="Yelp reviews",
             act_name=ACT_NAME,
             tokens_by_label=tokens_by_label,
             aligned_labels=["negative"],
-            # opposed_labels=["positive"],
+            opposed_labels=["positive"],
             lr=0.3,
             weight_decay=weight_decay,
             neutral_loss_method="abs_of_mean",
