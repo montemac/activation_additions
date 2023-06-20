@@ -170,10 +170,12 @@ def learn_activation_addition(
     tokens_by_label: dict[str, Int[t.Tensor, "batch pos"]],
     aligned_labels: list[str],
     opposed_labels: Optional[list[str]] = None,
+    num_positions: int = 1,
     lr: float = 0.01,
     weight_decay: float = 0.01,
     neutral_loss_method: str = "abs_of_mean",
     neutral_loss_beta: float = 1.0,
+    mask_addition_positions: bool = True,
     num_epochs: int = 100,
     batch_size: int = 20,
     seed: int = 0,
@@ -199,10 +201,12 @@ def learn_activation_addition(
             "token_labels": list(tokens_by_label.keys()),
             "aligned_labels": aligned_labels,
             "act_name": act_name,
+            "num_positions": num_positions,
             "lr": lr,
             "weight_decay": weight_decay,
             "neutral_loss_method": neutral_loss_method,
             "neutral_loss_beta": neutral_loss_beta,
+            "mask_addition_positions": mask_addition_positions,
             "num_epochs": num_epochs,
             "batch_size": batch_size,
             "seed": seed,
@@ -238,13 +242,15 @@ def learn_activation_addition(
         # Create the steering vector parameter, and an associated hook
         # function
         steering_vector = nn.Parameter(
-            t.randn(model.cfg.d_model, device=model.cfg.device),
+            t.randn(
+                (num_positions, model.cfg.d_model), device=model.cfg.device
+            ),
             requires_grad=True,
         )
 
         def hook_fn(activation, hook):  # pylint: disable=unused-argument
             """Hook function"""
-            activation[:, 0, :] += steering_vector
+            activation[:, :num_positions, :] += steering_vector
             return activation
 
         # Create an optimizer
@@ -277,6 +283,10 @@ def learn_activation_addition(
                         loss_per_token=True,
                     )
                     relative_loss = loss_per_token - batch["normal_loss"]
+                    # Mask out loss completely at injection positions,
+                    # if specified
+                    if mask_addition_positions:
+                        relative_loss[:, :num_positions] = 0
                     # Want loss to decrease for aligned sequences
                     loss = relative_loss[batch["aligned"] == 1, :].sum()
                     # Want loss to increase for opposed sequences
@@ -294,7 +304,10 @@ def learn_activation_addition(
                             ).sum()
                         )
                     # Normalize loss to size of token batch
-                    loss /= relative_loss.numel()
+                    loss_count = relative_loss.numel()
+                    if mask_addition_positions:
+                        loss_count -= num_positions
+                    loss /= loss_count
                     # Continue with optimization step
                     loss.backward()
                     grad_norm = steering_vector.grad.detach().norm().item()

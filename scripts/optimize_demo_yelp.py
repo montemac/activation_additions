@@ -68,7 +68,7 @@ for seed in range(5):
         num_each_label_test=NUM_EACH_SENTIMENT_TEST,
         rng=rng,
         label_col=LABEL_COL,
-        labels_to_use=["negative", "neutral", "positive"],
+        labels_to_use=["negative", "neutral"],
     )
 
     # Tokenize training texts
@@ -110,11 +110,13 @@ for seed in range(5):
             act_name=ACT_NAME,
             tokens_by_label=tokens_by_label,
             aligned_labels=["negative"],
-            opposed_labels=["positive"],
+            # opposed_labels=["positive"],
+            num_positions=1,
             lr=0.3,
             weight_decay=weight_decay,
             neutral_loss_method="abs_of_mean",
             neutral_loss_beta=1.0,
+            mask_addition_positions=True,
             num_epochs=10,
             batch_size=20,
             seed=seed,
