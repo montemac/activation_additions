@@ -1,3 +1,4 @@
+# %%
 import os
 
 import lzma
@@ -5,6 +6,7 @@ from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
 import torch
+from tqdm.auto import tqdm
 import plotly.express as px
 import plotly as py
 import nltk
@@ -49,6 +51,11 @@ def count_tokens(text):
 df["token_count"] = df["text"].apply(count_tokens)
 df = df[df['token_count'] > 5]
 
+# Filter out sentences with \x00 characters
+df = df[~df["text"].str.contains("\x00")]
+
+
+# %%
 # Find and show the most impacted tokens in sampled texts
 POS = 9
 TOP_K = 10
@@ -103,12 +110,14 @@ for index, prompt in enumerate(df_sample["text"]):
         height=SVG_HEIGHT,
     )
 
+# %%
 # Sweep an activation-addition over all model layers
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
         model=MODEL,
-        labeled_texts=df[["text", "topic"]],
+        labeled_texts=df[["text", "topic"]].iloc[:100],
         x_vector_phrases=(" weddings", ""),
-        act_names=list(range(0, 48, 1)),
+        # act_names=list(range(0, 48, 1)),
+        act_names=[16],
         coeffs=[1],
         method="mask_injection_logprob",
         label_col="topic",
@@ -135,6 +144,27 @@ fig.write_image(
     height=SVG_HEIGHT,
 )
 
+# %%
+# Convert mod_df to a new df with one token per row, with logprob_actual_next_token_diff, text index, and residual position as columns.
+df_list = []
+for idx, row in tqdm(mod_df.iloc[:100].iterrows()):
+    this_df = pd.DataFrame({'logprob_diff': row['logprob_actual_next_token_diff'], 
+        'text_index': row['input_index'], 
+        'pos': np.arange(len(row['logprob_actual_next_token_diff']))})
+    df_list.append(this_df)
+df_all_tokens = pd.concat(df_list).reset_index(drop=True)
+df_all_tokens = df_all_tokens[df_all_tokens['pos'] > 2]
+df_all_tokens_sorted = df_all_tokens.sort_values('logprob_diff', ascending=True)
+print(df_all_tokens_sorted)
+
+px.scatter(df_all_tokens_sorted['text_index'].reset_index(drop=True)).show()
+px.line(df_all_tokens_sorted['logprob_diff'].reset_index(drop=True))
+
+
+
+
+
+# %%
 # Sweep an activation-addition over all coefficients
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
         model=MODEL,
