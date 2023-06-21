@@ -14,7 +14,7 @@ from tuned_lens import TunedLens
 from tuned_lens.plotting import PredictionTrajectory
 from transformers import AutoTokenizer
 
-from algebraic_value_editing import completion_utils, hook_utils
+from activation_additions import completion_utils, hook_utils
 
 # %%
 
@@ -108,9 +108,10 @@ def run_hooked_and_normal_with_cache(
         normal_and_modified_df: A list of two dataframes, one for normal and one for modified.
         normal_and_modified_cache: A list of two caches, one for normal and one for modified.
     """
-    assert (
-        len(gen_args.get("prompt_batch", [])) == 1
-    ), f'Only one prompt is supported. Got {len(gen_args.get("prompt_batch", []))}'
+    assert len(gen_args.get("prompt_batch", [])) == 1, (
+        "Only one prompt is supported. Got"
+        f" {len(gen_args.get('prompt_batch', []))}"
+    )
 
     activ_hooks = hook_utils.hook_fns_from_activation_additions(
         model, activation_additions

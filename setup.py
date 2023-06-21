@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="algebraic_value_editing",
+    name="activation_additions",
     description=(
         "Tools for testing the algebraic value-editing conjecture (AVEC) on"
         " language models"
@@ -11,15 +11,26 @@ setup(
     version="0.2.0",
     packages=find_packages(),
     install_requires=[
-        (
-            "transformer-lens @"
-            " git+https://github.com/neelnanda-io/TransformerLens.git@1f65f4bf35d91677deea2331561ae6a9d2e92d38"
-        ),
-        "torch>=1.13.0",
+        "transformer_lens",
+        "torch==1.13.1",
         "numpy>=1.22.1",
         "pandas>=1.4.4",
         "jaxtyping>=0.2.14",
         "prettytable>=3.6.0",
-        "funcy>=2.0",
+        "openai>=0.27.2",
+        "nltk>=3.8.1",
+        "kaleido>=0.2.1",
+        "pytest",
+        "plotly",
+        "nbformat",
+        "Ipython",
+        "ipywidgets",
+        "tuned_lens",
     ],
+    extras_require={
+        "dev": [
+            "pytest",
+            "notebook",  # liked by vscode
+        ]
+    },
 )

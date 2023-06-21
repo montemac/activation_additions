@@ -1,7 +1,7 @@
 """ Tools for specifying prompts and coefficients for algebraic value
 editing. """
 
-from typing import Tuple, Optional, Union, Callable, List, Dict
+from typing import Tuple, Optional, Union, Callable, List
 from jaxtyping import Int
 import torch
 import torch.nn.functional
@@ -224,43 +224,3 @@ def pad_tokens_to_match_activation_additions(
         dim=1,
     )
     return tokens, activation_addition_len
-
-
-def weighted_prompt_superposition(
-    model: HookedTransformer,
-    weighted_prompts: Dict[str, float],  # TODO handle zero token
-) -> List[ActivationAddition]:
-    """Produce a list of `ActivationAddition`s that simulate the superposition of
-    the weighted prompts.
-
-    Args:
-        `model`: The model to use for tokenization.
-        `weighted_prompts`: A dictionary mapping prompts to coefficients.
-
-    Returns:
-        A list of `ActivationAddition`s.
-    """
-    act_adds: List[ActivationAddition] = [
-        ActivationAddition(
-            prompt=prompt, coeff=coeff, act_name=get_act_name(name="embed")
-        )
-        for prompt, coeff in weighted_prompts.items()
-    ]
-
-    # Make a dummy token sequence whose length equals the max token length
-    # of the activation addition prompts
-    max_len: int = max(
-        len(model.to_tokens([prompt])[0]) for prompt in weighted_prompts
-    )
-
-    dummy_tokens: torch.Tensor = torch.ones(
-        max_len, dtype=torch.int32
-    ) * model.to_single_token(string="a")
-
-    # Add in a prompt with a coefficient of -1.0 to cancel out the
-    # activations of the dummy prompt
-    dummy_act_add = ActivationAddition(
-        tokens=dummy_tokens, coeff=-1.0, act_name=get_act_name(name="embed")
-    )
-    act_adds.append(dummy_act_add)
-    return act_adds
