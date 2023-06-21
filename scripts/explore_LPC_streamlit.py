@@ -1,19 +1,5 @@
-# Imports
-try:
-    import algebraic_value_editing
-except ImportError:
-    commit = "15bcf55"  # Stable commit TODO out of date
-    get_ipython().run_line_magic(  # type: ignore
-        magic_name="pip",
-        line=(
-            "install -U"
-            f" git+https://github.com/montemac/algebraic_value_editing.git@{commit}"
-        ),
-    )
-
-
+# Streamlit app for exploring activation additions
 import torch
-import pandas as pd
 from typing import List, Dict
 import transformer_lens
 
@@ -55,16 +41,22 @@ def plot_attention_pattern_single(
     assert len(tokens) == attention.shape[-1]
 
     result = cv.attention.attention_heads(
-        tokens=tokens, attention=attention, max_value=1, min_value=-1
+        tokens=tokens,
+        attention=attention,
+        max_value=1,
+        min_value=-1,
     )
-    #
-    html(str(result), width=500, height=600 + (100 * attention.shape[0] // 4))
+    # If there are more heads, we need to make the plot bigger
+    html(
+        str(result),
+        width=400,
+        height=600 + (100 * attention.shape[0] // 4),
+    )
 
 
 # Save memory by not computing gradients
 _ = torch.set_grad_enabled(False)
 torch.manual_seed(0)  # For reproducibility
-
 
 gpt2small: HookedTransformer = load_model_tl(
     model_name="gpt2-small", device=DEVICE
@@ -75,33 +67,27 @@ def main():
     st.title("Algebraic Value Editing Demo")
 
     # User inputs
-    model_name: str = st.selectbox(
-        "Select GPT-2 Model",
-        ["gpt2-small", "gpt2-medium", "gpt2-large", "gpt2-xl"],
-    )
-    model: HookedTransformer = load_model_tl(
-        model_name=model_name, device=DEVICE
-    )
-    prompt: str = st.text_input(
-        "Prompt", value="My name is Frank and I like to eat"
-    )
+    with st.sidebar:
+        model_name: str = st.selectbox(
+            "Select GPT-2 Model",
+            ["gpt2-small", "gpt2-medium", "gpt2-large", "gpt2-xl"],
+        )
+        model: HookedTransformer = load_model_tl(
+            model_name=model_name, device=DEVICE
+        )
+        prompt: str = st.text_input(
+            "Prompt", value="My name is Frank and I like to eat"
+        )
 
-    act_prompt_1 = st.text_input("Act add prompt 1", value="Love")
-    act_prompt_2 = st.text_input("Act add prompt 2", value="Hate")
-    addition_layer: int = st.slider(
-        "Injection site",
-        min_value=0,
-        max_value=model.cfg.n_layers,
-        value=0,
-    )
-    coefficient: float = st.number_input("Coefficient", value=1.0)
-
-    attn_layer: int = st.slider(
-        "Attention layer",
-        min_value=0,
-        max_value=model.cfg.n_layers,
-        value=0,
-    )
+        act_prompt_1 = st.text_input("Act add prompt 1", value="Love")
+        act_prompt_2 = st.text_input("Act add prompt 2", value="Hate")
+        addition_layer: int = st.slider(
+            "Injection site",
+            min_value=0,
+            max_value=model.cfg.n_layers,
+            value=0,
+        )
+        coefficient: float = st.number_input("Coefficient", value=1.0)
 
     # Convert sample text to tokens
     sample_tokens = model.to_tokens(prompt)
@@ -123,16 +109,26 @@ def main():
         for hook_fn in hook_fns
     ]
 
+    attn_layer: int = st.slider(
+        "Attention layer",
+        min_value=0,
+        max_value=model.cfg.n_layers,
+        value=0,
+    )
+
     logits, cache = model.run_with_cache(sample_tokens, remove_batch_dim=True)
     attn_before = cache["pattern", attn_layer, "attn"]
 
+    # Split visualization into two columns
+    st.header(f"Attention patterns for layer {attn_layer}")
+    col1, col2 = st.columns(2)
+
     # Visualize attention patterns before intervention
-    st.subheader(
-        f"Layer {attn_layer} Head Attention Patterns (Before Intervention):"
-    )
-    plot_attention_pattern_single(
-        tokens=sample_str_tokens, attention=attn_before
-    )
+    with col1:
+        st.subheader(f"Before intervention")
+        plot_attention_pattern_single(
+            tokens=sample_str_tokens, attention=attn_before
+        )
 
     # Perform intervention
     with model.hooks(fwd_hooks=fwd_hooks):
@@ -142,18 +138,17 @@ def main():
         attn_after = cache["pattern", attn_layer, "attn"]
 
     # Visualize attention patterns after intervention
-    st.subheader(
-        f"Layer {attn_layer} Head Attention Patterns (After Intervention):"
-    )
-    plot_attention_pattern_single(
-        tokens=sample_str_tokens, attention=attn_after
-    )
+    with col2:
+        st.subheader(f"After intervention")
+        plot_attention_pattern_single(
+            tokens=sample_str_tokens, attention=attn_after
+        )
 
     # Compute difference in attention patterns
     attn_diff = attn_after - attn_before
 
     # Visualize the difference in attention patterns
-    st.subheader(f"Layer {attn_layer} Head Attention Patterns (Difference):")
+    st.subheader(f"Difference")
     plot_attention_pattern_single(
         tokens=sample_str_tokens, attention=attn_diff
     )
