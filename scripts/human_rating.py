@@ -1,4 +1,4 @@
-""" This script demonstrates how to use the algebraic_value_editing library to generate comparisons
+""" This script demonstrates how to use the activation_additions library to generate comparisons
 between two prompts. """
 
 # %%
@@ -7,9 +7,9 @@ from funcy import partial
 import pandas as pd
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import completion_utils, utils
-from algebraic_value_editing.analysis import rate_completions
-from algebraic_value_editing.prompt_utils import get_x_vector
+from activation_additions import completion_utils, utils
+from activation_additions.analysis import rate_completions
+from activation_additions.prompt_utils import get_x_vector
 
 utils.enable_ipython_reload()
 

@@ -14,7 +14,7 @@ from tuned_lens import TunedLens
 from tuned_lens.plotting import PredictionTrajectory
 from transformers import AutoTokenizer
 
-from algebraic_value_editing import completion_utils, hook_utils
+from activation_additions import completion_utils, hook_utils
 
 # %%
 

@@ -9,7 +9,7 @@ import torch
 
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import (
+from activation_additions import (
     sweeps,
     metrics,
     prompt_utils,

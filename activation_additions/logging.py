@@ -11,7 +11,7 @@ from decorator import decorate
 from transformer_lens.HookedTransformer import HookedTransformer
 import wandb
 
-PROJECT = "algebraic_value_editing"
+PROJECT = "activation_additions"
 
 # Hack to disable a warning when wandb forks a process for sync'ing (I
 # think)

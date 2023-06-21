@@ -8,8 +8,8 @@ from transformer_lens import HookedTransformer
 from tuned_lens import TunedLens
 from transformers import AutoModelForCausalLM
 
-from algebraic_value_editing.prompt_utils import get_x_vector
-from algebraic_value_editing import lenses, utils
+from activation_additions.prompt_utils import get_x_vector
+from activation_additions import lenses, utils
 
 utils.enable_ipython_reload()
 

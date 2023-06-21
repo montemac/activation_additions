@@ -12,9 +12,9 @@ import plotly.graph_objects as go
 from tqdm.auto import tqdm
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import metrics, logging, hook_utils
-from algebraic_value_editing.prompt_utils import ActivationAddition
-from algebraic_value_editing.completion_utils import (
+from activation_additions import metrics, logging, hook_utils
+from activation_additions.prompt_utils import ActivationAddition
+from activation_additions.completion_utils import (
     gen_using_hooks,
     gen_using_activation_additions,
 )

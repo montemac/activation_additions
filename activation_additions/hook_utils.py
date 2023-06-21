@@ -9,7 +9,7 @@ from einops import reduce
 from transformer_lens import ActivationCache
 from transformer_lens.HookedTransformer import HookedTransformer, Loss
 from transformer_lens.hook_points import HookPoint, LensHandle
-from algebraic_value_editing.prompt_utils import (
+from activation_additions.prompt_utils import (
     ActivationAddition,
     pad_tokens_to_match_activation_additions,
     get_block_name,

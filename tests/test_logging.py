@@ -6,7 +6,7 @@ import pytest
 import pandas as pd
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import (
+from activation_additions import (
     logging,
     completion_utils,
     prompt_utils,

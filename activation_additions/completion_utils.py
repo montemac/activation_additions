@@ -13,8 +13,8 @@ import einops
 
 from transformer_lens.HookedTransformer import HookedTransformer, Output
 
-from algebraic_value_editing.prompt_utils import ActivationAddition
-from algebraic_value_editing import hook_utils, logging
+from activation_additions.prompt_utils import ActivationAddition
+from activation_additions import hook_utils, logging
 
 
 def preserve_rng_state(func):

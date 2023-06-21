@@ -2,7 +2,7 @@
   "name": "PyTorch Dev Container",
   "dockerFile": "Dockerfile",
   "context": "..",
-  "workspaceFolder": "/home/vscode/algebraic_value_editing",
+  "workspaceFolder": "/home/vscode/activation_additions",
   "settings": {
     "terminal.integrated.shell.linux": "/bin/bash"
   },

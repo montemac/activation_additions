@@ -7,16 +7,16 @@ from tuned_lens.plotting import PredictionTrajectory
 import numpy as np
 import torch
 
-from algebraic_value_editing import completion_utils, utils
-from algebraic_value_editing.prompt_utils import (
+from activation_additions import completion_utils, utils
+from activation_additions.prompt_utils import (
     ActivationAddition,
     get_x_vector,
 )
-from algebraic_value_editing.lenses import (
+from activation_additions.lenses import (
     run_hooked_and_normal_with_cache,
     prediction_trajectories,
 )
-import algebraic_value_editing.hook_utils as hook_utils
+import activation_additions.hook_utils as hook_utils
 from plotly.subplots import make_subplots
 from transformers import AutoModelForCausalLM
 

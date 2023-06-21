@@ -6,8 +6,8 @@ import pandas as pd
 import torch
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import completion_utils, utils
-from algebraic_value_editing.prompt_utils import (
+from activation_additions import completion_utils, utils
+from activation_additions.prompt_utils import (
     ActivationAddition,
     get_x_vector,
 )
@@ -47,7 +47,7 @@ for location in ("front", "mid", "back"):
 
 wedding_completions: int = 100
 
-from algebraic_value_editing import metrics
+from activation_additions import metrics
 
 metrics_dict: Dict[str, Callable] = {
     "wedding_words": metrics.get_word_count_metric(

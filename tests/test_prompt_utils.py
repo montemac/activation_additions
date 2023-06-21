@@ -2,7 +2,7 @@
 
 import pytest
 from transformer_lens.HookedTransformer import HookedTransformer
-from algebraic_value_editing.prompt_utils import (
+from activation_additions.prompt_utils import (
     ActivationAddition,
     get_x_vector,
 )

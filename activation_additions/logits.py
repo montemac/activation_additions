@@ -9,7 +9,7 @@ import pandas as pd
 import plotly.express as px
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import prompt_utils, hook_utils
+from activation_additions import prompt_utils, hook_utils
 
 
 def logits_to_probs_numpy(

@@ -19,14 +19,14 @@
 
 # %%
 try:
-    import algebraic_value_editing
+    import activation_additions
 except ImportError:
     commit = "15bcf55"  # Stable commit
     get_ipython().run_line_magic(  # type: ignore
         magic_name="pip",
         line=(
             "install -U"
-            f" git+https://github.com/montemac/algebraic_value_editing.git@{commit}"
+            f" git+https://github.com/montemac/activation_additions.git@{commit}"
         ),
     )
 
@@ -37,8 +37,8 @@ from typing import List, Dict
 
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import hook_utils, prompt_utils
-from algebraic_value_editing.prompt_utils import ActivationAddition
+from activation_additions import hook_utils, prompt_utils
+from activation_additions.prompt_utils import ActivationAddition
 
 # %%
 device: str = "cpu"
@@ -60,7 +60,7 @@ torch.manual_seed(0)  # For reproducibility
 # %%
 import requests
 
-url = "https://raw.githubusercontent.com/montemac/algebraic_value_editing/cb6b1a42493a385ca02e7b9e6bbcb9bff9d006dc/scripts/prompts.txt"  # Cached at a commit to prevent changing results
+url = "https://raw.githubusercontent.com/montemac/activation_additions/cb6b1a42493a385ca02e7b9e6bbcb9bff9d006dc/scripts/prompts.txt"  # Cached at a commit to prevent changing results
 
 response = requests.get(url)
 
@@ -164,7 +164,7 @@ def magnitude_histogram(df: pd.DataFrame) -> go.Figure:
 # Create an empty dataframe with the required columns
 prompt_df = pd.DataFrame(columns=DF_COLS)
 
-from algebraic_value_editing import prompt_utils
+from activation_additions import prompt_utils
 
 # Loop through activation locations and prompts
 activation_locations_8: List[int] = torch.arange(

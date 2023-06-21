@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="algebraic_value_editing",
+    name="activation_additions",
     description=(
         "Tools for testing the algebraic value-editing conjecture (AVEC) on"
         " language models"
