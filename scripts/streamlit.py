@@ -50,7 +50,7 @@ torch.manual_seed(0)  # For reproducibility
 
 
 def customize_activation_addition():
-    st.sidebar.title("Customize the Activation Addition")
+    st.sidebar.title("Model, prompt, and activation additions")
 
     model_name = st.selectbox(
         "Select GPT-2 Model",
@@ -161,7 +161,9 @@ def completion_generation():
     # Let user configure non-negative temperature and frequency penalty and top_p and
     # integer num_comparisons and seed
     temperature = st.slider("Temperature", min_value=0.0, value=1.0)
-    freq_penalty = st.slider("Frequency penalty", min_value=0.0, value=1.0)
+    freq_penalty = st.slider(
+        "Frequency penalty", min_value=0.0, max_value=2.0, value=1.0
+    )
     top_p = st.slider("Top-p", min_value=0.0, max_value=1.0, value=0.3)
     num_comparisons = st.slider(
         "Number of completions", min_value=1, value=5, step=1
@@ -193,7 +195,7 @@ def completion_generation():
 
     # Retrieve the captured stdout
     completions_output = stdout_capture.getvalue()
-    # Remove ANSI escape sequences
+    # Remove ANSI escape sequences (previously, bold formatting)
     completions_output = completions_output.replace("[1m", "")
     completions_output = completions_output.replace("[0m", "")
 
@@ -208,7 +210,8 @@ def completion_generation():
 
 
 def main():
-    st.title("Algebraic Value Editing Demo")
+    st.set_page_config(layout="wide")
+    st.title("The effects of an activation addition on GPT-2")
 
     # Customization section
     with st.sidebar:
@@ -221,6 +224,12 @@ def main():
     # Attention pattern visualization section
     with st.expander("Attention pattern visualization"):
         attention_pattern_visualization()
+
+    # TODO include sweeps
+    # TODO include next-token probabilities
+    # TODO add ability to stack activation additions
+    # TODO include per-token probability visualization
+    # TODO include perplexity ratios on datasets
 
 
 if __name__ == "__main__":
