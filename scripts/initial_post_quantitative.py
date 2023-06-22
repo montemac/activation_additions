@@ -131,13 +131,14 @@ for index, (text, pos) in enumerate(zip(texts, POSS)):
 # Sweep an activation-addition over all model layers
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
     model=MODEL,
-    labeled_texts=df_to_use[["text", "topic"]].iloc[:100],
+    labeled_texts=df_to_use[["text", "topic"]],
     x_vector_phrases=(" weddings", ""),
     act_names=list(range(0, 48, 1)),
     # act_names=[16],
     coeffs=[1],
     method="mask_injection_logprob",
     label_col="topic",
+    log={"group": "OpenWebText"},
 )
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
@@ -147,11 +148,11 @@ fig = experiments.plot_corpus_logprob_experiment(
     color_qty="topic",
     facet_col_qty=None,
     metric=CORPUS_METRIC,
-    category_orders={"topic": ["Masked prediction"]},
-    color_discrete_sequence=[
-        px.colors.qualitative.Plotly[1],
-        px.colors.qualitative.Plotly[0],
-    ],
+    # category_orders={"topic": ["OpenWebText"]},
+    # color_discrete_sequence=[
+    #     px.colors.qualitative.Plotly[1],
+    #     px.colors.qualitative.Plotly[0],
+    # ],
 )
 if not RUNNING_IN_TMUX:
     fig.show()
@@ -163,25 +164,25 @@ fig.write_image(
 
 # %%
 # Convert mod_df to a new df with one token per row, with logprob_actual_next_token_diff, text index, and residual position as columns.
-df_list = []
-for idx, row in tqdm(mod_df.iloc[:100].iterrows()):
-    this_df = pd.DataFrame(
-        {
-            "logprob_diff": row["logprob_actual_next_token_diff"],
-            "text_index": row["input_index"],
-            "pos": np.arange(len(row["logprob_actual_next_token_diff"])),
-        }
-    )
-    df_list.append(this_df)
-df_all_tokens = pd.concat(df_list).reset_index(drop=True)
-df_all_tokens = df_all_tokens[df_all_tokens["pos"] > 2]
-df_all_tokens_sorted = df_all_tokens.sort_values(
-    "logprob_diff", ascending=True
-)
-print(df_all_tokens_sorted)
+# df_list = []
+# for idx, row in tqdm(mod_df.iloc[:100].iterrows()):
+#     this_df = pd.DataFrame(
+#         {
+#             "logprob_diff": row["logprob_actual_next_token_diff"],
+#             "text_index": row["input_index"],
+#             "pos": np.arange(len(row["logprob_actual_next_token_diff"])),
+#         }
+#     )
+#     df_list.append(this_df)
+# df_all_tokens = pd.concat(df_list).reset_index(drop=True)
+# df_all_tokens = df_all_tokens[df_all_tokens["pos"] > 2]
+# df_all_tokens_sorted = df_all_tokens.sort_values(
+#     "logprob_diff", ascending=True
+# )
+# print(df_all_tokens_sorted)
 
-px.scatter(df_all_tokens_sorted["text_index"].reset_index(drop=True)).show()
-px.line(df_all_tokens_sorted["logprob_diff"].reset_index(drop=True))
+# px.scatter(df_all_tokens_sorted["text_index"].reset_index(drop=True)).show()
+# px.line(df_all_tokens_sorted["logprob_diff"].reset_index(drop=True))
 
 
 # %%
@@ -194,6 +195,7 @@ px.line(df_all_tokens_sorted["logprob_diff"].reset_index(drop=True))
     coeffs=np.linspace(-1, 4, 101),
     method="mask_injection_logprob",
     label_col="topic",
+    log={"group": "OpenWebText"},
 )
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
@@ -205,11 +207,11 @@ fig = experiments.plot_corpus_logprob_experiment(
     facet_col_name="Layer",
     facet_col_spacing=0.05,
     metric=CORPUS_METRIC,
-    category_orders={"topic": ["Masked prediction"]},
-    color_discrete_sequence=[
-        px.colors.qualitative.Plotly[1],
-        px.colors.qualitative.Plotly[0],
-    ],
+    # category_orders={"topic": ["OpenWebText"]},
+    # color_discrete_sequence=[
+    #     px.colors.qualitative.Plotly[1],
+    #     px.colors.qualitative.Plotly[0],
+    # ],
 )
 fig.update_xaxes({"tickmode": "array", "tickvals": [-1, 0, 1, 2, 3, 4]})
 if not RUNNING_IN_TMUX:
