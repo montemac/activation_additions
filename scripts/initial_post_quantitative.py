@@ -33,34 +33,45 @@ if not os.path.exists("images"):
 
 MODEL: HookedTransformer = HookedTransformer.from_pretrained(
     model_name="gpt2-xl", device="cpu"
-).to("cuda:0")  # type: ignore
+).to(
+    "cuda:0"
+)  # type: ignore
 nltk.download("punkt")
 tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
+# %%
 # Parsing, sampling, and tokenizing the dataset text
-with lzma.open('openwebtext_1.xz', 'rt') as f:
+with lzma.open("openwebtext_1.xz", "rt") as f:
     html_content = f.read()
-soup = BeautifulSoup(html_content, 'html.parser')
+soup = BeautifulSoup(html_content, "html.parser")
 text = soup.get_text()
 sentences = ["" + sentence for sentence in tokenizer.tokenize(text)]
-df = pd.DataFrame({"text": sentences, "topic": "Masked prediction"})
+df_all_texts = pd.DataFrame({"text": sentences, "topic": "OpenWebText"})
+
 
 # Remove too-short texts
-def count_tokens(text):
+def count_words(text):
     return len(text.split())
-df["token_count"] = df["text"].apply(count_tokens)
-df = df[df['token_count'] > 5]
+
+
+word_counts = df_all_texts["text"].apply(count_words)
+df_no_short = df_all_texts[word_counts > 5]
 
 # Filter out sentences with \x00 characters
-df = df[~df["text"].str.contains("\x00")]
+df_no_short_no_null = df_no_short[~df_no_short["text"].str.contains("\x00")]
+
+# Define a set of texts to use for experiments
+df_to_use = df_no_short_no_null
 
 
 # %%
 # Find and show the most impacted tokens in sampled texts
-POS = 9
+# to dig into why the modified model assigns low probability to \x00
+NULL_CHAR_TOKEN = MODEL.to_single_token("\x00")
+
 TOP_K = 10
-SAMPLE_SIZE = 15
-SEED = 0
+texts = [df_no_short.iloc[0]["text"]]
+POSS = [200]
 activation_additions = list(
     prompt_utils.get_x_vector(
         prompt1=" weddings",
@@ -72,11 +83,10 @@ activation_additions = list(
         custom_pad_id=MODEL.to_single_token(" "),  # type: ignore
     ),
 )
-df_sample = df.sample(n=SAMPLE_SIZE, random_state=SEED)
-for index, prompt in enumerate(df_sample["text"]):
+for index, (text, pos) in enumerate(zip(texts, POSS)):
     probs = logits.get_normal_and_modified_token_probs(
         model=MODEL,
-        prompts=prompt,
+        prompts=text,
         activation_additions=activation_additions,
         return_positions_above=0,
     )
@@ -84,44 +94,51 @@ for index, prompt in enumerate(df_sample["text"]):
         MODEL,
         probs["normal", "probs"],
         probs["mod", "probs"],
-        POS,
+        pos,
         TOP_K,
     )
     if not RUNNING_IN_TMUX:
         fig.show()
-    fig.write_image(
-        f"images/top_k_tokens_{index}.svg",
-        width=SVG_WIDTH,
-        height=SVG_HEIGHT,
-    )
+    # fig.write_image(
+    #     f"images/top_k_tokens_{index}.svg",
+    #     width=SVG_WIDTH,
+    #     height=SVG_HEIGHT,
+    # )
     fig, kl_div_plot_df = experiments.show_token_probs(
         MODEL,
         probs["normal", "probs"],
         probs["mod", "probs"],
-        POS,
+        pos,
         TOP_K,
         sort_mode="kl_div",
     )
     if not RUNNING_IN_TMUX:
         fig.show()
-    fig.write_image(
-        f"images/top_k_div_tokens_{index}.svg",
-        width=SVG_WIDTH,
-        height=SVG_HEIGHT,
-    )
+    # fig.write_image(
+    #     f"images/top_k_div_tokens_{index}.svg",
+    #     width=SVG_WIDTH,
+    #     height=SVG_HEIGHT,
+    # )
+
+# Maybe useful snippets later
+# Create a token rank matrix for the normal model
+# normal_logprob_sort_inds = np.argsort(probs.loc[:,('normal','logprobs',slice(None))].values, axis=1)
+# normal_token_ranks = np.zeros_like(normal_logprob_sort_inds)
+# np.put_along_axis(normal_token_ranks, normal_logprob_sort_inds,
+#     np.arange(normal_logprob_sort_inds.shape[1]), axis=1)
 
 # %%
 # Sweep an activation-addition over all model layers
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
-        model=MODEL,
-        labeled_texts=df[["text", "topic"]].iloc[:100],
-        x_vector_phrases=(" weddings", ""),
-        # act_names=list(range(0, 48, 1)),
-        act_names=[16],
-        coeffs=[1],
-        method="mask_injection_logprob",
-        label_col="topic",
-    )
+    model=MODEL,
+    labeled_texts=df_to_use[["text", "topic"]].iloc[:100],
+    x_vector_phrases=(" weddings", ""),
+    act_names=list(range(0, 48, 1)),
+    # act_names=[16],
+    coeffs=[1],
+    method="mask_injection_logprob",
+    label_col="topic",
+)
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
     corpus_name="OpenWebText",
@@ -148,33 +165,36 @@ fig.write_image(
 # Convert mod_df to a new df with one token per row, with logprob_actual_next_token_diff, text index, and residual position as columns.
 df_list = []
 for idx, row in tqdm(mod_df.iloc[:100].iterrows()):
-    this_df = pd.DataFrame({'logprob_diff': row['logprob_actual_next_token_diff'], 
-        'text_index': row['input_index'], 
-        'pos': np.arange(len(row['logprob_actual_next_token_diff']))})
+    this_df = pd.DataFrame(
+        {
+            "logprob_diff": row["logprob_actual_next_token_diff"],
+            "text_index": row["input_index"],
+            "pos": np.arange(len(row["logprob_actual_next_token_diff"])),
+        }
+    )
     df_list.append(this_df)
 df_all_tokens = pd.concat(df_list).reset_index(drop=True)
-df_all_tokens = df_all_tokens[df_all_tokens['pos'] > 2]
-df_all_tokens_sorted = df_all_tokens.sort_values('logprob_diff', ascending=True)
+df_all_tokens = df_all_tokens[df_all_tokens["pos"] > 2]
+df_all_tokens_sorted = df_all_tokens.sort_values(
+    "logprob_diff", ascending=True
+)
 print(df_all_tokens_sorted)
 
-px.scatter(df_all_tokens_sorted['text_index'].reset_index(drop=True)).show()
-px.line(df_all_tokens_sorted['logprob_diff'].reset_index(drop=True))
-
-
-
+px.scatter(df_all_tokens_sorted["text_index"].reset_index(drop=True)).show()
+px.line(df_all_tokens_sorted["logprob_diff"].reset_index(drop=True))
 
 
 # %%
 # Sweep an activation-addition over all coefficients
 (mod_df, results_grouped_df) = experiments.run_corpus_logprob_experiment(
-        model=MODEL,
-        labeled_texts=df[["text", "topic"]],
-        x_vector_phrases=(" weddings", ""),
-        act_names=[6, 16],
-        coeffs=np.linspace(-1, 4, 101),
-        method="mask_injection_logprob",
-        label_col="topic",
-    )
+    model=MODEL,
+    labeled_texts=df_to_use[["text", "topic"]],
+    x_vector_phrases=(" weddings", ""),
+    act_names=[6, 16],
+    coeffs=np.linspace(-1, 4, 101),
+    method="mask_injection_logprob",
+    label_col="topic",
+)
 fig = experiments.plot_corpus_logprob_experiment(
     results_grouped_df=results_grouped_df,
     corpus_name="OpenWebText",
