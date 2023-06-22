@@ -210,21 +210,116 @@ def completion_generation():
     placeholder.empty()
 
 
+def next_token_stats() -> None:
+    """Plot the next token probabilities, KL(). Writes output to
+    streamlit."""
+    # Calculate normal and modified token probabilities
+    from activation_additions import logits, experiments
+    import plotly.graph_objects as go
+    import pandas as pd
+
+    probs: pd.DataFrame = logits.get_normal_and_modified_token_probs(
+        model=st.session_state.model,
+        prompts=st.session_state.prompt,
+        activation_additions=st.session_state.activation_adds,
+        return_positions_above=0,  # NOTE idk what this does
+    )
+
+    # Show token probabilities figure
+    top_k: int = 10
+    fig, _ = experiments.show_token_probs(
+        st.session_state.model,
+        probs["normal", "probs"],
+        probs["mod", "probs"],
+        -1,
+        top_k,
+    )
+
+    # Adjusting figure layout
+    fig.update_layout(width=500)
+    st.write(fig)
+
+    # Calculate KL divergence and entropy
+    kl_divergence: float = (
+        (
+            probs["mod", "probs"]
+            * (probs["mod", "logprobs"] - probs["normal", "logprobs"])
+        )
+        .sum(axis="columns")
+        .iloc[-1]
+    )
+    entropy: float = (
+        (-probs["mod", "probs"] * probs["mod", "logprobs"])
+        .sum(axis="columns")
+        .iloc[-1]
+    )
+
+    # Display KL divergence and entropy
+    st.write(
+        "KL(modified||normal) of next token"
+        f" distribution:\t{kl_divergence:.3f}"
+    )
+    st.write(f"Entropy of next-token distribution:\t\t\t{entropy:.3f}")
+    st.write(
+        "KL(modified||normal) / entropy"
+        f" ratio:\t\t\t{kl_divergence / entropy:.3f}"
+    )
+
+    # Show token contributions to KL divergence
+    _, kl_div_plot_df = experiments.show_token_probs(
+        model=st.session_state.model,
+        probs_norm=probs["normal", "probs"],
+        probs_mod=probs["mod", "probs"],
+        pos=-1,
+        top_k=top_k,
+        sort_mode="kl_div",
+    )
+    kl_div_plot_df = kl_div_plot_df.rename(
+        columns={"text": "token", "y_values": "KL-div contribution"}
+    )
+
+    # Select 'token' and 'KL-div contribution' columns and round to 3 significant digits
+    df_selected = kl_div_plot_df[["token", "KL-div contribution"]].round(3)
+
+    # Wrap the 'token' column content in <code> HTML tags for monospace font
+    df_selected["token"] = df_selected["token"].apply(
+        lambda x: f"<code>{x}</code>"
+    )
+
+    # Display top-K tokens by contribution to KL divergence
+    st.write("Top-K tokens by contribution to KL divergence:")
+
+    # Convert the DataFrame to HTML and display without index
+    st.markdown(
+        df_selected.to_html(escape=False, index=False), unsafe_allow_html=True
+    )
+
+
 def main():
-    st.set_page_config(layout="wide")
+    st.set_page_config(
+        layout="wide",
+        initial_sidebar_state="expanded",
+        page_title="Activation addition explorer",
+        page_icon="🔎",
+    )
     st.title("The effects of an activation addition on GPT-2")
 
+    tools, stats = st.columns(spec=[0.7, 0.3])
     # Customization section
     with st.sidebar:
         customize_activation_addition()
+    with tools:
+        # Completion generation section
+        with st.expander("Completion generation"):
+            completion_generation()
 
-    # Completion generation section
-    with st.expander("Completion generation"):
-        completion_generation()
+        # Attention pattern visualization section
+        with st.expander("Attention pattern visualization"):
+            attention_pattern_visualization()
 
-    # Attention pattern visualization section
-    with st.expander("Attention pattern visualization"):
-        attention_pattern_visualization()
+    # Show some stats on how the activation addition affects the model
+    with stats:
+        next_token_stats()
 
     # TODO include sweeps
     # TODO include next-token probabilities
