@@ -2,7 +2,7 @@
 which typically include some combination of data loading and processing,
 analysis/sweeps/etc, and visualizing/summarizing results."""
 
-from typing import Tuple, Union, Optional, List
+from typing import Tuple, Union, Optional, List, Dict
 
 import numpy as np
 import pandas as pd
@@ -17,9 +17,11 @@ from algebraic_value_editing import (
     metrics,
     sweeps,
     logits,
+    logging,
 )
 
 
+@logging.loggable
 def run_corpus_logprob_experiment(
     model: HookedTransformer,
     labeled_texts: pd.DataFrame,
@@ -29,6 +31,7 @@ def run_corpus_logprob_experiment(
     method: str = "mask_injection_logprob",
     text_col: str = "text",
     label_col: str = "label",
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
 ):
     """Function to evaluate log-prob on a set of input texts for both the
     original model and a model with various activation injections.  The
