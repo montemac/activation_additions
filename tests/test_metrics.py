@@ -7,7 +7,7 @@ import openai
 
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import metrics, completion_utils, utils
+from activation_additions import metrics, completion_utils, utils
 
 utils.enable_ipython_reload()
 

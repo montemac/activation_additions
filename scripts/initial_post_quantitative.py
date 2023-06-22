@@ -26,7 +26,7 @@ import nltk.data
 
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import (
+from activation_additions import (
     prompt_utils,
     utils,
     metrics,

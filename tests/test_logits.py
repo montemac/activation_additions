@@ -7,7 +7,7 @@ import numpy as np
 
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import utils, logits
+from activation_additions import utils, logits
 
 utils.enable_ipython_reload()
 

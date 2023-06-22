@@ -1,4 +1,4 @@
-""" This script demonstrates how to use the algebraic_value_editing library to generate comparisons
+""" This script demonstrates how to use the activation_additions library to generate comparisons
 between two prompts. """
 
 # %%
@@ -8,8 +8,8 @@ import torch
 import transformer_lens
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import completion_utils, utils, hook_utils
-from algebraic_value_editing.prompt_utils import (
+from activation_additions import completion_utils, utils, hook_utils
+from activation_additions.prompt_utils import (
     ActivationAddition,
     get_x_vector,
 )

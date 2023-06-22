@@ -9,7 +9,7 @@ import pandas as pd
 import plotly.express as px
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import prompt_utils, hook_utils
+from activation_additions import prompt_utils, hook_utils
 
 
 def logits_to_probs_numpy(
@@ -185,9 +185,11 @@ def plot_effectiveness_and_disruption(
         color="score",
         # facet_row="score",
         barmode="group",
-        title="Effectiveness-sore and disruption-score over input sub-sequences"
-        if title is None
-        else title,
+        title=(
+            "Effectiveness-sore and disruption-score over input sub-sequences"
+            if title is None
+            else title
+        ),
     )
     # fig.update_xaxes(tickangle=-45, title="", tickfont=dict(size=14))
     fig.update_xaxes(tickangle=-45, title="")

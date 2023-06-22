@@ -7,13 +7,13 @@ from typing import List
 import torch
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import (
+from activation_additions import (
     completion_utils,
     utils,
     hook_utils,
     prompt_utils,
 )
-from algebraic_value_editing.prompt_utils import (
+from activation_additions.prompt_utils import (
     ActivationAddition,
     get_x_vector,
 )

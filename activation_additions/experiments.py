@@ -2,7 +2,7 @@
 which typically include some combination of data loading and processing,
 analysis/sweeps/etc, and visualizing/summarizing results."""
 
-from typing import Tuple, Union, Optional, List
+from typing import Tuple, Union, Optional, List, Dict
 
 import numpy as np
 import pandas as pd
@@ -12,14 +12,16 @@ import plotly.graph_objects as go
 
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import (
+from activation_additions import (
     prompt_utils,
     metrics,
     sweeps,
     logits,
+    logging,
 )
 
 
+@logging.loggable
 def run_corpus_logprob_experiment(
     model: HookedTransformer,
     labeled_texts: pd.DataFrame,
@@ -29,6 +31,7 @@ def run_corpus_logprob_experiment(
     method: str = "mask_injection_logprob",
     text_col: str = "text",
     label_col: str = "label",
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
 ):
     """Function to evaluate log-prob on a set of input texts for both the
     original model and a model with various activation injections.  The
@@ -191,7 +194,10 @@ def plot_corpus_logprob_experiment(
             "y_value": "Mean change in log-probs",
         }
     elif metric == "perplexity_ratio":
-        title = f"(Modified model perplexity) / (normal model perplexity) on {corpus_name}"
+        title = (
+            "(Modified model perplexity) / (normal model perplexity) on"
+            f" {corpus_name}"
+        )
         results_grouped_df = results_grouped_df.assign(
             y_value=np.exp(
                 -results_grouped_df["logprob_actual_next_token_diff_mean"]
@@ -284,7 +290,10 @@ def show_token_probs(
         ].copy()  # Copy to avoid negative stride
         y_values = kl_contrib[top_k_tokens]
         y_title = "Contribution to KL divergence (nats)"
-        title = f"Contribution to KL divergence vs normal-model probabilities {extra_title}"
+        title = (
+            "Contribution to KL divergence vs normal-model probabilities"
+            f" {extra_title}"
+        )
     else:
         raise ValueError(f"Unknown sort mode {sort_mode}")
 
@@ -450,7 +459,10 @@ def compare_with_prompting(
             pos,
             10,
             sort_mode="kl_div",
-            extra_title=f'<br>Input: "{"".join(tokens_str_normal[1 : (pos + 1)])}", method: {name}',
+            extra_title=(
+                f'<br>Input: "{"".join(tokens_str_normal[1 : (pos + 1)])}",'
+                f" method: {name}"
+            ),
         )
         figs_dict[name] = fig
 

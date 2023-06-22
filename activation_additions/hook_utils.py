@@ -9,7 +9,7 @@ from einops import reduce
 from transformer_lens import ActivationCache
 from transformer_lens.HookedTransformer import HookedTransformer, Loss
 from transformer_lens.hook_points import HookPoint, LensHandle
-from algebraic_value_editing.prompt_utils import (
+from activation_additions.prompt_utils import (
     ActivationAddition,
     pad_tokens_to_match_activation_additions,
     get_block_name,
@@ -68,9 +68,9 @@ def steering_vec_magnitudes(
 ) -> Float[torch.Tensor, "pos"]:
     """Compute the magnitude of the net steering vector at each sequence
     position."""
-    act_dict: Dict[
-        str, List[Float[torch.Tensor, "batch pos d_model"]]
-    ] = get_activation_dict(model=model, activation_additions=act_adds)
+    act_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]] = (
+        get_activation_dict(model=model, activation_additions=act_adds)
+    )
     if len(act_dict) > 1:
         raise NotImplementedError(
             "Only one activation name is supported for now."
