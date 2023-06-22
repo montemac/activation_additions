@@ -6,8 +6,8 @@ from typing import List, Dict
 import torch
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import hook_utils, prompt_utils, completion_utils
-from algebraic_value_editing.prompt_utils import ActivationAddition
+from activation_additions import hook_utils, prompt_utils, completion_utils
+from activation_additions.prompt_utils import ActivationAddition
 
 import streamlit as st
 from streamlit.components.v1 import html
@@ -125,7 +125,7 @@ def attention_pattern_visualization():
 
     # Split visualization into two columns
     st.header(f"Attention patterns for layer {attn_layer}")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     # Visualize attention patterns before intervention
     with col1:
@@ -150,10 +150,11 @@ def attention_pattern_visualization():
     attn_diff = attn_after - attn_before
 
     # Visualize the difference in attention patterns
-    st.subheader(f"Difference")
-    plot_attention_pattern_single(
-        tokens=prompt_str_tokens, attention=attn_diff
-    )
+    with col3:
+        st.subheader(f"Difference")
+        plot_attention_pattern_single(
+            tokens=prompt_str_tokens, attention=attn_diff
+        )
 
 
 def completion_generation():

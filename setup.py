@@ -26,6 +26,7 @@ setup(
         "Ipython",
         "ipywidgets",
         "tuned_lens",
+        "streamlit>=1.23.1",
     ],
     extras_require={
         "dev": [
