@@ -8,10 +8,14 @@ from transformer_lens.HookedTransformer import HookedTransformer
 
 from activation_additions import hook_utils, prompt_utils, completion_utils
 from activation_additions.prompt_utils import ActivationAddition
+from activation_additions import logits, experiments
 
 import streamlit as st
 from streamlit.components.v1 import html
 import circuitsvis as cv
+import pandas as pd
+
+import wandb
 
 
 @st.cache_data
@@ -49,15 +53,20 @@ _ = torch.set_grad_enabled(False)
 torch.manual_seed(0)  # For reproducibility
 
 
+def write_horizontal_rule() -> None:
+    """Writes a horizontal rule to the page."""
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+
 def customize_activation_addition():
-    st.sidebar.title("Model, prompt, and activation additions")
+    st.subheader("Model and prompt selection")
 
     model_name = st.selectbox(
-        "Select GPT-2 Model",
+        "Model",
         ["gpt2-small", "gpt2-medium", "gpt2-large", "gpt2-xl"],
     )
     # Load the GPT-2 model
-    model = load_model_tl(model_name=model_name, device="cuda")
+    model = load_model_tl(model_name=model_name, device="cuda")  # type: ignore
     st.session_state.model = model
 
     prompt: str = st.sidebar.text_input(
@@ -65,8 +74,7 @@ def customize_activation_addition():
     )
     st.session_state.prompt = prompt
 
-    st.markdown("<hr>", unsafe_allow_html=True)
-
+    st.subheader("Activation additions")
     act_prompt_1 = st.sidebar.text_input("Act add prompt 1", value="Love")
     act_prompt_2 = st.sidebar.text_input("Act add prompt 2", value="Hate")
     addition_layer: int = st.sidebar.slider(
@@ -211,13 +219,9 @@ def completion_generation():
 
 
 def next_token_stats() -> None:
-    """Plot the next token probabilities, KL(). Writes output to
+    """Write next-token probability statistics to streamlit
     streamlit."""
     # Calculate normal and modified token probabilities
-    from activation_additions import logits, experiments
-    import plotly.graph_objects as go
-    import pandas as pd
-
     probs: pd.DataFrame = logits.get_normal_and_modified_token_probs(
         model=st.session_state.model,
         prompts=st.session_state.prompt,
@@ -236,7 +240,11 @@ def next_token_stats() -> None:
     )
 
     # Adjusting figure layout
-    fig.update_layout(width=500)
+    fig.update_layout(
+        width=500,
+        font=dict(size=15),
+        title=f"Changes to top {top_k} token probabilities",
+    )
     st.write(fig)
 
     # Calculate KL divergence and entropy
@@ -256,7 +264,7 @@ def next_token_stats() -> None:
 
     # Display KL divergence and entropy
     st.write(
-        "KL(modified||normal) of next token"
+        "KL(modified||normal) of next-token"
         f" distribution:\t{kl_divergence:.3f}"
     )
     st.write(f"Entropy of next-token distribution:\t\t\t{entropy:.3f}")
@@ -273,26 +281,63 @@ def next_token_stats() -> None:
         pos=-1,
         top_k=top_k,
         sort_mode="kl_div",
-    )
+    )  # TODO somehow we're cutting initial whitespace, I think
     kl_div_plot_df = kl_div_plot_df.rename(
-        columns={"text": "token", "y_values": "KL-div contribution"}
+        columns={"text": "Token", "y_values": "KL-div contribution"}
     )
 
     # Select 'token' and 'KL-div contribution' columns and round to 3 significant digits
-    df_selected = kl_div_plot_df[["token", "KL-div contribution"]].round(3)
+    df_selected = kl_div_plot_df[["Token", "KL-div contribution"]].round(3)
 
     # Wrap the 'token' column content in <code> HTML tags for monospace font
-    df_selected["token"] = df_selected["token"].apply(
+    df_selected["Token"] = df_selected["Token"].apply(
         lambda x: f"<code>{x}</code>"
     )
 
     # Display top-K tokens by contribution to KL divergence
-    st.write("Top-K tokens by contribution to KL divergence:")
+    st.subheader(f"Top {top_k} contributors to KL divergence:")
 
     # Convert the DataFrame to HTML and display without index
     st.markdown(
         df_selected.to_html(escape=False, index=False), unsafe_allow_html=True
     )
+
+
+def wandb_interface() -> None:
+    """Interface for logging to Weights & Biases."""
+    st.subheader("Logging")
+    if wandb.api.api_key is None:
+        st.markdown(
+            "Not logged to Weights & Biases; enter API key into environment"
+            " variables."
+        )
+    else:
+        # User input for run name
+        run_name = st.text_input("Enter a name for your run:")
+        ENTITY: str = "turn-trout"  # NOTE enter your own entity
+        PROJECT: str = "activation_additions_streamlit"
+
+        # Initialize a new run in W&B
+        try:
+            run = wandb.init(
+                project=PROJECT,
+                entity=ENTITY,
+                name=run_name,
+                mode="offline",  # TODO change to online
+            )
+            # TODO log all relevant variables
+
+            if st.button("Sync to W&B"):
+                run.finish()
+                st.markdown(
+                    "Logging to Weights & Biases at"
+                    f" [{PROJECT}/{run.name}]({run.get_url()})."
+                )
+        except wandb.errors.CommError:
+            st.markdown(
+                "Communication error occurred; couldn't initialize Weights &"
+                " Biases run."
+            )
 
 
 def main():
@@ -302,12 +347,15 @@ def main():
         page_title="Activation addition explorer",
         page_icon="🔎",
     )
+
     st.title("The effects of an activation addition on GPT-2")
 
     tools, stats = st.columns(spec=[0.7, 0.3])
-    # Customization section
+
     with st.sidebar:
         customize_activation_addition()
+        wandb_interface()
+
     with tools:
         # Completion generation section
         with st.expander("Completion generation"):
@@ -319,10 +367,10 @@ def main():
 
     # Show some stats on how the activation addition affects the model
     with stats:
+        st.header("Effect on token probabilities")
         next_token_stats()
 
     # TODO include sweeps
-    # TODO include next-token probabilities
     # TODO add ability to stack activation additions
     # TODO include per-token probability visualization
     # TODO include perplexity ratios on datasets
