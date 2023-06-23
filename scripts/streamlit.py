@@ -40,7 +40,8 @@ def main():
             visualization.attention_pattern_visualization()
 
         with st.expander("Sweeps"):
-            completions.sweep_interface()
+            # completions.sweep_interface()
+            pass
 
     # Show some stats on how the activation addition affects the model
     with stats_col:
