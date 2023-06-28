@@ -77,8 +77,8 @@ def next_token_stats() -> None:
 
     # Wrap the 'Token' column content in <code> HTML tags for monospace font
     df_selected["Token"] = df_selected["Token"].apply(
-        lambda x: f"<code>{x}</code>"
-    )
+        lambda x: f'<code>{x.replace(" ", "&nbsp;")}</code>'
+    )  # Apply monospace to all tokens
 
     # Display top-K tokens by contribution to KL divergence
     st.markdown(f"**Top {top_k} contributors to KL divergence:**")

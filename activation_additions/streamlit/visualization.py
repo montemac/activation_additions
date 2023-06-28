@@ -64,7 +64,6 @@ def attention_pattern_visualization(
     attn_before = cache["pattern", attn_layer, "attn"]
 
     # Split visualization into two columns
-    st.header(f"Attention patterns for layer {attn_layer}")
     col1, col2, col3 = st.columns(3)
 
     # Visualize attention patterns before intervention
@@ -113,8 +112,6 @@ def attention_pattern_visualization():
         for hook_fn in hook_fns
     ]
 
-    st.subheader("Attention Pattern Visualization")
-
     attn_layer = st.slider(
         "Attention layer",
         min_value=0,
@@ -126,7 +123,7 @@ def attention_pattern_visualization():
     attn_before = cache["pattern", attn_layer, "attn"]
 
     # Split visualization into two columns
-    st.header(f"Attention patterns for layer {attn_layer}")
+    st.write(f"**Attention patterns for layer {attn_layer}**")
     col1, col2, col3 = st.columns(3)
 
     # Visualize attention patterns before intervention

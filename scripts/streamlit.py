@@ -12,6 +12,13 @@ from activation_additions.streamlit import (
 
 import pandas as pd
 
+# Reset imports TODO remove if not necessary
+import importlib
+
+importlib.reload(stats)
+importlib.reload(completions)
+importlib.reload(visualization)
+
 
 def generate_act_adds_table(skip_BOS_token: bool = False):
     """Generates a DataFrame containing the activation additions and
@@ -28,7 +35,7 @@ def generate_act_adds_table(skip_BOS_token: bool = False):
         model.to_str_tokens(act_add.prompt)
         for act_add in st.session_state.activation_adds
     ]
-    st.write(activation_addition_str_tokens)  # TODO not preserving whitespace
+
     coefficients = [
         act_add.coeff for act_add in st.session_state.activation_adds
     ]
@@ -52,7 +59,9 @@ def generate_act_adds_table(skip_BOS_token: bool = False):
     first_pos = 1 if skip_BOS_token else 0
     for token_position in range(first_pos, max_token_count):
         col_name: str = (
-            f"{token_position}" if token_position > first_pos else "Position 0"
+            f"{token_position}"
+            if token_position > first_pos
+            else f"Position {first_pos}"
         )
         # If the current token position is within the prompt length, create a new column for this position
         if token_position < len(st.session_state.prompt_str_tokens):
@@ -82,8 +91,11 @@ def generate_act_adds_table(skip_BOS_token: bool = False):
 
     # Apply monospace to all tokens
     for col in df.columns:
-        if col not in ["Layer", "Coefficient"]:
-            df[col] = df[col].apply(lambda x: f"<code>{x}</code>")
+        if col not in ["Layer", "Coefficient", "Position"]:
+            # Replace leading whitespaces with non-breaking spaces
+            df[col] = df[col].apply(
+                lambda x: f'<code>{x.replace(" ", "&nbsp;")}</code>'
+            )
 
     df.reset_index(drop=True, inplace=True)
     return df
@@ -108,14 +120,15 @@ def main():
 
         wandb.wandb_interface()
 
-    # New section to display the table
-    st.write(
-        "**Residual stream alignment for prompt and activation additions**"
-    )
-    df: pd.DataFrame = generate_act_adds_table()
-    st.markdown(df.to_html(escape=False), unsafe_allow_html=True)
-
     with tools_col:
+        # Activation addition table
+        st.write(
+            "**Residual stream alignment for prompt and activation additions**"
+        )
+        df: pd.DataFrame = generate_act_adds_table(skip_BOS_token=True)
+        st.markdown(df.to_html(escape=False), unsafe_allow_html=True)
+        st.write("")
+
         # Completion generation section
         with st.expander("Completion generation"):
             completions.completion_generation()
