@@ -34,7 +34,7 @@ def completion_generation() -> None:
 
     completion_utils.print_n_comparisons(
         model=st.session_state.model,
-        activation_additions=st.session_state.activation_adds,
+        activation_additions=st.session_state.flat_adds,
         prompt=st.session_state.prompt,
         num_comparisons=num_comparisons,
         tokens_to_generate=tokens_to_generate,
@@ -63,7 +63,6 @@ def completion_generation() -> None:
 def sweep_interface() -> None:
     """Run the current set of"""
     from activation_additions import sweeps, metrics, prompt_utils
-    import pickle
     import numpy as np
 
     model = st.session_state.model
@@ -104,12 +103,6 @@ def sweep_interface() -> None:
         ),
     }
 
-    # Run the sweep of completions, or load from cache
-    # CACHE_FN = "sweeps_demo_cache.pkl"
-    # try:
-    #     with open(CACHE_FN, "rb") as file:
-    #         normal_df, patched_df, activation_additions_df = pickle.load(file)
-    # except FileNotFoundError:
     normal_df, patched_df = sweeps.sweep_over_prompts(
         model,
         prompts,
@@ -122,8 +115,6 @@ def sweep_interface() -> None:
         freq_penalty=1,
         top_p=0.3,
     )
-    # with open(CACHE_FN, "wb") as file:
-    #     pickle.dump((normal_df, patched_df, activation_additions_df), file)
 
     # Visualize
 

@@ -6,10 +6,11 @@ from activation_additions.streamlit import (
     completions,
     visualization,
     stats,
-    wandb,
+    logging,
     sidebar,
 )
 
+import wandb
 import pandas as pd
 
 # Reset imports TODO remove if not necessary
@@ -18,7 +19,7 @@ import importlib
 importlib.reload(stats)
 importlib.reload(completions)
 importlib.reload(visualization)
-importlib.reload(wandb)
+importlib.reload(logging)
 importlib.reload(sidebar)
 
 
@@ -35,11 +36,11 @@ def main():
     tools_col, stats_col = st.columns(spec=[0.7, 0.3])
 
     with st.sidebar:
+        logging.wandb_interface()
+
         sidebar.model_selection()
         sidebar.prompt_selection()
-        sidebar.customize_activation_addition()
-
-        wandb.wandb_interface()
+        sidebar.customize_activation_additions()
 
     with tools_col:
         # Activation addition table

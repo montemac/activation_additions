@@ -2,6 +2,7 @@
 from typing import List
 
 import torch
+import wandb
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from activation_additions import prompt_utils
@@ -36,6 +37,9 @@ def model_selection():
     model = load_model_tl(model_name=model_name, device="cuda")  # type: ignore
     st.session_state.model = model
 
+    if wandb.run is not None:
+        wandb.config.update({"model_name": model_name})
+
 
 def prompt_selection():
     model = st.session_state.model
@@ -48,30 +52,65 @@ def prompt_selection():
     st.session_state.prompt_tokens = model.to_tokens(prompt)
     st.session_state.prompt_str_tokens = model.to_str_tokens(prompt)
 
+    if wandb.run is not None:
+        wandb.config.update({"prompt": prompt})
 
-def customize_activation_addition():
-    model = st.session_state.model
 
+def customize_activation_additions():
     st.subheader("Activation additions")
-    act_prompt_1 = st.sidebar.text_input("Act add prompt 1", value="Love")
-    act_prompt_2 = st.sidebar.text_input("Act add prompt 2", value="Hate")
-    addition_layer: int = st.sidebar.slider(
-        "Injection site",
-        min_value=0,
-        max_value=model.cfg.n_layers - 1,
-        value=0,
-    )
-    st.session_state.coefficient = st.sidebar.number_input(
-        "Coefficient", value=1.0
-    )
+    if "activation_adds" not in st.session_state:
+        st.session_state.activation_adds = []
 
-    # Get hooks for the activation addition on the GPT-2 model
-    activation_adds: List[ActivationAddition] = [
-        *prompt_utils.get_x_vector(
+    for i in range(len(st.session_state.activation_adds)):
+        st.markdown(f"**Activation Addition Pair {i+1}**")
+        act_prompt_1 = st.text_input(
+            f"Prompt 1", value="Love", key=f"prompt 1 {i+1}"
+        )
+        act_prompt_2 = st.text_input(
+            f"Prompt 2", value="Hate", key=f"prompt 2 {i+1}"
+        )
+        addition_layer: int = st.slider(
+            f"Injection site",
+            min_value=0,
+            max_value=st.session_state.model.cfg.n_layers - 1,
+            value=0,
+            key=f"site {i+1}",
+        )
+        coefficient = st.number_input(
+            f"Coefficient", value=1.0, key=f"coeff {i+1}"
+        )
+
+        activation_adds = prompt_utils.get_x_vector(
             act_prompt_1,
             act_prompt_2,
-            st.session_state.coefficient,
+            coefficient,
             addition_layer,
         )
-    ]
-    st.session_state.activation_adds = activation_adds
+
+        st.session_state.activation_adds[i] = activation_adds
+
+        if len(st.session_state.activation_adds) > 0 and st.button(
+            f"Remove Addition Pair {i+1}"
+        ):
+            st.session_state.activation_adds.pop(i)
+
+    st.session_state.flat_adds = [
+        item
+        for sublist in st.session_state.activation_adds
+        for item in sublist
+    ]  # Flatten list of lists TODO config this
+
+    # Add horizontal break
+    st.markdown("---")
+    if st.button("Add Pair"):
+        st.session_state.activation_adds.append(None)
+
+    # if wandb.run is not None:
+    #     wandb.config.update(
+    #         {
+    #             "act_prompt_1": act_prompt_1,
+    #             "act_prompt_2": act_prompt_2,
+    #             "addition_layer": addition_layer,
+    #             "coefficient": st.session_state.coefficient,
+    #         }
+    #     )

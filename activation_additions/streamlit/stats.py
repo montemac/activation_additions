@@ -11,7 +11,7 @@ def next_token_stats() -> None:
     probs: pd.DataFrame = logits.get_normal_and_modified_token_probs(
         model=st.session_state.model,
         prompts=st.session_state.prompt,
-        activation_additions=st.session_state.activation_adds,
+        activation_additions=st.session_state.flat_adds,
         return_positions_above=0,
     )
 
@@ -98,29 +98,33 @@ def generate_act_adds_table(skip_BOS_token: bool = False):
     :param skip_BOS_token: Whether to skip the BOS token in the prompt
         (pos 0)."""
     model = st.session_state.model
+    # Flatten the activation additions
 
     # Get activation additions details
     activation_addition_str_tokens = [
         model.to_str_tokens(act_add.prompt)
-        for act_add in st.session_state.activation_adds
+        for act_add in st.session_state.flat_adds
     ]
 
-    coefficients = [
-        act_add.coeff for act_add in st.session_state.activation_adds
-    ]
-    layers = [act_add.act_name for act_add in st.session_state.activation_adds]
+    coefficients = [act_add.coeff for act_add in st.session_state.flat_adds]
+    layers = [act_add.act_name for act_add in st.session_state.flat_adds]
 
     data = {
-        "Layer": ["embed (Prompt)"] + layers,
+        "Injection site": ["embed (Prompt)"] + layers,
         "Coefficient": [1.0] + coefficients,
     }
 
-    # Determine the maximum number of tokens across all prompts and activation additions
+    # Determine the maximum number of tokens across all prompts and
+    # activation additions
     max_token_count = max(
         len(st.session_state.prompt_str_tokens),
-        max([len(tokens) for tokens in activation_addition_str_tokens]),
+        (
+            max([len(tokens) for tokens in activation_addition_str_tokens])
+            if activation_addition_str_tokens
+            else 0  # Find the maximum number of tokens across all activation additions
+        ),
     )
-    MAX_TOKENS: int = 6
+    MAX_TOKENS: int = 6  # Maximum number of tokens to display, including BOS
     max_token_count = min(max_token_count, MAX_TOKENS)
 
     # Populate the 'Position' column and generate additional columns for
@@ -160,7 +164,7 @@ def generate_act_adds_table(skip_BOS_token: bool = False):
 
     # Apply monospace to all tokens
     for col in df.columns:
-        if col not in ["Layer", "Coefficient", "Position"]:
+        if col not in ["Layer", "Coefficient", "Injection site"]:
             # Replace leading whitespaces with non-breaking spaces
             df[col] = df[col].apply(
                 lambda x: f'<code>{x.replace(" ", "&nbsp;")}</code>'
