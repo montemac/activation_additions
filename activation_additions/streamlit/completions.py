@@ -4,7 +4,14 @@ import sys
 
 import streamlit as st
 
-from activation_additions import completion_utils
+from activation_additions import (
+    sweeps,
+    metrics,
+    prompt_utils,
+    completion_utils,
+)
+import numpy as np
+import wandb
 
 
 def completion_generation() -> None:
@@ -23,6 +30,17 @@ def completion_generation() -> None:
     tokens_to_generate = st.number_input(
         "Tokens to generate", min_value=0, value=50, step=1
     )
+    if wandb.run is not None:
+        wandb.config.update(
+            {
+                "sampling/temperature": temperature,
+                "sampling/freq_penalty": freq_penalty,
+                "sampling/top_p": top_p,
+                "sampling/num_comparisons": num_comparisons,
+                "sampling/seed": seed,
+                "sampling/tokens_to_generate": tokens_to_generate,
+            }
+        )
 
     # Create a "loading" placeholder
     placeholder = st.empty()
@@ -55,16 +73,15 @@ def completion_generation() -> None:
 
     # Display the completions in the Streamlit app
     st.code(completions_output, language=None)
+    if wandb.run is not None:
+        wandb.log({"completions": completions_output})
 
     # Remove the loading indicator
     placeholder.empty()
 
 
 def sweep_interface() -> None:
-    """Run the current set of"""
-    from activation_additions import sweeps, metrics, prompt_utils
-    import numpy as np
-
+    """Run the current set of TODO unfinished"""
     model = st.session_state.model
     activation_additions_df = sweeps.make_activation_additions(
         [

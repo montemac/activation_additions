@@ -10,7 +10,6 @@ from activation_additions.streamlit import (
     sidebar,
 )
 
-import wandb
 import pandas as pd
 
 # Reset imports TODO remove if not necessary
