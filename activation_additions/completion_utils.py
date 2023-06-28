@@ -191,7 +191,7 @@ def gen_using_hooks(
             tokens_to_generate,
             seed,
             include_logits,
-            log,
+            log=log,
             **sampling_kwargs,
         )
 
@@ -247,7 +247,7 @@ def gen_using_activation_additions(
         )
     )
 
-    return gen_using_hooks(model=model, hook_fns=hook_fns, log=False, **kwargs)
+    return gen_using_hooks(model=model, hook_fns=hook_fns, **kwargs)
 
 
 # Display utils #

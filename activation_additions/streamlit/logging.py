@@ -4,7 +4,7 @@ import wandb
 import streamlit as st
 
 
-def display_finished_run() -> None:
+def finish_run_and_display() -> None:
     """Displays a finished run."""
     if wandb.run is None:
         return
@@ -31,7 +31,7 @@ def wandb_interface() -> None:
             "run_name" in st.session_state
             and st.session_state.run_name != run_name
         ):
-            display_finished_run()  # TODO have way to not finish run
+            finish_run_and_display()  # TODO have way to not finish run
 
         st.session_state.run_name = run_name  # Track previous state
 
@@ -47,7 +47,7 @@ def wandb_interface() -> None:
             )
 
             if st.button("Sync to W&B"):
-                display_finished_run()
+                finish_run_and_display()
         except wandb.errors.CommError:
             st.markdown(
                 "Communication error occurred; couldn't initialize Weights &"

@@ -99,7 +99,13 @@ def customize_activation_additions():
         item
         for sublist in st.session_state.activation_adds
         for item in sublist
-    ]  # Flatten list of lists TODO config this
+    ]  # Flatten list of lists
+
+    if wandb.run is not None:
+        wandb.config.update(
+            {"activation_adds": st.session_state.flat_adds},
+            allow_val_change=True,
+        )
 
     # Add horizontal break
     st.markdown("---")
