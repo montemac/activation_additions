@@ -61,7 +61,8 @@ def customize_activation_additions():
     if "activation_adds" not in st.session_state:
         st.session_state.activation_adds = []
 
-    for i in range(len(st.session_state.activation_adds)):
+    i = 0
+    while i < len(st.session_state.activation_adds):
         st.markdown(f"**Activation Addition Pair {i+1}**")
         act_prompt_1 = st.text_input(
             f"Prompt 1", value="Love", key=f"prompt 1 {i+1}"
@@ -89,10 +90,10 @@ def customize_activation_additions():
 
         st.session_state.activation_adds[i] = activation_adds
 
-        if len(st.session_state.activation_adds) > 0 and st.button(
-            f"Remove Addition Pair {i+1}"
-        ):
+        if st.button(f"Remove Addition Pair {i+1}"):
             st.session_state.activation_adds.pop(i)
+            continue
+        i += 1
 
     st.session_state.flat_adds = [
         item

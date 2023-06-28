@@ -4,6 +4,18 @@ import wandb
 import streamlit as st
 
 
+def display_finished_run() -> None:
+    """Displays a finished run."""
+    if wandb.run is None:
+        return
+    st.markdown(
+        f"Run {wandb.run.project}/{wandb.run.name} finished. View it on "
+        f"[Weights & Biases](https://wandb.ai/{wandb.run.entity}/"
+        f"{wandb.run.project}/runs/{wandb.run.id})."
+    )
+    wandb.run.finish()
+
+
 def wandb_interface() -> None:
     """Interface for logging to Weights & Biases."""
     st.subheader("Logging")
@@ -13,25 +25,29 @@ def wandb_interface() -> None:
             " variables."
         )
     else:
-        # User input for run name
         run_name = st.text_input("Enter a name for your run:")
+        # If run_name has changed, finish the previous run
+        if (
+            "run_name" in st.session_state
+            and st.session_state.run_name != run_name
+        ):
+            display_finished_run()  # TODO have way to not finish run
+
+        st.session_state.run_name = run_name  # Track previous state
+
         ENTITY: str = "turn-trout"  # NOTE enter your own entity
         PROJECT: str = "activation_additions_streamlit"
 
         # Initialize a new run in W&B
         try:
-            run = wandb.init(
+            wandb.init(
                 project=PROJECT,
                 entity=ENTITY,
                 name=run_name,
             )
 
-            if st.button("Sync to W&B") and run is not None:
-                st.markdown(
-                    "Logged data to Weights & Biases at"
-                    f" [{PROJECT}/{run.name}]({run.get_url()})."
-                )
-                run.finish()
+            if st.button("Sync to W&B"):
+                display_finished_run()
         except wandb.errors.CommError:
             st.markdown(
                 "Communication error occurred; couldn't initialize Weights &"

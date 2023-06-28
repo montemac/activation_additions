@@ -74,7 +74,8 @@ def completion_generation() -> None:
     # Display the completions in the Streamlit app
     st.code(completions_output, language=None)
     if wandb.run is not None:
-        wandb.log({"completions": completions_output})
+        wandb.log({"completions": "abc"})
+        # wandb.log({"completions": completions_output})
 
     # Remove the loading indicator
     placeholder.empty()
