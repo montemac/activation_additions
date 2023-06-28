@@ -29,8 +29,8 @@ def next_token_stats() -> None:
     fig.update_layout(
         width=500,
         font=dict(size=15),
-        title=f"Changes to top {top_k} token probabilities",
-    )
+        title=f"Changes to top token probabilities",
+    )  # top-k for both normal and modified models
     st.write(fig)
 
     # Calculate KL divergence and entropy

@@ -26,6 +26,15 @@ def wandb_interface() -> None:
                 name=run_name,
             )
             # TODO log all relevant variables
+            # Log all relevant variables
+            relevant_variables = {
+                "model": st.session_state.model,
+                "prompt": st.session_state.prompt,
+                # "activation_adds": st.session_state.activation_adds,
+                # "coefficient": st.session_state.coefficient,
+                # Add more variables here...
+            }
+            wandb.log(relevant_variables)
 
             if st.button("Sync to W&B") and run is not None:
                 st.markdown(
