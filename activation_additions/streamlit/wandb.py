@@ -24,16 +24,15 @@ def wandb_interface() -> None:
                 project=PROJECT,
                 entity=ENTITY,
                 name=run_name,
-                mode="offline",  # TODO change to online
             )
             # TODO log all relevant variables
 
             if st.button("Sync to W&B") and run is not None:
-                run.finish()
                 st.markdown(
-                    "Logging to Weights & Biases at"
+                    "Logged data to Weights & Biases at"
                     f" [{PROJECT}/{run.name}]({run.get_url()})."
                 )
+                run.finish()
         except wandb.errors.CommError:
             st.markdown(
                 "Communication error occurred; couldn't initialize Weights &"
