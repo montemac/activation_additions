@@ -30,7 +30,7 @@ def main():
         page_icon="🔎",
     )
 
-    st.title("The effects of an activation addition on GPT-2")
+    st.title("Activation addition explorer")
 
     tools_col, stats_col = st.columns(spec=[0.7, 0.3])
 

@@ -60,6 +60,7 @@ def completion_generation() -> None:
         freq_penalty=freq_penalty,
         top_p=top_p,
         seed=seed,
+        log=wandb.run is not None,
     )
 
     # Retrieve the captured stdout
@@ -73,9 +74,20 @@ def completion_generation() -> None:
 
     # Display the completions in the Streamlit app
     st.code(completions_output, language=None)
+
+    import tempfile
+    import os
+
+    # Save the completions to a temporary file
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as temp:
+        temp.write(completions_output.encode("utf-8"))
+        temp_path = temp.name
+
+        # Upload the completions file to Weights & Biases if a run is active
     if wandb.run is not None:
-        wandb.log({"completions": "abc"})
-        # wandb.log({"completions": completions_output})
+        wandb.save(os.path.abspath(temp_path))
+
+    os.remove(temp_path)
 
     # Remove the loading indicator
     placeholder.empty()

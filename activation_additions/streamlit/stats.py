@@ -1,6 +1,7 @@
 # stats.py
 import pandas as pd
 import streamlit as st
+import wandb
 
 from activation_additions import logits, experiments
 
@@ -87,6 +88,22 @@ def next_token_stats() -> None:
     st.markdown(
         df_selected.to_html(escape=False, index=False), unsafe_allow_html=True
     )
+    if wandb.run is not None:
+        next_token_section: str = "next_token"
+        wandb.log(
+            {
+                f"{next_token_section}/top_k": top_k,
+                # f"{next_token_section}/rel_token_plotly": fig,
+                f"{next_token_section}/kl_div": kl_divergence,
+                f"{next_token_section}/entropy": entropy,
+                f"{next_token_section}/kl_div_entropy_ratio": (
+                    kl_divergence / entropy
+                ),
+                f"{next_token_section}/kl_div_contributions": wandb.Table(
+                    data=df_selected
+                ),
+            }
+        )
 
 
 def generate_act_adds_table(skip_BOS_token: bool = False):
@@ -161,14 +178,17 @@ def generate_act_adds_table(skip_BOS_token: bool = False):
 
     # Create a DataFrame from the data dictionary
     df = pd.DataFrame(data)
+    df.reset_index(drop=True, inplace=True)
+
+    # if wandb.run is not None:
+    #     wandb.log({"activation_additions_table": wandb.Table(dataframe=df)})
 
     # Apply monospace to all tokens
     for col in df.columns:
-        if col not in ["Layer", "Coefficient", "Injection site"]:
+        if col not in ["Coefficient", "Injection site"]:
             # Replace leading whitespaces with non-breaking spaces
             df[col] = df[col].apply(
                 lambda x: f'<code>{x.replace(" ", "&nbsp;")}</code>'
             )
 
-    df.reset_index(drop=True, inplace=True)
     return df
