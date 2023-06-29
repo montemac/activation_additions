@@ -340,6 +340,11 @@ for desc, filename in FILENAMES.items():
     texts.append(pd.DataFrame({"text": sentences, "topic": desc}))
 texts_df = pd.concat(texts).reset_index(drop=True)
 
+# %%
+# TEMP: test the corpus logprob stats function
+avg_logprob, perplexity, logprobs = experiments.get_stats_over_corpus(
+    MODEL, [open(FILENAMES["weddings"]).read()], mask_len=2
+)
 
 # %%
 # Perform layers-dense experiment and show results

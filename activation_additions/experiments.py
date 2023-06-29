@@ -9,8 +9,11 @@ import pandas as pd
 import torch
 import plotly.express as px
 import plotly.graph_objects as go
+import nltk
+import nltk.data
 
 from transformer_lens import HookedTransformer
+from transformer_lens.utils import lm_cross_entropy_loss
 
 from activation_additions import (
     prompt_utils,
@@ -19,6 +22,134 @@ from activation_additions import (
     logits,
     logging,
 )
+
+
+@logging.loggable
+def get_stats_over_corpus(
+    model: HookedTransformer,
+    corpus_texts: List[str],
+    split_method: Optional[str] = "sentence",
+    mask_len: int = 0,
+    sentence_batch_max_len_diff: int = 5,
+    sentence_batch_max_size: int = 50,
+    token_batch_len: int = 32,
+    token_batch_stride: int = 32,
+):
+    """Function to run forward pass(es) over a corpus given a model,
+    returning various stats including perplexity.
+
+    `split_method` is one of:
+    - "sentence": use a tokenizer to split each corpus string into
+    sentences, then run forward pass on each sentence individually, with
+    BOS prepended.
+    - "token_batch: tokenize each corpus string, concatenate with EOS
+    seperating each string, then split into batches of tokens according
+    to `token_batch_len` and `token_batch_stride` args, and run forward
+    passes on these token batches.
+
+    `mask_len` is the number of token positions to mask at the start of
+    each forward pass, to ensure that the immediate effect of any
+    activation additions is removed from aggregated stats that depend on
+    logprobs.
+
+    Returns the average logprob, perplexity, and a 1D tensor containing
+    all the valid logprobs from the forward passes stacked together
+    (i.e. not including token positions that were masked out by `mask_len`)
+    """
+    assert split_method in [
+        "sentence",
+        "token_batch",
+    ], "Invalid split_method"
+    if split_method == "sentence":
+        # If split_method is "sentence", split each corpus string into
+        # sentences, then tokenize each sentence, and store the results in a
+        # list
+        nltk.download("punkt")
+        tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
+
+        # Split the essays into sentences and tokenize them
+        sentences_tokens = []
+        for text in corpus_texts:
+            sentences = tokenizer.tokenize(text)  # type: ignore
+            tokens = [
+                model.to_tokens(sentence).squeeze() for sentence in sentences
+            ]
+            sentences_tokens.extend(tokens)
+
+        # Get the sort incides that would sort the sentences by length
+        sort_indices = np.argsort([len(tokens) for tokens in sentences_tokens])
+
+        # Group sentence tokens into batches of similar length, and use a
+        # generator to produce batched tensors, which will be the inputs to
+        # successive forward passes.
+        def batch_generator():
+            batch_list = [sentences_tokens[0]]
+            min_len = len(sentences_tokens[0])
+            sentinel = max(model.tokenizer.vocab.values()) + 1
+
+            def batch_to_tokens():
+                batch_tokens = torch.nn.utils.rnn.pad_sequence(
+                    batch_list, batch_first=True, padding_value=sentinel
+                )
+                batch_pad_mask = batch_tokens != sentinel
+                # Actual pad token doesn't matter, just needs to be valid
+                batch_tokens[~batch_pad_mask] = 0
+                return batch_tokens, batch_pad_mask
+
+            for idx in sort_indices[1:]:
+                # Check if the current sentence is similar enough in
+                # length to the others to be added to the batch, and the
+                # batch isn't too long. If not, yield the current batch
+                # and start a new one.
+                if (
+                    len(sentences_tokens[idx])
+                    > min_len + sentence_batch_max_len_diff
+                    or len(batch_list) >= sentence_batch_max_size
+                ):
+                    yield batch_to_tokens()
+                    batch_list = [sentences_tokens[idx]]
+                    min_len = len(sentences_tokens[idx])
+                else:
+                    batch_list.append(sentences_tokens[idx])
+
+            # Yield the final batch
+            yield batch_to_tokens()
+
+    elif split_method == "sentence":
+        # If split_method is "token_batch", tokenize each corpus string
+        # individually, then concatenate the tokenized strings with EOS,
+        # then concatenate into a single tensor.  A generator will be used
+        # to yield slices of this tensor, which will be the forward
+        # pass.
+        raise NotImplementedError("token_batch not implemented yet")
+
+    # Run forward passes over the batches, and collect the results
+    logprobs_all_list = []
+    for batch_tokens, batch_pad_mask in batch_generator():
+        logits = model.forward(input=batch_tokens, return_type="logits")
+        # Logprob of the next token is just the negative of the
+        # cross entropy loss
+        logprobs = -lm_cross_entropy_loss(
+            logits, batch_tokens, per_token=True
+        ).detach()
+        # Ignore the predictions from the first mask_len tokens, and
+        # flatten into a single vector of logprobs
+        logprobs_flat = logprobs[:, mask_len:].flatten()
+        # Create a mask for the logprobs, to ignore the padding tokens
+        # We igore the final position of the mask because the final
+        # token position's prediction doesn't have an actual next token logprob
+        batch_pad_mask_flat = batch_pad_mask[:, mask_len:-1].flatten()
+        # Extract only the non-padding logprobs
+        logprobs_masked = logprobs_flat[batch_pad_mask_flat]
+        logprobs_all_list.append(logprobs_masked)
+
+    # Concatenate the logprobs from all batches into a single vector
+    logprobs_all = torch.cat(logprobs_all_list)
+
+    # Calculate the average logprob and the perplexity
+    avg_logprob = logprobs_all.mean().item()
+    perplexity = np.exp(-avg_logprob)
+    return avg_logprob, perplexity, logprobs_all
 
 
 @logging.loggable
