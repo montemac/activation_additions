@@ -882,7 +882,6 @@ print(plot_df)
 # %%
 # TEMP: test the corpus logprob stats function
 text = open(FILENAMES["weddings"]).read()
-# text = "This weekend I am going to a wedding. My friends are getting married."
 
 # Define activation additions
 activation_additions = list(
