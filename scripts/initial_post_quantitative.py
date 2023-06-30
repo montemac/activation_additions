@@ -29,6 +29,7 @@ from transformer_lens import HookedTransformer
 
 from activation_additions import (
     prompt_utils,
+    hook_utils,
     utils,
     metrics,
     sweeps,
@@ -340,11 +341,6 @@ for desc, filename in FILENAMES.items():
     texts.append(pd.DataFrame({"text": sentences, "topic": desc}))
 texts_df = pd.concat(texts).reset_index(drop=True)
 
-# %%
-# TEMP: test the corpus logprob stats function
-avg_logprob, perplexity, logprobs = experiments.get_stats_over_corpus(
-    MODEL, [open(FILENAMES["weddings"]).read()], mask_len=2
-)
 
 # %%
 # Perform layers-dense experiment and show results
@@ -361,7 +357,8 @@ else:
         model=MODEL,
         labeled_texts=texts_df[["text", "topic"]],
         x_vector_phrases=(" weddings", ""),
-        act_names=list(range(0, 48, 1)),
+        # act_names=list(range(0, 48, 1)),
+        act_names=[10, 16],
         coeffs=[1],
         method="mask_injection_logprob",
         label_col="topic",
@@ -880,3 +877,58 @@ print(plot_df)
 #     height=PNG_HEIGHT,
 #     scale=PNG_SCALE,
 # )
+
+
+# %%
+# TEMP: test the corpus logprob stats function
+text = open(FILENAMES["weddings"]).read()
+# text = "This weekend I am going to a wedding. My friends are getting married."
+
+# Define activation additions
+activation_additions = list(
+    prompt_utils.get_x_vector(
+        prompt1=" weddings",
+        prompt2="",
+        coeff=1.0,
+        act_name=16,
+        model=MODEL,
+        pad_method="tokens_right",
+        custom_pad_id=MODEL.to_single_token(" "),  # type: ignore
+    ),
+)
+
+# Get the mask length to use for all forward passes to mask out the
+# activation additions positions.
+mask_len = prompt_utils.get_max_addition_len(MODEL, activation_additions)
+
+# Normal, unmodified model
+avg_logprob, perplexity, logprobs = experiments.get_stats_over_corpus(
+    MODEL, [text], mask_len=mask_len
+)
+
+# Modified model
+with hook_utils.apply_activation_additions(MODEL, activation_additions):
+    (
+        avg_logprob_mod,
+        perplexity_mod,
+        logprobs_mod,
+    ) = experiments.get_stats_over_corpus(MODEL, [text], mask_len=mask_len)
+
+# Compare with sweeps function
+(
+    mod_df,
+    results_grouped_df,
+) = experiments.run_corpus_logprob_experiment(
+    model=MODEL,
+    labeled_texts=pd.DataFrame(
+        {"text": tokenizer.tokenize(text), "topic": "weddings"}
+    ),
+    x_vector_phrases=(" weddings", ""),
+    act_names=[16],
+    coeffs=[1],
+    method="mask_injection_logprob",
+    label_col="topic",
+)
+
+print(avg_logprob_mod - avg_logprob)
+print(results_grouped_df["logprob_actual_next_token_diff_mean"].iloc[0])

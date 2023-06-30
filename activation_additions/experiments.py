@@ -32,9 +32,10 @@ def get_stats_over_corpus(
     mask_len: int = 0,
     sentence_batch_max_len_diff: int = 5,
     sentence_batch_max_size: int = 50,
-    token_batch_len: int = 32,
-    token_batch_stride: int = 32,
-):
+    token_batch_len: int = 32,  # pylint: disable=unused-argument
+    token_batch_stride: int = 32,  # pylint: disable=unused-argument
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
+) -> Tuple[float, float, torch.Tensor]:
     """Function to run forward pass(es) over a corpus given a model,
     returning various stats including perplexity.
 
@@ -83,8 +84,8 @@ def get_stats_over_corpus(
         # generator to produce batched tensors, which will be the inputs to
         # successive forward passes.
         def batch_generator():
-            batch_list = [sentences_tokens[0]]
-            min_len = len(sentences_tokens[0])
+            batch_list = [sentences_tokens[sort_indices[0]]]
+            min_len = len(batch_list[0])
             sentinel = max(model.tokenizer.vocab.values()) + 1
 
             def batch_to_tokens():
@@ -126,19 +127,19 @@ def get_stats_over_corpus(
     # Run forward passes over the batches, and collect the results
     logprobs_all_list = []
     for batch_tokens, batch_pad_mask in batch_generator():
-        logits = model.forward(input=batch_tokens, return_type="logits")
+        logits_this = model.forward(input=batch_tokens, return_type="logits")
         # Logprob of the next token is just the negative of the
         # cross entropy loss
         logprobs = -lm_cross_entropy_loss(
-            logits, batch_tokens, per_token=True
+            logits_this, batch_tokens, per_token=True
         ).detach()
         # Ignore the predictions from the first mask_len tokens, and
         # flatten into a single vector of logprobs
         logprobs_flat = logprobs[:, mask_len:].flatten()
         # Create a mask for the logprobs, to ignore the padding tokens
-        # We igore the final position of the mask because the final
-        # token position's prediction doesn't have an actual next token logprob
-        batch_pad_mask_flat = batch_pad_mask[:, mask_len:-1].flatten()
+        # The (mask_len + 1) index is because the logprobs tensor has
+        # one less position element than the original tokens tensor.
+        batch_pad_mask_flat = batch_pad_mask[:, (mask_len + 1) :].flatten()
         # Extract only the non-padding logprobs
         logprobs_masked = logprobs_flat[batch_pad_mask_flat]
         logprobs_all_list.append(logprobs_masked)

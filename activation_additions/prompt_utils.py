@@ -224,3 +224,20 @@ def pad_tokens_to_match_activation_additions(
         dim=1,
     )
     return tokens, activation_addition_len
+
+
+def get_max_addition_len(
+    model: HookedTransformer,
+    activation_additions: List[ActivationAddition],
+) -> int:
+    """Iterate through the activation additions and return the maximum
+    token length of the activation additions."""
+    lengths = []
+    for activation_addition in activation_additions:
+        try:
+            lengths.append(len(activation_addition.tokens))
+        except AttributeError:
+            lengths.append(
+                len(model.to_tokens(activation_addition.prompt).squeeze())
+            )
+    return max(lengths)

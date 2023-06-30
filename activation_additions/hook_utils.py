@@ -16,6 +16,23 @@ from activation_additions.prompt_utils import (
 )
 
 
+def apply_activation_additions(
+    model: HookedTransformer,
+    activation_additions: List[ActivationAddition],
+):
+    """Apply the activation additions to the model via forward hooks and
+    return a context manager."""
+    hook_fns_dict = hook_fns_from_activation_additions(
+        model=model,
+        activation_additions=activation_additions,
+    )
+    hook_fns = []
+    for act_name, hook_fns_this in hook_fns_dict.items():
+        for hook_fn in hook_fns_this:
+            hook_fns.append((act_name, hook_fn))
+    return model.hooks(fwd_hooks=hook_fns)
+
+
 def get_prompt_activations(  # TODO rename
     model: HookedTransformer, activation_addition: ActivationAddition
 ) -> Float[torch.Tensor, "batch pos d_model"]:
@@ -68,9 +85,9 @@ def steering_vec_magnitudes(
 ) -> Float[torch.Tensor, "pos"]:
     """Compute the magnitude of the net steering vector at each sequence
     position."""
-    act_dict: Dict[str, List[Float[torch.Tensor, "batch pos d_model"]]] = (
-        get_activation_dict(model=model, activation_additions=act_adds)
-    )
+    act_dict: Dict[
+        str, List[Float[torch.Tensor, "batch pos d_model"]]
+    ] = get_activation_dict(model=model, activation_additions=act_adds)
     if len(act_dict) > 1:
         raise NotImplementedError(
             "Only one activation name is supported for now."
