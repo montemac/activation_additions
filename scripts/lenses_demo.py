@@ -1,9 +1,14 @@
 # %%
+
+%load_ext autoreload
+%autoreload 2
+
+# %%
 from typing import List, Dict, Callable, Literal
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from tuned_lens import TunedLens
-from tuned_lens.plotting import PredictionTrajectory
+from tuned_lens.plotting import PredictionTrajectory, TrajectoryStatistic
 import numpy as np
 import torch
 
@@ -68,7 +73,7 @@ tuned_lens = TunedLens.from_model_and_pretrained(
 Metric = Literal["entropy", "forward_kl", "max_probability"]
 
 
-def apply_metric(metric: Metric, pt: PredictionTrajectory):
+def apply_metric(metric: Metric, pt: PredictionTrajectory) -> TrajectoryStatistic:
     return getattr(pt, metric)()
 
 
@@ -96,13 +101,18 @@ def plot_lens_diff(
         caches, dataframes, model.tokenizer, tuned_lens
     )
 
+    stats_normal = apply_metric(metric, trajectories[0])
+    stats_modified = apply_metric(metric, trajectories[1])
+
     # Update heatmap data inside playground function
-    hm_normal = apply_metric(metric, trajectories[0]).heatmap(
-        layer_stride=layer_stride
-    )
-    hm_modified = apply_metric(metric, trajectories[1]).heatmap(
-        layer_stride=layer_stride
-    )
+    hm_normal = stats_normal.heatmap(layer_stride=layer_stride)
+    hm_modified = stats_modified.heatmap(layer_stride=layer_stride)
+
+    # Fix colorbars to use the same scale (ty gpt4)
+    zmax = max(stats_normal.stats.max(), stats_modified.stats.max())
+    zmin = min(stats_normal.stats.min(), stats_modified.stats.min())
+    hm_normal.update(zmin=zmin, zmax=zmax, showscale=False)
+    hm_modified.update(zmin=zmin, zmax=zmax, showscale=True)
 
     fig.add_trace(hm_normal, row=1, col=1)
     fig.add_trace(hm_modified, row=2, col=1)
@@ -111,14 +121,43 @@ def plot_lens_diff(
 
 # Main playground for lenses. Run with ctrl+enter
 
-prompt = "I hate you because"
+# Steering vector: "Love" - "Hate" before attention layer 6 with coefficient +5
+setup = dict(
+    prompt = "I hate you because you're a wonderful person",
+    xv=dict(
+        prompt1 = "Love",
+        prompt2 = "Hate",
+        coeff = 5,
+        act_name = 6,
+    )
+)
+
+# Steering vector: "Bush did 9/11 because" - "      " before attention layer 23 with coefficient +1
+# setup = dict(
+#     prompt = "Barack Obama was born in a secret CIA prison",
+#     xv=dict(
+#         prompt1="Bush did 9/11 because",
+#         prompt2="",
+#         coeff = 1,
+#         act_name = 23,
+#     )
+# )
+
+# Steering vector: "Intent to praise" - "Intent to hurt" before attention layer 6 with coefficient +15
+# setup = dict(
+#     prompt="I want to kill you because you're such a",
+#     xv=dict(
+#         prompt1="Intent to praise",
+#         prompt2="Intent to hurt",
+#         coeff = 15,
+#         act_name = 6,
+#     )
+# )
+
 
 activation_additions = [
     *get_x_vector(
-        prompt1="Love",
-        prompt2="Hate",
-        coeff=5,
-        act_name=6,
+        **setup["xv"],
         pad_method="tokens_right",
         model=model,
         custom_pad_id=model.to_single_token(" "),
@@ -128,8 +167,8 @@ activation_additions = [
 dataframes, caches = run_hooked_and_normal_with_cache(
     model=model,
     activation_additions=activation_additions,
-    kw=dict(
-        prompt_batch=[prompt] * 1, tokens_to_generate=6, top_p=0.3, seed=0
+    gen_args=dict(
+        prompt_batch=[setup['prompt']] * 1, tokens_to_generate=0, top_p=0.3, seed=0 # NOTE: topp, seed don't matter if not generating.
     ),
 )
 
@@ -140,7 +179,7 @@ trajectories = prediction_trajectories(
 fig = plot_lens_diff(
     caches=caches,
     dataframes=dataframes,
-    metric="entropy",
+    metric="cross_entropy",
     layer_stride=2,
 )
 fig.show()
