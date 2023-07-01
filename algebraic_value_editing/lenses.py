@@ -87,6 +87,11 @@ def prediction_trajectories(
                 tokenizer.encode(prompt) + [tokenizer.eos_token_id]  # type: ignore
             ),
             tokenizer=tokenizer,  # type: ignore
+
+            # ALSO INPUT IDS
+            targets=np.array(
+                tokenizer.encode(prompt) + [tokenizer.eos_token_id]  # type: ignore
+            ),
         )
         for prompt, logits, cache in zip(full_prompts, logits_list, caches)
     ]
