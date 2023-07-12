@@ -13,11 +13,10 @@ from activation_additions import (
     prompt_utils,
     completion_utils,
 )
-from activation_additions.completion_utils import ActivationAddition
 
 import numpy as np
 import wandb
-from typing import Optional, List
+from typing import Optional
 
 run_type = wandb.sdk.wandb_run.Run
 

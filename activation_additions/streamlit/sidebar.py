@@ -64,7 +64,7 @@ def customize_activation_additions(run: Optional[run_type] = None):
     if "activation_adds" not in st.session_state:
         st.session_state.activation_adds = []
 
-    i = 0
+    i = 0  # TODO replace with for?
     while i < len(st.session_state.activation_adds):
         st.markdown(f"**Activation Addition Pair {i+1}**")
         act_prompt_1 = st.text_input(
@@ -72,7 +72,7 @@ def customize_activation_additions(run: Optional[run_type] = None):
         )
         act_prompt_2 = st.text_input(
             f"Prompt 2", value="Hate", key=f"prompt 2 {i+1}"
-        )
+        )  # TODO non-unique key issue on deletion
         addition_layer: int = st.slider(
             f"Injection site",
             min_value=0,
@@ -93,9 +93,16 @@ def customize_activation_additions(run: Optional[run_type] = None):
 
         st.session_state.activation_adds[i] = activation_adds
 
+        # TODO removal isn't working right now, and additions occur when modifying the logging name
+        def remove_activation_addition(index: int):
+            st.session_state.activation_adds.pop(index)
+
+        remove_func = remove_activation_addition
+        remove_args = (i,)
+
         if st.button(f"Remove Addition Pair {i+1}"):
-            st.session_state.activation_adds.pop(i)
-            continue
+            remove_func(*remove_args)
+
         i += 1
 
     # NOTE if the user modifies the global values before another
@@ -111,5 +118,7 @@ def customize_activation_additions(run: Optional[run_type] = None):
 
     # Add horizontal break
     st.markdown("---")
-    if st.button("Add Pair"):
-        st.session_state.activation_adds.append(None)
+    st.button(
+        "Add Pair",
+        on_click=st.session_state.activation_adds.append([]),
+    )
