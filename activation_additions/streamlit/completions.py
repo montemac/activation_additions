@@ -1,5 +1,8 @@
 # completion.py
+# pyright: reportGeneralTypeIssues=false
 import io
+import tempfile
+import os
 import sys
 
 import streamlit as st
@@ -12,9 +15,12 @@ from activation_additions import (
 )
 import numpy as np
 import wandb
+from typing import Optional
+
+run_type = wandb.sdk.wandb_run.Run
 
 
-def completion_generation() -> None:
+def completion_generation(run: Optional[run_type] = None) -> None:
     """Provides tools for running completions."""
     # Let user configure non-negative temperature and frequency penalty and top_p and
     # integer num_comparisons and seed
@@ -30,8 +36,8 @@ def completion_generation() -> None:
     tokens_to_generate = st.number_input(
         "Tokens to generate", min_value=0, value=50, step=1
     )
-    if wandb.run is not None:
-        wandb.config.update(
+    if run is not None:
+        run.config.update(
             {
                 "sampling/temperature": temperature,
                 "sampling/freq_penalty": freq_penalty,
@@ -60,7 +66,7 @@ def completion_generation() -> None:
         freq_penalty=freq_penalty,
         top_p=top_p,
         seed=seed,
-        log=wandb.run is not None,
+        log=run is not None,
     )
 
     # Retrieve the captured stdout
@@ -75,25 +81,20 @@ def completion_generation() -> None:
     # Display the completions in the Streamlit app
     st.code(completions_output, language=None)
 
-    import tempfile
-    import os
-
     # Save the completions to a temporary file
     with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as temp:
         temp.write(completions_output.encode("utf-8"))
         temp_path = temp.name
 
         # Upload the completions file to Weights & Biases if a run is active
-    if wandb.run is not None:
-        wandb.save(os.path.abspath(temp_path))
-
-    os.remove(temp_path)
+        if run is not None:
+            run.save(os.path.abspath(temp_path))
 
     # Remove the loading indicator
     placeholder.empty()
 
 
-def sweep_interface() -> None:
+def sweep_interface(run: Optional[run_type] = None) -> None:
     """Run the current set of TODO unfinished"""
     model = st.session_state.model
     activation_additions_df = sweeps.make_activation_additions(

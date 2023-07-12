@@ -58,6 +58,8 @@ def wandb_interface() -> Optional[run_type]:
             and st.session_state.logging_now
         )  # TODO maybe still logging in duplicate runs? pass around wandb run instead of just doing wandb.run
 
+        # NOTE this button stays disabled after run finishes, until
+        # streamlit reruns
         def button_on_click():
             st.session_state.logging_now = True
 
