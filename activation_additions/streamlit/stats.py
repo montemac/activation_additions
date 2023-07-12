@@ -88,6 +88,7 @@ def next_token_stats() -> None:
     st.markdown(
         df_selected.to_html(escape=False, index=False), unsafe_allow_html=True
     )
+
     if wandb.run is not None:
         next_token_section: str = "next_token"
         wandb.log(
