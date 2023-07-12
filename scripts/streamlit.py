@@ -39,11 +39,11 @@ def main():
     start_time = time.ctime()
     try:
         with sidebar:
-            logging.wandb_interface()
+            run = logging.wandb_interface()
 
-            # sidebar.model_selection()
-            # sidebar.prompt_selection()
-            # sidebar.customize_activation_additions()
+            # sidebar.model_selection(run=run)
+            # sidebar.prompt_selection(run=run)
+            # sidebar.customize_activation_additions(run=run)
 
         # with tools_col:
         #     # Activation addition table
