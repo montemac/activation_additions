@@ -78,6 +78,9 @@ class ActivationAddition:
             f"ActivationAddition({self.tokens}, {self.coeff}, {self.act_name})"
         )
 
+    def __hash__(self) -> int:
+        return hash(self.__repr__())
+
     def __eq__(self, other) -> bool:
         if not isinstance(other, ActivationAddition):
             return False
