@@ -13,14 +13,20 @@ from activation_additions import (
     prompt_utils,
     completion_utils,
 )
+from activation_additions.completion_utils import ActivationAddition
+
 import numpy as np
 import wandb
-from typing import Optional
+from typing import Optional, List
 
 run_type = wandb.sdk.wandb_run.Run
 
 
-@st.cache_data
+@st.cache_data(
+    hash_funcs={
+        list: lambda lst: "".join(map(str, lst))
+    }  # Tell st how to hash a list of ActivationAdditions
+)
 def get_completions(run: Optional[run_type] = None, **kwargs) -> str:
     """Generate completions and return them as a string."""
     # Redirect stdout to a StringIO object
@@ -86,6 +92,7 @@ def completion_generation(run: Optional[run_type] = None) -> None:
 
     # Generate the completions
     completions_output = get_completions(
+        model=st.session_state.model.name,
         act_adds=st.session_state.flat_adds,
         prompt=st.session_state.prompt,
         num_comparisons=num_comparisons,
