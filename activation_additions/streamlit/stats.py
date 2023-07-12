@@ -1,12 +1,16 @@
 # stats.py
+# pyright: reportGeneralTypeIssues=false
 import pandas as pd
 import streamlit as st
 import wandb
+from typing import Optional
+
+run_type = wandb.sdk.wandb_run.Run
 
 from activation_additions import logits, experiments
 
 
-def next_token_stats() -> None:
+def next_token_stats(run: Optional[run_type] = None) -> None:
     """Write next-token probability statistics to streamlit."""
     # Calculate normal and modified token probabilities
     probs: pd.DataFrame = logits.get_normal_and_modified_token_probs(
@@ -89,9 +93,9 @@ def next_token_stats() -> None:
         df_selected.to_html(escape=False, index=False), unsafe_allow_html=True
     )
 
-    if wandb.run is not None:
+    if run is not None:
         next_token_section: str = "next_token"
-        wandb.log(
+        run.log(
             {
                 f"{next_token_section}/top_k": top_k,
                 # f"{next_token_section}/rel_token_plotly": fig,
@@ -107,7 +111,9 @@ def next_token_stats() -> None:
         )
 
 
-def generate_act_adds_table(skip_BOS_token: bool = False):
+def generate_act_adds_table(
+    skip_BOS_token: bool = False, run: Optional[run_type] = None
+):
     """Generates a DataFrame containing the activation additions and
     their
     corresponding coefficients and positions. Renders them in a table
@@ -181,8 +187,8 @@ def generate_act_adds_table(skip_BOS_token: bool = False):
     df = pd.DataFrame(data)
     df.reset_index(drop=True, inplace=True)
 
-    # if wandb.run is not None:
-    #     wandb.log({"activation_additions_table": wandb.Table(dataframe=df)})
+    if run is not None:
+        wandb.log({"activation_additions_table": wandb.Table(dataframe=df)})
 
     # Apply monospace to all tokens
     for col in df.columns:

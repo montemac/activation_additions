@@ -50,18 +50,18 @@ def main():
                 " additions**"
             )
             df: pd.DataFrame = stats.generate_act_adds_table(
-                skip_BOS_token=True
+                skip_BOS_token=True, run=run
             )
             st.markdown(df.to_html(escape=False), unsafe_allow_html=True)
             st.write("")
 
             # Completion generation section
             with st.expander("Completion generation"):
-                completions.completion_generation()
+                completions.completion_generation(run=run)
 
             # Attention pattern visualization section
             with st.expander("Attention pattern visualization"):
-                visualization.attention_pattern_visualization()
+                visualization.attention_pattern_visualization()  # TODO add run
 
             with st.expander("Sweeps"):
                 # completions.sweep_interface()
@@ -70,7 +70,7 @@ def main():
         # Show some stats on how the activation addition affects the model
         with stats_col:
             st.header("Effect on token probabilities")
-            stats.next_token_stats()
+            stats.next_token_stats(run=run)
 
         # # TODO include sweeps
         # # TODO add ability to stack activation additions

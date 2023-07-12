@@ -20,6 +20,38 @@ from typing import Optional
 run_type = wandb.sdk.wandb_run.Run
 
 
+@st.cache_data
+def get_completions(run: Optional[run_type] = None, **kwargs) -> str:
+    """Generate completions and return them as a string."""
+    # Redirect stdout to a StringIO object
+    stdout_capture = io.StringIO()
+    sys.stdout = stdout_capture
+
+    completion_utils.print_n_comparisons(
+        model=st.session_state.model,
+        activation_additions=kwargs["act_adds"],
+        prompt=kwargs["prompt"],
+        num_comparisons=kwargs["num_comparisons"],
+        tokens_to_generate=kwargs["tokens_to_generate"],
+        temperature=kwargs["temperature"],
+        freq_penalty=kwargs["freq_penalty"],
+        top_p=kwargs["top_p"],
+        seed=kwargs["seed"],
+        log=run is not None,
+    )
+
+    # Retrieve the captured stdout
+    completions_output = stdout_capture.getvalue()
+    # Remove ANSI escape sequences (previously, bold formatting)
+    completions_output = completions_output.replace("[1m", "")
+    completions_output = completions_output.replace("[0m", "")
+
+    # Restore stdout
+    sys.stdout = sys.__stdout__
+
+    return completions_output
+
+
 def completion_generation(run: Optional[run_type] = None) -> None:
     """Provides tools for running completions."""
     # Let user configure non-negative temperature and frequency penalty and top_p and
@@ -52,13 +84,9 @@ def completion_generation(run: Optional[run_type] = None) -> None:
     placeholder = st.empty()
     placeholder.write("Loading...")
 
-    # Redirect stdout to a StringIO object
-    stdout_capture = io.StringIO()
-    sys.stdout = stdout_capture
-
-    completion_utils.print_n_comparisons(
-        model=st.session_state.model,
-        activation_additions=st.session_state.flat_adds,
+    # Generate the completions
+    completions_output = get_completions(
+        act_adds=st.session_state.flat_adds,
         prompt=st.session_state.prompt,
         num_comparisons=num_comparisons,
         tokens_to_generate=tokens_to_generate,
@@ -66,17 +94,8 @@ def completion_generation(run: Optional[run_type] = None) -> None:
         freq_penalty=freq_penalty,
         top_p=top_p,
         seed=seed,
-        log=run is not None,
+        run=run,
     )
-
-    # Retrieve the captured stdout
-    completions_output = stdout_capture.getvalue()
-    # Remove ANSI escape sequences (previously, bold formatting)
-    completions_output = completions_output.replace("[1m", "")
-    completions_output = completions_output.replace("[0m", "")
-
-    # Restore stdout
-    sys.stdout = sys.__stdout__
 
     # Display the completions in the Streamlit app
     st.code(completions_output, language=None)
