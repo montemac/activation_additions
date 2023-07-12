@@ -44,6 +44,9 @@ def wandb_interface() -> None:
                 project=PROJECT,
                 entity=ENTITY,
                 name=run_name,
+                resume="allow",
+                reinit=True,
+                magic=True,
             )
 
             if st.button("Sync to W&B"):
