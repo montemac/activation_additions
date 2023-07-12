@@ -27,7 +27,7 @@ run_type = wandb.sdk.wandb_run.Run
         list: lambda lst: "".join(map(str, lst))
     }  # Tell st how to hash a list of ActivationAdditions
 )
-def get_completions(run: Optional[run_type] = None, **kwargs) -> str:
+def get_completions(**kwargs) -> str:
     """Generate completions and return them as a string."""
     # Redirect stdout to a StringIO object
     stdout_capture = io.StringIO()
@@ -43,7 +43,7 @@ def get_completions(run: Optional[run_type] = None, **kwargs) -> str:
         freq_penalty=kwargs["freq_penalty"],
         top_p=kwargs["top_p"],
         seed=kwargs["seed"],
-        log=run is not None,
+        log=kwargs["_log"],
     )
 
     # Retrieve the captured stdout
@@ -101,7 +101,7 @@ def completion_generation(run: Optional[run_type] = None) -> None:
         freq_penalty=freq_penalty,
         top_p=top_p,
         seed=seed,
-        run=run,
+        _log=run is not None,  # underscore so that st doesn't cache this
     )
 
     # Display the completions in the Streamlit app
