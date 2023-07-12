@@ -1,12 +1,15 @@
 # sidebar.py: Customize model and intervention details
-from typing import List
+# pyright: reportGeneralTypeIssues=false
+from typing import Optional
 
 import torch
 import wandb
+
+run_type = wandb.sdk.wandb_run.Run
+
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from activation_additions import prompt_utils
-from activation_additions.prompt_utils import ActivationAddition
 
 import streamlit as st
 
@@ -26,7 +29,7 @@ _ = torch.set_grad_enabled(False)
 torch.manual_seed(0)  # For reproducibility
 
 
-def model_selection():
+def model_selection(run: Optional[run_type] = None):
     st.subheader("Model selection")
 
     model_name = st.selectbox(
@@ -37,11 +40,11 @@ def model_selection():
     model = load_model_tl(model_name=model_name, device="cuda")  # type: ignore
     st.session_state.model = model
 
-    if wandb.run is not None:
-        wandb.config.update({"model_name": model_name})
+    if run is not None:
+        run.config.update({"model_name": model_name})
 
 
-def prompt_selection():
+def prompt_selection(run: Optional[run_type] = None):
     model = st.session_state.model
     prompt: str = st.sidebar.text_input(
         "Prompt", value="My name is Frank and I like to eat"
@@ -52,11 +55,11 @@ def prompt_selection():
     st.session_state.prompt_tokens = model.to_tokens(prompt)
     st.session_state.prompt_str_tokens = model.to_str_tokens(prompt)
 
-    if wandb.run is not None:
-        wandb.config.update({"prompt": prompt})
+    if run is not None:
+        run.config.update({"prompt": prompt})
 
 
-def customize_activation_additions():
+def customize_activation_additions(run: Optional[run_type] = None):
     st.subheader("Activation additions")
     if "activation_adds" not in st.session_state:
         st.session_state.activation_adds = []
@@ -95,29 +98,18 @@ def customize_activation_additions():
             continue
         i += 1
 
+    # NOTE if the user modifies the global values before another
+    # execution is finished, other runs will be affected
     st.session_state.flat_adds = [
         item
         for sublist in st.session_state.activation_adds
         for item in sublist
     ]  # Flatten list of lists
 
-    if wandb.run is not None:
-        wandb.config.update(
-            {"activation_adds": st.session_state.flat_adds},
-            allow_val_change=True,
-        )
+    if run is not None:
+        run.config.update({"activation_adds": st.session_state.flat_adds})
 
     # Add horizontal break
     st.markdown("---")
     if st.button("Add Pair"):
         st.session_state.activation_adds.append(None)
-
-    # if wandb.run is not None:
-    #     wandb.config.update(
-    #         {
-    #             "act_prompt_1": act_prompt_1,
-    #             "act_prompt_2": act_prompt_2,
-    #             "addition_layer": addition_layer,
-    #             "coefficient": st.session_state.coefficient,
-    #         }
-    #     )
