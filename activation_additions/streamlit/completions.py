@@ -91,7 +91,7 @@ def completion_generation(run: Optional[run_type] = None) -> None:
 
     # Generate the completions
     completions_output = get_completions(
-        model=st.session_state.model.name,
+        model=str(st.session_state.model),
         act_adds=st.session_state.flat_adds,
         prompt=st.session_state.prompt,
         num_comparisons=num_comparisons,
