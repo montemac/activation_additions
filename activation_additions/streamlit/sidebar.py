@@ -1,6 +1,7 @@
 # sidebar.py: Customize model and intervention details
 # pyright: reportGeneralTypeIssues=false
 from typing import Optional
+import time
 
 import torch
 import wandb
@@ -64,24 +65,61 @@ def customize_activation_additions(run: Optional[run_type] = None):
     if "activation_adds" not in st.session_state:
         st.session_state.activation_adds = []
 
-    i = 0  # TODO replace with for?
+    act_adds = st.session_state.activation_adds
+
+    i = 0
     while i < len(st.session_state.activation_adds):
         st.markdown(f"**Activation Addition Pair {i+1}**")
+
+        def remove_activation_addition(index: int):
+            st.session_state.activation_adds.pop(index)
+
+        remove_func = remove_activation_addition
+        remove_args = (i,)
+
+        if st.button(
+            f"Remove Addition Pair {i+1}", key=f"{time.time()}"
+        ):  # TODO remove isn't working
+            remove_func(*remove_args)
+            continue
+
+        # Define pair parameters with default values
+        pair_params = {
+            "prompt_1": "Love",
+            "prompt_2": "Hate",
+            "site": 0,
+            "coeff": 1.0,
+        }
+
+        # Overwrite defaults with saved values if they exist
+        if i < len(act_adds) and act_adds[i] != []:
+            layer_num = int(
+                act_adds[i][0].act_name.split(".")[1]
+            )  # get the layer num 0 from e.g. "blocks.0.hook_resid_pre"
+            pair_params.update(
+                {
+                    "prompt_1": act_adds[i][0].prompt,
+                    "prompt_2": act_adds[i][1].prompt,
+                    "site": layer_num,
+                    "coeff": act_adds[i][0].coeff,
+                }
+            )
+
         act_prompt_1 = st.text_input(
-            f"Prompt 1", value="Love", key=f"prompt 1 {i+1}"
+            f"Prompt 1", value=pair_params["prompt_1"], key=f"prompt 1 {i+1}"
         )
         act_prompt_2 = st.text_input(
-            f"Prompt 2", value="Hate", key=f"prompt 2 {i+1}"
-        )  # TODO non-unique key issue on deletion
+            f"Prompt 2", value=pair_params["prompt_2"], key=f"prompt 2 {i+1}"
+        )
         addition_layer: int = st.slider(
             f"Injection site",
             min_value=0,
             max_value=st.session_state.model.cfg.n_layers - 1,
-            value=0,
+            value=pair_params["site"],
             key=f"site {i+1}",
         )
         coefficient = st.number_input(
-            f"Coefficient", value=1.0, key=f"coeff {i+1}"
+            f"Coefficient", value=pair_params["coeff"], key=f"coeff {i+1}"
         )
 
         activation_adds = prompt_utils.get_x_vector(
@@ -91,17 +129,10 @@ def customize_activation_additions(run: Optional[run_type] = None):
             addition_layer,
         )
 
-        st.session_state.activation_adds[i] = activation_adds
-
-        # TODO removal isn't working right now, and additions occur when modifying the logging name
-        def remove_activation_addition(index: int):
-            st.session_state.activation_adds.pop(index)
-
-        remove_func = remove_activation_addition
-        remove_args = (i,)
-
-        if st.button(f"Remove Addition Pair {i+1}"):
-            remove_func(*remove_args)
+        if i < len(act_adds):
+            act_adds[i] = activation_adds
+        else:
+            act_adds.append(activation_adds)  # Add new pair
 
         i += 1
 
@@ -118,7 +149,11 @@ def customize_activation_additions(run: Optional[run_type] = None):
 
     # Add horizontal break
     st.markdown("---")
+
+    def add_pair():
+        act_adds.append([])
+
     st.button(
         "Add Pair",
-        on_click=st.session_state.activation_adds.append([]),
+        on_click=add_pair,
     )
