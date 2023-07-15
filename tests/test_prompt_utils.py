@@ -2,9 +2,10 @@
 
 import pytest
 from transformer_lens.HookedTransformer import HookedTransformer
-from algebraic_value_editing.prompt_utils import (
+from activation_additions.prompt_utils import (
     ActivationAddition,
     get_x_vector,
+    get_max_addition_len,
 )
 
 
@@ -53,6 +54,18 @@ def test_x_vector_creation():
         assert xvec.prompt == rch_prompt.prompt
         assert xvec.act_name == rch_prompt.act_name
         assert xvec.coeff == rch_prompt.coeff
+
+
+def test_get_max_addition_len(attn_1l_model):
+    """Test that we can get the max addition length."""
+    activation_additions = [
+        ActivationAddition(prompt="Hello world!", act_name="", coeff=1.0),
+        ActivationAddition(
+            prompt="This is a longer one", act_name="", coeff=1.0
+        ),
+        ActivationAddition(prompt="A", act_name="", coeff=1.0),
+    ]
+    assert get_max_addition_len(attn_1l_model, activation_additions) == 6
 
 
 def test_x_vector_right_pad(attn_1l_model):

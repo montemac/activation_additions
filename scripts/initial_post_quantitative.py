@@ -23,11 +23,13 @@ import plotly.express as px
 import plotly as py
 import nltk
 import nltk.data
+from IPython.display import display, HTML
 
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import (
+from activation_additions import (
     prompt_utils,
+    hook_utils,
     utils,
     metrics,
     sweeps,
@@ -355,7 +357,8 @@ else:
         model=MODEL,
         labeled_texts=texts_df[["text", "topic"]],
         x_vector_phrases=(" weddings", ""),
-        act_names=list(range(0, 48, 1)),
+        # act_names=list(range(0, 48, 1)),
+        act_names=[10, 16],
         coeffs=[1],
         method="mask_injection_logprob",
         label_col="topic",
@@ -391,27 +394,93 @@ with open(CACHE_FN, "wb") as file:
 # %%
 # Do some deeper investigation on certain specific sentences, for
 # interests sake!
-# for idx in range(30,40):
-for idx in range(5):
-    mod_df_sel = mod_df[
-        (mod_df["act_name"] == 16)
-        & (mod_df["coeff"] == 1.0)
-        & (mod_df["input_index"] == idx)
-    ]
-    text_token_strs = MODEL.to_string(mod_df_sel["input"].item().T)[1:]
-    logprob_diff = mod_df_sel["logprob_actual_next_token_diff"].item()
-    logprob_diff[:2] = np.NaN  # Mask off injection zone
-    prob_ratio = np.exp(logprob_diff)
-    fig = px.line(y=prob_ratio, title=texts_df.loc[idx, "text"][:50] + "...")
-    fig.update_xaxes(
-        {
-            "tickmode": "array",
-            "tickvals": np.arange(len(text_token_strs)),
-            "ticktext": text_token_strs,
-        }
+MASK_POS = 2
+
+COLOR_DEF = {
+    "min": dict(val=-4.6, clr=np.array([0xFF, 0x80, 0x80])),
+    "zero": dict(val=0, clr=np.array([0xFF, 0xFF, 0xFF])),
+    "max": dict(val=4.6, clr=np.array([0x80, 0xFF, 0x80])),
+}
+
+inds_by_topic = {"weddings": np.arange(9), "not-weddings": np.arange(6)}
+
+for topic in texts_df["topic"].unique():
+    html_strs = []
+    for text_index, row in (
+        texts_df[texts_df["topic"] == topic]
+        .iloc[inds_by_topic[topic]]
+        .iterrows()
+    ):
+        mod_df_sel = mod_df[
+            (mod_df["act_name"] == 16)
+            & (mod_df["coeff"] == 1.0)
+            & (mod_df["input_index"] == text_index)
+        ]
+        text_token_strs = MODEL.to_string(mod_df_sel["input"].item().T)[1:]
+        logprob_diffs = mod_df_sel["logprob_actual_next_token_diff"].item()
+        logprob_diffs[:MASK_POS] = np.NaN  # Mask off injection zone
+        # print(max(logprob_diffs[MASK_POS:]), min(logprob_diffs[MASK_POS:]))
+        # prob_ratios = np.exp(logprob_diffs)
+
+        # Now we have the tokens and prob ratios, create an HTML string
+        def token_to_span(token_str, logprob_diff):
+            # Pick the color
+            if np.isnan(logprob_diff):
+                clr = np.array([0xE0, 0xE0, 0xE0])
+            elif logprob_diff < COLOR_DEF["min"]["val"]:
+                clr = COLOR_DEF["min"]["clr"]
+            elif logprob_diff < COLOR_DEF["zero"]["val"]:
+                clr = (logprob_diff - COLOR_DEF["min"]["val"]) * (
+                    COLOR_DEF["zero"]["clr"] - COLOR_DEF["min"]["clr"]
+                ) / (
+                    COLOR_DEF["zero"]["val"] - COLOR_DEF["min"]["val"]
+                ) + COLOR_DEF[
+                    "min"
+                ][
+                    "clr"
+                ]
+            elif logprob_diff < COLOR_DEF["max"]["val"]:
+                clr = (logprob_diff - COLOR_DEF["zero"]["val"]) * (
+                    COLOR_DEF["max"]["clr"] - COLOR_DEF["zero"]["clr"]
+                ) / (
+                    COLOR_DEF["max"]["val"] - COLOR_DEF["zero"]["val"]
+                ) + COLOR_DEF[
+                    "zero"
+                ][
+                    "clr"
+                ]
+            else:
+                clr = COLOR_DEF["max"]["clr"]
+            clr_str = "".join(f"{int(col):02X}" for col in clr)
+
+            span_str = f'<span style="background-color:#{clr_str};">{token_str}</span>'
+            return span_str
+
+        spans = [
+            token_to_span(token_str, logprob_diff)
+            for token_str, logprob_diff in zip(text_token_strs, logprob_diffs)
+        ]
+        html_str = "<p>" + "".join(spans) + "</p>"
+        html_strs.append(html_str)
+        # fig = px.line(y=prob_ratio, title=texts_df.loc[idx, "text"][:50] + "...")
+        # fig.update_xaxes(
+        #     {
+        #         "tickmode": "array",
+        #         "tickvals": np.arange(len(text_token_strs)),
+        #         "ticktext": text_token_strs,
+        #     }
+        # )
+        # # fig.add_hline
+        # fig.show()
+
+    final_html_str = (
+        # '<div style="background-color:#FFFFFF; color:black; white-space: pre-line;"><p>'
+        f'<div style="background-color:#FFFFFF; color:black; font-size:18px; padding:10px"><h3>Topic: {topic}</h3>'
+        + "".join(html_strs)
+        + "</div>"
     )
-    # fig.add_hline
-    fig.show()
+    final_html = HTML(final_html_str)
+    display(final_html)
 
 
 # %%
@@ -808,3 +877,57 @@ print(plot_df)
 #     height=PNG_HEIGHT,
 #     scale=PNG_SCALE,
 # )
+
+
+# %%
+# TEMP: test the corpus logprob stats function
+text = open(FILENAMES["weddings"]).read()
+
+# Define activation additions
+activation_additions = list(
+    prompt_utils.get_x_vector(
+        prompt1=" weddings",
+        prompt2="",
+        coeff=1.0,
+        act_name=16,
+        model=MODEL,
+        pad_method="tokens_right",
+        custom_pad_id=MODEL.to_single_token(" "),  # type: ignore
+    ),
+)
+
+# Get the mask length to use for all forward passes to mask out the
+# activation additions positions.
+mask_len = prompt_utils.get_max_addition_len(MODEL, activation_additions)
+
+# Normal, unmodified model
+avg_logprob, perplexity, logprobs = experiments.get_stats_over_corpus(
+    MODEL, [text], mask_len=mask_len
+)
+
+# Modified model
+with hook_utils.apply_activation_additions(MODEL, activation_additions):
+    (
+        avg_logprob_mod,
+        perplexity_mod,
+        logprobs_mod,
+    ) = experiments.get_stats_over_corpus(MODEL, [text], mask_len=mask_len)
+
+# Compare with sweeps function
+(
+    mod_df,
+    results_grouped_df,
+) = experiments.run_corpus_logprob_experiment(
+    model=MODEL,
+    labeled_texts=pd.DataFrame(
+        {"text": tokenizer.tokenize(text), "topic": "weddings"}
+    ),
+    x_vector_phrases=(" weddings", ""),
+    act_names=[16],
+    coeffs=[1],
+    method="mask_injection_logprob",
+    label_col="topic",
+)
+
+print(avg_logprob_mod - avg_logprob)
+print(results_grouped_df["logprob_actual_next_token_diff_mean"].iloc[0])

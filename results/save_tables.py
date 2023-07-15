@@ -1,14 +1,14 @@
 """ Saves qualitative results to a CSV file for inclusion in post. """
 # %%
 try:
-    import algebraic_value_editing
+    import activation_additions
 except ImportError:
     COMMIT: str = "08efeb9"  # Stable commit
     get_ipython().run_line_magic(  # type: ignore
         magic_name="pip",
         line=(
             "install -U"
-            f" git+https://github.com/montemac/algebraic_value_editing.git@{COMMIT}"
+            f" git+https://github.com/montemac/activation_additions.git@{COMMIT}"
         ),
     )
 
@@ -19,14 +19,14 @@ from functools import partial
 import torch
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing.completion_utils import (
+from activation_additions.completion_utils import (
     gen_using_hooks,
 )
-from algebraic_value_editing.prompt_utils import (
+from activation_additions.prompt_utils import (
     ActivationAddition,
     get_x_vector,
 )
-from algebraic_value_editing import hook_utils
+from activation_additions import hook_utils
 
 # %% [markdown]
 # ## Loading the `HookedTransformer`
@@ -72,7 +72,7 @@ csv_file: str = "completions.csv"
 with open(csv_file, "w") as f:
     f.write("")
 
-from algebraic_value_editing.completion_utils import pretty_print_completions
+from activation_additions.completion_utils import pretty_print_completions
 import pandas as pd
 import csv
 

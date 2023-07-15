@@ -9,11 +9,28 @@ from einops import reduce
 from transformer_lens import ActivationCache
 from transformer_lens.HookedTransformer import HookedTransformer, Loss
 from transformer_lens.hook_points import HookPoint, LensHandle
-from algebraic_value_editing.prompt_utils import (
+from activation_additions.prompt_utils import (
     ActivationAddition,
     pad_tokens_to_match_activation_additions,
     get_block_name,
 )
+
+
+def apply_activation_additions(
+    model: HookedTransformer,
+    activation_additions: List[ActivationAddition],
+):
+    """Apply the activation additions to the model via forward hooks and
+    return a context manager."""
+    hook_fns_dict = hook_fns_from_activation_additions(
+        model=model,
+        activation_additions=activation_additions,
+    )
+    hook_fns = []
+    for act_name, hook_fns_this in hook_fns_dict.items():
+        for hook_fn in hook_fns_this:
+            hook_fns.append((act_name, hook_fn))
+    return model.hooks(fwd_hooks=hook_fns)
 
 
 def get_prompt_activations(  # TODO rename
