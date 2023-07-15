@@ -6,7 +6,7 @@ passes of language models like GPT-2 using the hooking functionality of
 
 # Installation
 After cloning the repository, run `pip install -e .` to install the
-`algebraic_value_editing` package. 
+`activation_additions` package. 
 
 There are currently a few example scripts in the `scripts/`
 directory.For example, `basic_functionality.py` generates

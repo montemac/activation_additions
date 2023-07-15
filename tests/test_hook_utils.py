@@ -6,8 +6,8 @@ import pytest
 
 from transformer_lens.HookedTransformer import HookedTransformer
 
-from algebraic_value_editing import hook_utils, prompt_utils
-from algebraic_value_editing.prompt_utils import ActivationAddition
+from activation_additions import hook_utils, prompt_utils
+from activation_additions.prompt_utils import ActivationAddition
 
 
 # Fixtures

@@ -4,7 +4,7 @@
 # Imports, etc
 from IPython.display import display
 from transformer_lens import HookedTransformer
-from algebraic_value_editing import widgets, utils
+from activation_additions import widgets, utils
 
 utils.enable_ipython_reload()
 

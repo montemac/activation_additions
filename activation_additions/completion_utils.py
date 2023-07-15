@@ -13,8 +13,8 @@ import einops
 
 from transformer_lens.HookedTransformer import HookedTransformer, Output
 
-from algebraic_value_editing.prompt_utils import ActivationAddition
-from algebraic_value_editing import hook_utils, logging
+from activation_additions.prompt_utils import ActivationAddition
+from activation_additions import hook_utils, logging
 
 
 def preserve_rng_state(func):
@@ -238,13 +238,13 @@ def gen_using_activation_additions(
                 `loss`: The average loss per token of the completions.
     """
     # Create the hook functions
-    hook_fns: Dict[
-        str, List[Callable]
-    ] = hook_utils.hook_fns_from_activation_additions(
-        model=model,
-        activation_additions=activation_additions,
-        addition_location=addition_location,
-        res_stream_slice=res_stream_slice,
+    hook_fns: Dict[str, List[Callable]] = (
+        hook_utils.hook_fns_from_activation_additions(
+            model=model,
+            activation_additions=activation_additions,
+            addition_location=addition_location,
+            res_stream_slice=res_stream_slice,
+        )
     )
 
     return gen_using_hooks(model=model, hook_fns=hook_fns, log=False, **kwargs)

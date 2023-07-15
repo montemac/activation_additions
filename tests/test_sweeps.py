@@ -11,8 +11,8 @@ import plotly.graph_objects as go
 
 from transformer_lens import HookedTransformer
 
-from algebraic_value_editing import sweeps, prompt_utils, utils
-from algebraic_value_editing.prompt_utils import ActivationAddition
+from activation_additions import sweeps, prompt_utils, utils
+from activation_additions.prompt_utils import ActivationAddition
 
 utils.enable_ipython_reload()
 

@@ -10,7 +10,7 @@ RUN echo "conda activate ave" >> ~/.bashrc # FIXME: Doesn't work on vastai
 RUN conda install -c conda-forge -n ave git
 
 # Install project dependencies
-WORKDIR /root/algebraic_value_editing
+WORKDIR /root/activation_additions
 COPY . .
 RUN conda run -n ave pip install --no-cache-dir -e '.[dev]'
 

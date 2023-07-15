@@ -2,24 +2,158 @@
 which typically include some combination of data loading and processing,
 analysis/sweeps/etc, and visualizing/summarizing results."""
 
-from typing import Tuple, Union, Optional, List
+from typing import Tuple, Union, Optional, List, Dict
 
 import numpy as np
 import pandas as pd
 import torch
 import plotly.express as px
 import plotly.graph_objects as go
+import nltk
+import nltk.data
 
 from transformer_lens import HookedTransformer
+from transformer_lens.utils import lm_cross_entropy_loss
 
-from algebraic_value_editing import (
+from activation_additions import (
     prompt_utils,
     metrics,
     sweeps,
     logits,
+    logging,
 )
 
 
+@logging.loggable
+def get_stats_over_corpus(
+    model: HookedTransformer,
+    corpus_texts: List[str],
+    split_method: Optional[str] = "sentence",
+    mask_len: int = 0,
+    sentence_batch_max_len_diff: int = 5,
+    sentence_batch_max_size: int = 50,
+    token_batch_len: int = 32,  # pylint: disable=unused-argument
+    token_batch_stride: int = 32,  # pylint: disable=unused-argument
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
+) -> Tuple[float, float, torch.Tensor]:
+    """Function to run forward pass(es) over a corpus given a model,
+    returning various stats including perplexity.
+
+    `split_method` is one of:
+    - "sentence": use a tokenizer to split each corpus string into
+    sentences, then run forward pass on each sentence individually, with
+    BOS prepended.
+    - "token_batch: tokenize each corpus string, concatenate with EOS
+    seperating each string, then split into batches of tokens according
+    to `token_batch_len` and `token_batch_stride` args, and run forward
+    passes on these token batches.
+
+    `mask_len` is the number of token positions to mask at the start of
+    each forward pass, to ensure that the immediate effect of any
+    activation additions is removed from aggregated stats that depend on
+    logprobs.
+
+    Returns the average logprob, perplexity, and a 1D tensor containing
+    all the valid logprobs from the forward passes stacked together
+    (i.e. not including token positions that were masked out by `mask_len`)
+    """
+    assert split_method in [
+        "sentence",
+        "token_batch",
+    ], "Invalid split_method"
+    if split_method == "sentence":
+        # If split_method is "sentence", split each corpus string into
+        # sentences, then tokenize each sentence, and store the results in a
+        # list
+        nltk.download("punkt")
+        tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
+
+        # Split the essays into sentences and tokenize them
+        sentences_tokens = []
+        for text in corpus_texts:
+            sentences = tokenizer.tokenize(text)  # type: ignore
+            tokens = [
+                model.to_tokens(sentence).squeeze() for sentence in sentences
+            ]
+            sentences_tokens.extend(tokens)
+
+        # Get the sort incides that would sort the sentences by length
+        sort_indices = np.argsort([len(tokens) for tokens in sentences_tokens])
+
+        # Group sentence tokens into batches of similar length, and use a
+        # generator to produce batched tensors, which will be the inputs to
+        # successive forward passes.
+        def batch_generator():
+            batch_list = [sentences_tokens[sort_indices[0]]]
+            min_len = len(batch_list[0])
+            sentinel = max(model.tokenizer.vocab.values()) + 1
+
+            def batch_to_tokens():
+                batch_tokens = torch.nn.utils.rnn.pad_sequence(
+                    batch_list, batch_first=True, padding_value=sentinel
+                )
+                batch_pad_mask = batch_tokens != sentinel
+                # Actual pad token doesn't matter, just needs to be valid
+                batch_tokens[~batch_pad_mask] = 0
+                return batch_tokens, batch_pad_mask
+
+            for idx in sort_indices[1:]:
+                # Check if the current sentence is similar enough in
+                # length to the others to be added to the batch, and the
+                # batch isn't too long. If not, yield the current batch
+                # and start a new one.
+                if (
+                    len(sentences_tokens[idx])
+                    > min_len + sentence_batch_max_len_diff
+                    or len(batch_list) >= sentence_batch_max_size
+                ):
+                    yield batch_to_tokens()
+                    batch_list = [sentences_tokens[idx]]
+                    min_len = len(sentences_tokens[idx])
+                else:
+                    batch_list.append(sentences_tokens[idx])
+
+            # Yield the final batch
+            yield batch_to_tokens()
+
+    elif split_method == "sentence":
+        # If split_method is "token_batch", tokenize each corpus string
+        # individually, then concatenate the tokenized strings with EOS,
+        # then concatenate into a single tensor.  A generator will be used
+        # to yield slices of this tensor, which will be the forward
+        # pass.
+        raise NotImplementedError("token_batch not implemented yet")
+
+    # Run forward passes over the batches, and collect the results
+    logprobs_all_list = []
+    for batch_tokens, batch_pad_mask in batch_generator():
+        logits_this = model.forward(input=batch_tokens, return_type="logits")
+        # Logprob of the next token is just the negative of the
+        # cross entropy loss
+        logprobs = -lm_cross_entropy_loss(
+            logits_this, batch_tokens, per_token=True
+        ).detach()
+        # Ignore the predictions from the first mask_len tokens, and
+        # flatten into a single vector of logprobs
+        logprobs_flat = logprobs[:, mask_len:].flatten()
+        # Create a mask for the logprobs, to ignore the padding tokens
+        # The (mask_len + 1) index is because the logprobs tensor has
+        # one less position element than the original tokens tensor.
+        batch_pad_mask_flat = batch_pad_mask[:, (mask_len + 1) :].flatten()
+        # Extract only the non-padding logprobs
+        logprobs_masked = logprobs_flat[batch_pad_mask_flat]
+        logprobs_all_list.append(logprobs_masked)
+
+    # Concatenate the logprobs from all batches into a single vector
+    logprobs_all = torch.cat(logprobs_all_list)
+
+    # Calculate the average logprob and the perplexity
+    avg_logprob = logprobs_all.mean().item()
+    perplexity = np.exp(-avg_logprob)
+    return avg_logprob, perplexity, logprobs_all
+
+
+@logging.loggable
 def run_corpus_logprob_experiment(
     model: HookedTransformer,
     labeled_texts: pd.DataFrame,
@@ -29,6 +163,7 @@ def run_corpus_logprob_experiment(
     method: str = "mask_injection_logprob",
     text_col: str = "text",
     label_col: str = "label",
+    log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
 ):
     """Function to evaluate log-prob on a set of input texts for both the
     original model and a model with various activation injections.  The
@@ -191,7 +326,10 @@ def plot_corpus_logprob_experiment(
             "y_value": "Mean change in log-probs",
         }
     elif metric == "perplexity_ratio":
-        title = f"(Modified model perplexity) / (normal model perplexity) on {corpus_name}"
+        title = (
+            "(Modified model perplexity) / (normal model perplexity) on"
+            f" {corpus_name}"
+        )
         results_grouped_df = results_grouped_df.assign(
             y_value=np.exp(
                 -results_grouped_df["logprob_actual_next_token_diff_mean"]
@@ -284,7 +422,10 @@ def show_token_probs(
         ].copy()  # Copy to avoid negative stride
         y_values = kl_contrib[top_k_tokens]
         y_title = "Contribution to KL divergence (nats)"
-        title = f"Contribution to KL divergence vs normal-model probabilities {extra_title}"
+        title = (
+            "Contribution to KL divergence vs normal-model probabilities"
+            f" {extra_title}"
+        )
     else:
         raise ValueError(f"Unknown sort mode {sort_mode}")
 
@@ -450,7 +591,10 @@ def compare_with_prompting(
             pos,
             10,
             sort_mode="kl_div",
-            extra_title=f'<br>Input: "{"".join(tokens_str_normal[1 : (pos + 1)])}", method: {name}',
+            extra_title=(
+                f'<br>Input: "{"".join(tokens_str_normal[1 : (pos + 1)])}",'
+                f" method: {name}"
+            ),
         )
         figs_dict[name] = fig
 
