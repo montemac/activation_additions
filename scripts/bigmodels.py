@@ -3,13 +3,13 @@
 from contextlib import contextmanager
 from typing import Tuple, Callable, Optional
 import torch as t
-import torch.nn as nn
+from torch import nn
 import numpy as np
 from transformers import LlamaForCausalLM, LlamaTokenizer, GenerationConfig
 
 
 # %%
-MODEL_DIR: str = "lmsys/vicuna-13B-v1.3"
+MODEL_DIR: str = "lmsys/vicuna-7B-v1.3"
 DEVICE: str = "cuda:0"
 DO_SAMPLE: bool = True
 TEMPERATURE: float = 1.0
@@ -35,7 +35,7 @@ model.eval()
 def tokenize(prompt: str) -> dict[str, t.Tensor]:
     """Tokenize a prompt into a model input."""
     passed_input = tokenizer(prompt, return_tensors="pt")
-    passed_input = {k: t.to(DEVICE).half() for k, t in passed_input.items()}
+    passed_input = {k: t.to(DEVICE) for k, t in passed_input.items()}
     return passed_input
 
 
@@ -99,8 +99,9 @@ print(stream)
 # %%
 sampling_kwargs = dict(temperature=TEMPERATURE, top_p=TOP_P)
 sampling_kwargs["repetition_penalty"] = REPETITION_PENALTY
-
 # TODO: Automatic padding
+
+
 # %%
 def get_resid_pre(prompt: str, layer_num: int):
     """Get the residual stream activations for a prompt."""
