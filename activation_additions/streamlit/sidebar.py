@@ -11,6 +11,7 @@ run_type = wandb.sdk.wandb_run.Run
 from transformer_lens.HookedTransformer import HookedTransformer
 
 from activation_additions import prompt_utils
+from activation_additions import consts
 
 import streamlit as st
 
@@ -18,10 +19,28 @@ import streamlit as st
 @st.cache_data
 def load_model_tl(model_name: str, device: str = "cpu") -> HookedTransformer:
     """Loads a model on CPU and then transfers it to the device."""
-    model: HookedTransformer = HookedTransformer.from_pretrained(
-        model_name, device="cpu"
-    )
-    _ = model.to(device)
+    if model_name in consts.llama_model_names:
+        from transformers import LlamaForCausalLM, LlamaTokenizer
+
+        MODEL_PATH = consts.LLAMA_PATH + consts.llama_relpaths[model_name]
+        tokenizer = LlamaTokenizer.from_pretrained(MODEL_PATH)
+        hf_model = LlamaForCausalLM.from_pretrained(MODEL_PATH, low_cpu_mem_usage=True)
+        model = HookedTransformer.from_pretrained(
+            model_name,
+            hf_model=hf_model,
+            device="cpu",
+            # TODO check what these params do
+            fold_ln=False,
+            center_writing_weights=False,
+            center_unembed=False,
+        )
+        model.tokenizer = tokenizer
+        model.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+    else:
+        model: HookedTransformer = HookedTransformer.from_pretrained(
+            model_name, device="cpu"
+        )
+        _ = model.to(device)
     return model
 
 
@@ -35,7 +54,7 @@ def model_selection(run: Optional[run_type] = None):
 
     model_name = st.selectbox(
         "Model",
-        ["gpt2-small", "gpt2-medium", "gpt2-large", "gpt2-xl"],
+        consts.supported_models,
     )
     # Load the GPT-2 model
     model = load_model_tl(model_name=model_name, device="cuda")  # type: ignore
@@ -139,9 +158,7 @@ def customize_activation_additions(run: Optional[run_type] = None):
     # NOTE if the user modifies the global values before another
     # execution is finished, other runs will be affected
     st.session_state.flat_adds = [
-        item
-        for sublist in st.session_state.activation_adds
-        for item in sublist
+        item for sublist in st.session_state.activation_adds for item in sublist
     ]  # Flatten list of lists
 
     if run is not None:
