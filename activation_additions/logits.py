@@ -149,7 +149,7 @@ def get_effectiveness_and_disruption(
 
 
 def plot_effectiveness_and_disruption(
-    tokens_str: list[str],
+    tokens_str: List[str],
     eff: pd.DataFrame,
     foc: pd.DataFrame,
     title: Optional[str] = None,
