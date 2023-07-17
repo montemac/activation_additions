@@ -128,7 +128,8 @@ def customize_activation_additions(run: Optional[run_type] = None):
             f"Injection token location",
             min_value=0.0,
             max_value=1.0,
-            value=0.0
+            value=0.0,
+            key=f"location {i+1}"
         )
 
         activation_adds = prompt_utils.get_x_vector(

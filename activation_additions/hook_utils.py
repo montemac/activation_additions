@@ -233,7 +233,7 @@ def hook_fn_from_activations(
 
         indexing_operation: Tuple[slice, slice, slice] = (
             slice(None),  # Apply to all batches
-            sequence_slice, 
+            sequence_slice,
             res_stream_slice,
         )
 
