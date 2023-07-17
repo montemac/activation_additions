@@ -206,7 +206,7 @@ def gen_using_activation_additions(
     model: HookedTransformer,
     activation_additions: List[ActivationAddition],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
-    addition_location: str = "front",
+    addition_location: int = 0,
     res_stream_slice: slice = slice(None),
     **kwargs,
 ) -> pd.DataFrame:
@@ -222,8 +222,8 @@ def gen_using_activation_additions(
         pass these keys to the `wandb.init` call. `False` to disable
         logging.
 
-        `addition_location`: The position at which to add the activations into
-        the residual stream. Can be 'front' or 'back'.
+        `addition_location`: A scalar in range [0, 1] representing where in the prompt
+        to add the activation addition
 
         `res_stream_slice`: A slice specifying which parts of the
         residual stream to add to.
@@ -359,7 +359,7 @@ def print_n_comparisons(
     num_comparisons: int = 5,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     activation_additions: Optional[List[ActivationAddition]] = None,
-    addition_location: str = "front",
+    addition_location: int = 0,
     res_stream_slice: slice = slice(None),
     **kwargs,
 ) -> None:

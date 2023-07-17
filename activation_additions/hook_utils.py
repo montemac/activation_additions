@@ -164,7 +164,7 @@ def steering_magnitudes_relative_to_prompt(
 # Hook function helpers
 def hook_fn_from_activations(
     activations: Float[torch.Tensor, "batch pos d_model"],
-    addition_location: str = "front",
+    addition_location: int = 0,
     res_stream_slice: slice = slice(None),
 ) -> Callable:
     """Takes an activation tensor and returns a hook function that adds the
@@ -174,18 +174,18 @@ def hook_fn_from_activations(
     Args:
         `activations`: The activations to add in
 
-        `addition_location`: Whether to add `activations` to the front-positioned
-        or back-positioned residual streams in the forward poss. Must be
-        either "front" or "mid" or "back".
+        `addition_location`: A scalar between 0 and 1 representing where in the 
+        prompt to add the injection.
 
         `res_stream_slice`: The slice of the residual stream dimensions to apply
         the activations to. If `res_stream_slice` is `slice(None)`,
         then the activations are applied to all dimensions.
     """
-    if addition_location not in ["front", "mid", "back"]:
+    if not 0 <= addition_location <= 1:
         raise ValueError(
-            "Invalid addition_location. Must be 'front' or 'mid' or 'back'."
+            "Invalid addition_location. Must be in range [0, 1]"
         )
+    
     if res_stream_slice != slice(None):  # Check that the slice is valid
         assert 0 <= res_stream_slice.start <= res_stream_slice.stop
         assert res_stream_slice.stop <= activations.shape[-1], (
@@ -194,6 +194,7 @@ def hook_fn_from_activations(
         )
 
     activations_seq_len: int = activations.shape[1]
+
 
     def prompt_hook(
         resid_pre: Float[torch.Tensor, "batch pos d_model"],
@@ -207,6 +208,10 @@ def hook_fn_from_activations(
         """
         prompt_seq_len: int = resid_pre.shape[1]
 
+        print("prompt length:", prompt_seq_len)
+
+        injection_location: int = round(addition_location * prompt_seq_len)
+
         # Check if prompt_activ_len > sequence length for this batch
         if prompt_seq_len == 1:
             # This suggests that we're computing only the new keys and
@@ -219,28 +224,17 @@ def hook_fn_from_activations(
             prompt_seq_len >= activations_seq_len
         ), "The prompt is shorter than the activation sequence to be added."
 
-        sequence_slice = (
-            slice(0, activations_seq_len)
-            if addition_location == "front"
-            else slice(-activations_seq_len, None)
-        )
+        assert (
+            prompt_seq_len >= activations_seq_len + injection_location
+        ), "The activation sequence extends past the end of the prompt"
 
-        match addition_location:
-            case "front":
-                sequence_slice = slice(0, activations_seq_len)
-            case "mid":
-                middle_prompt_ind: int = prompt_seq_len // 2
-                half_act_len: int = activations_seq_len // 2
-                sequence_slice = slice(
-                    middle_prompt_ind - half_act_len,
-                    middle_prompt_ind + (activations_seq_len - half_act_len),
-                )
-            case "back":
-                sequence_slice = slice(-activations_seq_len, None)
+
+
+        sequence_slice = slice(injection_location, injection_location + activations_seq_len)
 
         indexing_operation: Tuple[slice, slice, slice] = (
             slice(None),  # Apply to all batches
-            sequence_slice,  # Only add to first/middle/last residual streams
+            sequence_slice, 
             res_stream_slice,
         )
 

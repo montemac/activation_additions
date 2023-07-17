@@ -65,6 +65,9 @@ def customize_activation_additions(run: Optional[run_type] = None):
     if "activation_adds" not in st.session_state:
         st.session_state.activation_adds = []
 
+    if "addition_location" not in st.session_state:
+        st.session_state.addition_location = 0
+
     act_adds = st.session_state.activation_adds
 
     i = 0
@@ -120,6 +123,12 @@ def customize_activation_additions(run: Optional[run_type] = None):
         )
         coefficient = st.number_input(
             f"Coefficient", value=pair_params["coeff"], key=f"coeff {i+1}"
+        )
+        st.session_state.addition_location: float = st.number_input(
+            f"Injection token location",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.0
         )
 
         activation_adds = prompt_utils.get_x_vector(
