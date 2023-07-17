@@ -208,7 +208,6 @@ def hook_fn_from_activations(
         """
         prompt_seq_len: int = resid_pre.shape[1]
 
-        print("prompt length:", prompt_seq_len)
 
         injection_location: int = round(addition_location * prompt_seq_len)
 
