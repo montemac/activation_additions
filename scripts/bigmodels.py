@@ -19,7 +19,7 @@ DO_SAMPLE: bool = True
 TEMPERATURE: float = 1.0
 TOP_P: float = 0.9
 REP_PENALTY: float = 2.0
-ADDITION_PROMPT, SUBTRACTION_PROMPT = "Love ", "Hate"
+PLUS_PROMPT, MINUS_PROMPT = "Love ", "Hate"
 CHAT_PROMPT: str = "I hate you because"
 ACTIVATION_NUM: int = 6
 COEFFICIENT: int = 5
@@ -52,7 +52,7 @@ Hooks = list[Hook]
 
 @contextmanager
 def pre_hooks(hooks: Hooks):
-    """Context manager to register pre-forward hooks on a model."""
+    """Register pre-forward hooks with torch."""
     handles = []
     try:
         handles = [mod.register_forward_pre_hook(hook) for mod, hook in hooks]
@@ -71,11 +71,11 @@ def get_blocks(mod):
 
 @contextmanager
 def residual_stream(mod: LlamaForCausalLM, layers: Optional[list[int]] = None):
-    """Context manager to track residual stream activations in the model."""
+    """Actually build hooks for a model."""
     # TODO Plausibly could be replaced by 'output_hidden_states=True' in model call.
-
     current_stream = [None] * len(get_blocks(mod))
 
+    # Factory function that builds the hooks.
     def _make_hook(i):
         def _hook(_, current_inputs):
             current_stream[i] = current_inputs[0]
@@ -87,6 +87,7 @@ def residual_stream(mod: LlamaForCausalLM, layers: Optional[list[int]] = None):
         for i, layer in enumerate(get_blocks(mod))
         if i in layers
     ]
+    # Register the hooks.
     with pre_hooks(hooks):
         yield current_stream
 
@@ -106,12 +107,12 @@ sampling_kwargs["repetition_penalty"] = REP_PENALTY
 def get_resid_pre(prompt: str, layer_num: int):
     """Get the residual stream activations for a prompt."""
     with residual_stream(model, layers=[layer_num]) as working_stream:
-        model_outputs = model(**tokenize(prompt))
+        model(**tokenize(prompt))
     return working_stream[layer_num]
 
 
-act_add = get_resid_pre(ADDITION_PROMPT, ACTIVATION_NUM)
-act_sub = get_resid_pre(SUBTRACTION_PROMPT, ACTIVATION_NUM)
+act_add = get_resid_pre(PLUS_PROMPT, ACTIVATION_NUM)
+act_sub = get_resid_pre(MINUS_PROMPT, ACTIVATION_NUM)
 assert act_add.shape == act_sub.shape
 
 act_diff = act_add - act_sub
