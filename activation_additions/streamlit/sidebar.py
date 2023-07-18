@@ -9,6 +9,7 @@ import wandb
 run_type = wandb.sdk.wandb_run.Run
 
 from transformer_lens.HookedTransformer import HookedTransformer
+from transformer_lens import consts
 
 from activation_additions import prompt_utils
 
