@@ -2,48 +2,49 @@
 """Script to run activation engineering on Vicuna 13B."""
 from contextlib import contextmanager
 from typing import Tuple, Callable, Optional
+
+import numpy as np
 import torch as t
 from torch import nn
-import numpy as np
+
 from transformers import LlamaForCausalLM, LlamaTokenizer, GenerationConfig
 
 
 # %%
 MODEL_DIR: str = "lmsys/vicuna-7B-v1.3"
 DEVICE: str = "cuda:0"
+MAX_NEW_TOKENS: int = 50
+SEED: int = 0
 DO_SAMPLE: bool = True
 TEMPERATURE: float = 1.0
 TOP_P: float = 0.9
-REPETITION_PENALTY: float = 2.0
-MAX_NEW_TOKENS: int = 50
-SEED: int = 0
-COEFF: int = 5
-ACT_NAME: int = 6
-PROMPT: str = "I hate you because"
-
-prompt_add, prompt_sub = "Love ", "Hate"
+REP_PENALTY: float = 2.0
+ADDITION_PROMPT, SUBTRACTION_PROMPT = "Love ", "Hate"
+CHAT_PROMPT: str = "I hate you because"
+ACTIVATION_NUM: int = 6
+COEFFICIENT: int = 5
 
 t.set_grad_enabled(False)
 tokenizer = LlamaTokenizer.from_pretrained(MODEL_DIR)
 model = LlamaForCausalLM.from_pretrained(MODEL_DIR)
 model.to(DEVICE)
-model = model.half()
+model.half()
 model.eval()
 
 
 # %%
-def tokenize(prompt: str) -> dict[str, t.Tensor]:
-    """Tokenize a prompt into a model input."""
-    passed_input = tokenizer(prompt, return_tensors="pt")
-    passed_input = {k: t.to(DEVICE) for k, t in passed_input.items()}
-    return passed_input
+def tokenize(text: str) -> dict[str, t.Tensor]:
+    """Tokenize a prompt onto the device."""
+    tokens = tokenizer(text, return_tensors="pt")
+    tokens = {j: k.to(DEVICE) for j, k in tokens.items()}
+    return tokens
 
 
-inputs = tokenize(PROMPT)
-outputs = model(**inputs)
+model_inputs = tokenize(CHAT_PROMPT)
+model_outputs = model(**model_inputs)
 
 # %%
-# New type declarations
+# Declare new types for hooks.
 PreHookFn = Callable[[nn.Module, t.Tensor], Optional[t.Tensor]]
 Hook = Tuple[nn.Module, PreHookFn]
 Hooks = list[Hook]
@@ -61,20 +62,19 @@ def pre_hooks(hooks: Hooks):
             handle.remove()
 
 
-def get_blocks(passed_model):
+def get_blocks(mod):
     """Get the blocks of a model."""
-    if isinstance(passed_model, LlamaForCausalLM):
-        return passed_model.model.layers
-    else:
-        raise ValueError(f"Unsupported model type: {type(passed_model)}")
+    if isinstance(mod, LlamaForCausalLM):
+        return mod.model.layers
+    raise ValueError(f"Unsupported model type: {type(mod)}.")
 
 
 @contextmanager
-def residual_stream(passed_model: LlamaForCausalLM, layers: Optional[list[int]] = None):
+def residual_stream(mod: LlamaForCausalLM, layers: Optional[list[int]] = None):
     """Context manager to track residual stream activations in the model."""
     # TODO Plausibly could be replaced by 'output_hidden_states=True' in model call.
 
-    current_stream = [None] * len(get_blocks(passed_model))
+    current_stream = [None] * len(get_blocks(mod))
 
     def _make_hook(i):
         def _hook(_, current_inputs):
@@ -84,7 +84,7 @@ def residual_stream(passed_model: LlamaForCausalLM, layers: Optional[list[int]] 
 
     hooks = [
         (layer, _make_hook(i))
-        for i, layer in enumerate(get_blocks(passed_model))
+        for i, layer in enumerate(get_blocks(mod))
         if i in layers
     ]
     with pre_hooks(hooks):
@@ -93,12 +93,12 @@ def residual_stream(passed_model: LlamaForCausalLM, layers: Optional[list[int]] 
 
 # %%
 with residual_stream(model, layers=[0]) as stream:
-    outputs = model(**inputs)
+    model_outputs = model(**model_inputs)
 print(stream)
 
 # %%
 sampling_kwargs = dict(temperature=TEMPERATURE, top_p=TOP_P)
-sampling_kwargs["repetition_penalty"] = REPETITION_PENALTY
+sampling_kwargs["repetition_penalty"] = REP_PENALTY
 # TODO: Automatic padding
 
 
@@ -110,8 +110,8 @@ def get_resid_pre(prompt: str, layer_num: int):
     return working_stream[layer_num]
 
 
-act_add = get_resid_pre(prompt_add, ACT_NAME)
-act_sub = get_resid_pre(prompt_sub, ACT_NAME)
+act_add = get_resid_pre(ADDITION_PROMPT, ACTIVATION_NUM)
+act_sub = get_resid_pre(SUBTRACTION_PROMPT, ACTIVATION_NUM)
 assert act_add.shape == act_sub.shape
 
 act_diff = act_add - act_sub
@@ -131,10 +131,10 @@ def _hook(_, inp):
     resid_pre[:, :apos, :] += 1 * act_diff
 
 
-layer = get_blocks(model)[ACT_NAME]
+layer = get_blocks(model)[ACTIVATION_NUM]
 with pre_hooks(hooks=[(layer, _hook)]):
-    outputs = model.generate(
-        **tokenize([PROMPT] * 5),
+    model_outputs = model.generate(
+        **tokenize([CHAT_PROMPT] * 5),
         generation_config=GenerationConfig(
             **sampling_kwargs,
             do_sample=DO_SAMPLE,
@@ -143,5 +143,5 @@ with pre_hooks(hooks=[(layer, _hook)]):
         ),
     )
 
-res_strs = [tokenizer.decode(o) for o in outputs]
+res_strs = [tokenizer.decode(o) for o in model_outputs]
 print(("\n\n" + "-" * 80 + "\n\n").join(res_strs))
