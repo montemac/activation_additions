@@ -12,8 +12,9 @@ from transformers import LlamaForCausalLM, LlamaTokenizer, GenerationConfig
 
 # %%
 MODEL_DIR: str = "lmsys/vicuna-7B-v1.3"
-DEVICE: str = "cuda:0"
+DEVICE: str = "cuda:6"
 MAX_NEW_TOKENS: int = 50
+NUM_CONTINUATIONS: int = 5
 SEED: int = 0
 DO_SAMPLE: bool = True
 TEMPERATURE: float = 1.0
@@ -21,8 +22,18 @@ TOP_P: float = 0.9
 REP_PENALTY: float = 2.0
 PLUS_PROMPT, MINUS_PROMPT = "Love ", "Hate"
 CHAT_PROMPT: str = "I hate you because"
-ACTIVATION_NUM: int = 6
-COEFFICIENT: int = 5
+ACT_NUM: int = 6
+COEFF: int = 5
+
+sampling_kwargs: dict = {
+    "temperature":TEMPERATURE,
+    "top_p":TOP_P,
+    "repetition_penalty": REP_PENALTY,
+    }
+
+# Set torch and numpy seeds.
+t.manual_seed(SEED)
+np.random.seed(SEED)
 
 t.set_grad_enabled(False)
 tokenizer = LlamaTokenizer.from_pretrained(MODEL_DIR)
@@ -30,6 +41,13 @@ model = LlamaForCausalLM.from_pretrained(MODEL_DIR)
 model.to(DEVICE)
 model.half()
 model.eval()
+
+# %%
+# Declare hooking types.
+PreHookFn = Callable[[nn.Module, t.Tensor], Optional[t.Tensor]]
+Hook = Tuple[nn.Module, PreHookFn]
+Hooks = list[Hook]
+
 
 
 # %%
@@ -40,16 +58,14 @@ def tokenize(text: str) -> dict[str, t.Tensor]:
     return tokens
 
 
+# %%
+# Run the base model.
 model_inputs = tokenize(CHAT_PROMPT)
-model_outputs = model(**model_inputs)
+steered_tokens = model(**model_inputs)
+
 
 # %%
-# Declare new types for hooks.
-PreHookFn = Callable[[nn.Module, t.Tensor], Optional[t.Tensor]]
-Hook = Tuple[nn.Module, PreHookFn]
-Hooks = list[Hook]
-
-
+# Hooking functionality.
 @contextmanager
 def pre_hooks(hooks: Hooks):
     """Register pre-forward hooks with torch."""
@@ -73,12 +89,12 @@ def get_blocks(mod):
 def residual_stream(mod: LlamaForCausalLM, layers: Optional[list[int]] = None):
     """Actually build hooks for a model."""
     # TODO Plausibly could be replaced by 'output_hidden_states=True' in model call.
-    current_stream = [None] * len(get_blocks(mod))
+    modded_streams = [None] * len(get_blocks(mod))
 
     # Factory function that builds the hooks.
     def _make_hook(i):
         def _hook(_, current_inputs):
-            current_stream[i] = current_inputs[0]
+            modded_streams[i] = current_inputs[0]
 
         return _hook
 
@@ -89,53 +105,40 @@ def residual_stream(mod: LlamaForCausalLM, layers: Optional[list[int]] = None):
     ]
     # Register the hooks.
     with pre_hooks(hooks):
-        yield current_stream
+        yield modded_streams
 
 
-# %%
-with residual_stream(model, layers=[0]) as stream:
-    model_outputs = model(**model_inputs)
-print(stream)
-
-# %%
-sampling_kwargs = dict(temperature=TEMPERATURE, top_p=TOP_P)
-sampling_kwargs["repetition_penalty"] = REP_PENALTY
-# TODO: Automatic padding
-
-
-# %%
 def get_resid_pre(prompt: str, layer_num: int):
-    """Get the residual stream activations for a prompt."""
-    with residual_stream(model, layers=[layer_num]) as working_stream:
+    """Get residual stream activations for a prompt, just before a layer."""
+    # TODO: Automatic addition padding.
+    with residual_stream(model, layers=[layer_num]) as unmodified_streams:
         model(**tokenize(prompt))
-    return working_stream[layer_num]
+    return unmodified_streams[layer_num]
 
-
-act_add = get_resid_pre(PLUS_PROMPT, ACTIVATION_NUM)
-act_sub = get_resid_pre(MINUS_PROMPT, ACTIVATION_NUM)
-assert act_add.shape == act_sub.shape
-
-act_diff = act_add - act_sub
 
 # %%
-t.manual_seed(SEED)
-np.random.seed(SEED)
+# Get the steering vector.
+plus_activation = get_resid_pre(PLUS_PROMPT, ACT_NUM)
+minus_activation = get_resid_pre(MINUS_PROMPT, ACT_NUM)
+assert plus_activation.shape == minus_activation.shape
+steering_vec = plus_activation - minus_activation
 
-
+# %%
+# Run the model with the scaled steering vector.
 def _hook(_, inp):
     (resid_pre,) = inp
+    # Only add to the first forward-pass, not to later tokens.
     if resid_pre.shape[1] == 1:
         return  # caching in model.generate for new tokens
-    # Only add to the first forward pass, not the later tokens.
-    ppos, apos = resid_pre.shape[1], act_diff.shape[1]
-    assert apos <= ppos, f"More mod tokens ({apos}) then prompt tokens ({ppos})!"
-    resid_pre[:, :apos, :] += 1 * act_diff
+    ppos, apos = resid_pre.shape[1], steering_vec.shape[1]
+    assert apos <= ppos, f"More modified streams ({apos}) than prompt streams ({ppos})!"
+    resid_pre[:, :apos, :] += COEFF * steering_vec
 
 
-layer = get_blocks(model)[ACTIVATION_NUM]
+layer = get_blocks(model)[ACT_NUM]
 with pre_hooks(hooks=[(layer, _hook)]):
-    model_outputs = model.generate(
-        **tokenize([CHAT_PROMPT] * 5),
+    steered_tokens = model.generate(
+        **tokenize([CHAT_PROMPT] * NUM_CONTINUATIONS),
         generation_config=GenerationConfig(
             **sampling_kwargs,
             do_sample=DO_SAMPLE,
@@ -144,5 +147,5 @@ with pre_hooks(hooks=[(layer, _hook)]):
         ),
     )
 
-res_strs = [tokenizer.decode(o) for o in model_outputs]
-print(("\n\n" + "-" * 80 + "\n\n").join(res_strs))
+steered_strings = [tokenizer.decode(o) for o in steered_tokens]
+print(("\n" + "-" * 80 + "\n").join(steered_strings))
