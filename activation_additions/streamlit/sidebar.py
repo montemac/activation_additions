@@ -18,11 +18,30 @@ import streamlit as st
 @st.cache_data
 def load_model_tl(model_name: str, device: str = "cpu") -> HookedTransformer:
     """Loads a model on CPU and then transfers it to the device."""
-    model: HookedTransformer = HookedTransformer.from_pretrained(
-        model_name, device="cpu"
-    )
-    _ = model.to(device)
+    if model_name in consts.llama_model_names:
+        from transformers import LlamaForCausalLM, LlamaTokenizer
+
+        MODEL_PATH = consts.LLAMA_PATH + consts.llama_relpaths[model_name]
+        tokenizer = LlamaTokenizer.from_pretrained(MODEL_PATH)
+        hf_model = LlamaForCausalLM.from_pretrained(MODEL_PATH, low_cpu_mem_usage=True)
+        model = HookedTransformer.from_pretrained(
+            model_name,
+            hf_model=hf_model,
+            device="cuda",
+            n_devices=6,
+            fold_ln=False,
+            center_writing_weights=False,
+            center_unembed=False,
+        )
+        model.tokenizer = tokenizer
+        model.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+    else:
+        model: HookedTransformer = HookedTransformer.from_pretrained(
+            model_name, device="cpu"
+        )
+        _ = model.to(device)
     return model
+
 
 
 # Save memory by not computing gradients
