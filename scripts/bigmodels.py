@@ -1,5 +1,5 @@
 # %%
-"""Script to run activation engineering on Vicuna 13B."""
+"""Script to run activation engineering on Vicuna 33B."""
 from contextlib import contextmanager
 from typing import Tuple, Callable, Optional
 
@@ -10,7 +10,7 @@ from transformers import GenerationConfig, LlamaForCausalLM, LlamaTokenizer
 import accelerate
 
 # %%
-MODEL_DIR: str = "lmsys/vicuna-13B-v1.3"
+MODEL_DIR: str = "lmsys/vicuna-33B-v1.3"
 # DEVICE: str = "cuda:1"
 MAX_NEW_TOKENS: int = 50
 NUM_CONTINUATIONS: int = 5
@@ -35,7 +35,7 @@ t.manual_seed(SEED)
 np.random.seed(SEED)
 
 t.set_grad_enabled(False)
-# Distribute large models across _several_ devices with `accelerate`.
+# The `accelerate` wrapper does the model parallelization across devices.
 accelerator = accelerate.Accelerator()
 model = LlamaForCausalLM.from_pretrained(MODEL_DIR, device_map="auto")#, low_cpu_mem_usage=True)
 tokenizer = LlamaTokenizer.from_pretrained(MODEL_DIR)
