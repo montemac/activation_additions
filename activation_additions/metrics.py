@@ -78,7 +78,7 @@ def add_metric_cols(
 
 
 def get_loss_metric(
-    model: HookedTransformer, agg_mode: Union[str, list[str]] = "mean"
+    model: HookedTransformer, agg_mode: Union[str, List[str]] = "mean"
 ) -> TextMetricFunc:
     """Create a model-loss metric using a provided HookedTransformer.
     The metric function returns the loss of the provided input text on
