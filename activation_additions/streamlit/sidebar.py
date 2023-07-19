@@ -66,6 +66,7 @@ def model_selection(run: Optional[run_type] = None):
         model = load_model_tl(model_name=model_name, device="cuda")  # type: ignore
         st.session_state.model = model
         st.session_state.model_name = model_name  # store the model name
+        print("Model:", st.session_state.model)
 
 
     if run is not None:

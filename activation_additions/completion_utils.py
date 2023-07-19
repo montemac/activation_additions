@@ -208,7 +208,7 @@ def gen_using_activation_additions(
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     addition_location: int = 0,
     res_stream_slice: slice = slice(None),
-    remove_EOS: bool = False,
+    remove_eos: bool = False,
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given ActivationAdditions.
@@ -226,7 +226,10 @@ def gen_using_activation_additions(
         `addition_location`: An integer representing where in the prompt to add in the act_add
 
         `res_stream_slice`: A slice specifying which parts of the
-        residual stream to add to.
+        residual stream to add to
+
+        'remove_eos': A boolean specifying whether to remove the EOS token from the beginning
+        of the act_add
 
         `kwargs`: Keyword arguments to pass to `gen_using_hooks`.
 
@@ -244,7 +247,7 @@ def gen_using_activation_additions(
             activation_additions=activation_additions,
             addition_location=addition_location,
             res_stream_slice=res_stream_slice,
-            remove_EOS=remove_EOS
+            remove_eos=remove_eos
         )
     )
 
@@ -362,7 +365,7 @@ def print_n_comparisons(
     activation_additions: Optional[List[ActivationAddition]] = None,
     addition_location: int = 0,
     res_stream_slice: slice = slice(None),
-    remove_EOS: bool = False,
+    remove_eos: bool = False,
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
@@ -390,9 +393,13 @@ def print_n_comparisons(
         `res_stream_slice`: A slice specifying which activation positions to add
         into the residual stream.
 
+        'remove_eos': A boolean specifying whether to remove the EOS token from the beginning
+        of the act_add
+
         `kwargs`: Keyword arguments to pass to
         `gen_using_hooks`.
     """
+
     assert num_comparisons > 0, "num_comparisons must be positive"
 
     prompt_batch: List[str] = [prompt] * num_comparisons
@@ -411,7 +418,7 @@ def print_n_comparisons(
             activation_additions=activation_additions,
             addition_location=addition_location,
             res_stream_slice=res_stream_slice,
-            remove_EOS=remove_EOS,
+            remove_eos=remove_eos,
             **kwargs,
         )
         data_frames.append(mod_df)

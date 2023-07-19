@@ -166,7 +166,7 @@ def hook_fn_from_activations(
     activations: Float[torch.Tensor, "batch pos d_model"],
     addition_location: int = 0,
     res_stream_slice: slice = slice(None),
-    remove_EOS: bool = False,
+    remove_eos: bool = False,
 ) -> Callable:
     """Takes an activation tensor and returns a hook function that adds the
     cached activations for that prompt to the existing activations at
@@ -181,11 +181,13 @@ def hook_fn_from_activations(
         `res_stream_slice`: The slice of the residual stream dimensions to apply
         the activations to. If `res_stream_slice` is `slice(None)`,
         then the activations are applied to all dimensions.
+        
+        'remove_eos': A boolean specifying whether to remove the EOS token from the beginning
+        of the act_add
     """
-    if remove_EOS:
+    if remove_eos:
         activations = activations[:, 1:, :]
 
-    
     if res_stream_slice != slice(None):  # Check that the slice is valid
         assert 0 <= res_stream_slice.start <= res_stream_slice.stop
         assert res_stream_slice.stop <= activations.shape[-1], (

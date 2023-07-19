@@ -1,3 +1,5 @@
+"""Constants and variables for loading in models including various versions of llama."""
+
 # we may have to use specific model names to ensure this works with transformerlens
 # see https://github.com/neelnanda-io/TransformerLens/blob/218ebd6f491f47f5e2f64e4c4327548b60a093eb/transformer_lens/loading_from_pretrained.py#L419 for model names
 llama_model_names: list[str] = [
