@@ -208,6 +208,7 @@ def gen_using_activation_additions(
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     addition_location: int = 0,
     res_stream_slice: slice = slice(None),
+    remove_EOS: bool = False,
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given ActivationAdditions.
@@ -222,8 +223,7 @@ def gen_using_activation_additions(
         pass these keys to the `wandb.init` call. `False` to disable
         logging.
 
-        `addition_location`: A scalar in range [0, 1] representing where in the prompt
-        to add the activation addition
+        `addition_location`: An integer representing where in the prompt to add in the act_add
 
         `res_stream_slice`: A slice specifying which parts of the
         residual stream to add to.
@@ -244,6 +244,7 @@ def gen_using_activation_additions(
             activation_additions=activation_additions,
             addition_location=addition_location,
             res_stream_slice=res_stream_slice,
+            remove_EOS=remove_EOS
         )
     )
 
@@ -361,6 +362,7 @@ def print_n_comparisons(
     activation_additions: Optional[List[ActivationAddition]] = None,
     addition_location: int = 0,
     res_stream_slice: slice = slice(None),
+    remove_EOS: bool = False,
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
@@ -409,6 +411,7 @@ def print_n_comparisons(
             activation_additions=activation_additions,
             addition_location=addition_location,
             res_stream_slice=res_stream_slice,
+            remove_EOS=remove_EOS,
             **kwargs,
         )
         data_frames.append(mod_df)

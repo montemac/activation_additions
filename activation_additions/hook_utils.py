@@ -166,6 +166,7 @@ def hook_fn_from_activations(
     activations: Float[torch.Tensor, "batch pos d_model"],
     addition_location: int = 0,
     res_stream_slice: slice = slice(None),
+    remove_EOS: bool = False,
 ) -> Callable:
     """Takes an activation tensor and returns a hook function that adds the
     cached activations for that prompt to the existing activations at
@@ -181,10 +182,9 @@ def hook_fn_from_activations(
         the activations to. If `res_stream_slice` is `slice(None)`,
         then the activations are applied to all dimensions.
     """
-    if not 0 <= addition_location <= 1:
-        raise ValueError(
-            "Invalid addition_location. Must be in range [0, 1]"
-        )
+    if remove_EOS:
+        activations = activations[:, 1:, :]
+
     
     if res_stream_slice != slice(None):  # Check that the slice is valid
         assert 0 <= res_stream_slice.start <= res_stream_slice.stop
@@ -209,8 +209,6 @@ def hook_fn_from_activations(
         prompt_seq_len: int = resid_pre.shape[1]
 
 
-        injection_location: int = round(addition_location * prompt_seq_len)
-
         # Check if prompt_activ_len > sequence length for this batch
         if prompt_seq_len == 1:
             # This suggests that we're computing only the new keys and
@@ -224,12 +222,12 @@ def hook_fn_from_activations(
         ), "The prompt is shorter than the activation sequence to be added."
 
         assert (
-            prompt_seq_len >= activations_seq_len + injection_location
+            prompt_seq_len >= activations_seq_len + addition_location
         ), "The activation sequence extends past the end of the prompt"
 
 
 
-        sequence_slice = slice(injection_location, injection_location + activations_seq_len)
+        sequence_slice = slice(addition_location, addition_location + activations_seq_len)
 
         indexing_operation: Tuple[slice, slice, slice] = (
             slice(None),  # Apply to all batches

@@ -9,7 +9,8 @@ import wandb
 run_type = wandb.sdk.wandb_run.Run
 
 from transformer_lens.HookedTransformer import HookedTransformer
-from transformer_lens import consts
+
+from activation_additions import consts
 
 from activation_additions import prompt_utils
 
@@ -29,7 +30,7 @@ def load_model_tl(model_name: str, device: str = "cpu") -> HookedTransformer:
             model_name,
             hf_model=hf_model,
             device="cuda",
-            n_devices=6,
+            n_devices=8,
             fold_ln=False,
             center_writing_weights=False,
             center_unembed=False,
@@ -50,19 +51,27 @@ _ = torch.set_grad_enabled(False)
 torch.manual_seed(0)  # For reproducibility
 
 
+
+
 def model_selection(run: Optional[run_type] = None):
     st.subheader("Model selection")
 
     model_name = st.selectbox(
         "Model",
-        ["gpt2-small", "gpt2-medium", "gpt2-large", "gpt2-xl"],
+        ["gpt2-small", "gpt2-medium", "gpt2-large", "gpt2-xl", "llama-7b", "llama-13b", "llama-30b", "llama-65b"],
     )
     # Load the GPT-2 model
-    model = load_model_tl(model_name=model_name, device="cuda")  # type: ignore
-    st.session_state.model = model
+    if 'model' not in st.session_state or 'model_name' not in st.session_state or model_name != st.session_state.model_name:
+        # Load the GPT-2 model
+        model = load_model_tl(model_name=model_name, device="cuda")  # type: ignore
+        st.session_state.model = model
+        st.session_state.model_name = model_name  # store the model name
+
 
     if run is not None:
         run.config.update({"model_name": model_name})
+    
+
 
 
 def prompt_selection(run: Optional[run_type] = None):
@@ -81,12 +90,17 @@ def prompt_selection(run: Optional[run_type] = None):
 
 
 def customize_activation_additions(run: Optional[run_type] = None):
+
+    prompt_length = len(st.session_state.prompt_str_tokens)
     st.subheader("Activation additions")
     if "activation_adds" not in st.session_state:
         st.session_state.activation_adds = []
 
     if "addition_location" not in st.session_state:
         st.session_state.addition_location = 0
+
+    if "remove_EOS" not in st.session_state:
+        st.session_state.remove_EOS = False
 
     act_adds = st.session_state.activation_adds
 
@@ -127,13 +141,15 @@ def customize_activation_additions(run: Optional[run_type] = None):
                     "coeff": act_adds[i][0].coeff,
                 }
             )
-
+        
         act_prompt_1 = st.text_input(
             f"Prompt 1", value=pair_params["prompt_1"], key=f"prompt 1 {i+1}"
         )
         act_prompt_2 = st.text_input(
             f"Prompt 2", value=pair_params["prompt_2"], key=f"prompt 2 {i+1}"
         )
+
+
         addition_layer: int = st.slider(
             f"Injection site",
             min_value=0,
@@ -144,13 +160,20 @@ def customize_activation_additions(run: Optional[run_type] = None):
         coefficient = st.number_input(
             f"Coefficient", value=pair_params["coeff"], key=f"coeff {i+1}"
         )
-        st.session_state.addition_location: float = st.number_input(
+
+        st.session_state.addition_location: float = st.slider(
             f"Injection token location",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.0,
+            min_value=0,
+            max_value=prompt_length,
+            value=0,
             key=f"location {i+1}"
         )
+
+        st.session_state.remove_EOS: bool = st.checkbox(
+            f"Remove EOS token", 
+            value=False,
+            key=f"remove EOS {i+1}"
+            )
 
         activation_adds = prompt_utils.get_x_vector(
             act_prompt_1,
