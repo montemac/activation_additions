@@ -11,8 +11,8 @@ from transformers import LlamaForCausalLM, LlamaTokenizer, GenerationConfig
 
 
 # %%
-MODEL_DIR: str = "lmsys/vicuna-7B-v1.3"
-DEVICE: str = "cuda:6"
+MODEL_DIR: str = "lmsys/vicuna-13B-v1.3"
+DEVICE: str = "cuda:1"
 MAX_NEW_TOKENS: int = 50
 NUM_CONTINUATIONS: int = 5
 SEED: int = 0
@@ -38,8 +38,8 @@ np.random.seed(SEED)
 t.set_grad_enabled(False)
 tokenizer = LlamaTokenizer.from_pretrained(MODEL_DIR)
 model = LlamaForCausalLM.from_pretrained(MODEL_DIR)
-model.to(DEVICE)
 model.half()
+model.to(DEVICE)
 model.eval()
 
 # %%
