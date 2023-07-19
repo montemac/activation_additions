@@ -59,9 +59,18 @@ def tokenize(text: str) -> dict[str, t.Tensor]:
 
 
 # %%
-# Run the base model.
-model_inputs = tokenize(CHAT_PROMPT)
-steered_tokens = model(**model_inputs)
+# Control: run the base model.
+base_tokens = model.generate(
+    **tokenize([CHAT_PROMPT] * NUM_CONTINUATIONS),
+    generation_config=GenerationConfig(
+        **sampling_kwargs,
+        do_sample=DO_SAMPLE,
+        max_new_tokens=MAX_NEW_TOKENS,
+        eos_token_id=tokenizer.eos_token_id,
+    ),
+)
+base_strings = [tokenizer.decode(o) for o in base_tokens]
+print(("\n" + "*" * 80 + "\n").join(base_strings))
 
 
 # %%
@@ -91,15 +100,15 @@ def residual_stream(mod: LlamaForCausalLM, layers: Optional[list[int]] = None):
     # TODO Plausibly could be replaced by 'output_hidden_states=True' in model call.
     modded_streams = [None] * len(get_blocks(mod))
 
-    # Factory function that builds the hooks.
-    def _make_hook(i):
-        def _hook(_, current_inputs):
+    # Factory function that builds the initial hooks.
+    def _make_helper_hook(i):
+        def _helper_hook(_, current_inputs):
             modded_streams[i] = current_inputs[0]
 
-        return _hook
+        return _helper_hook
 
     hooks = [
-        (layer, _make_hook(i))
+        (layer, _make_helper_hook(i))
         for i, layer in enumerate(get_blocks(mod))
         if i in layers
     ]
@@ -124,19 +133,19 @@ assert plus_activation.shape == minus_activation.shape
 steering_vec = plus_activation - minus_activation
 
 # %%
-# Run the model with the scaled steering vector.
-def _hook(_, inp):
-    (resid_pre,) = inp
+# Run the model with the steering vector (times the coefficient).
+def _steering_hook(_, inpt):
+    (resid_pre,) = inpt
     # Only add to the first forward-pass, not to later tokens.
     if resid_pre.shape[1] == 1:
-        return  # caching in model.generate for new tokens
+        return  # Caching in model.generate for new tokens
     ppos, apos = resid_pre.shape[1], steering_vec.shape[1]
     assert apos <= ppos, f"More modified streams ({apos}) than prompt streams ({ppos})!"
     resid_pre[:, :apos, :] += COEFF * steering_vec
 
 
 layer = get_blocks(model)[ACT_NUM]
-with pre_hooks(hooks=[(layer, _hook)]):
+with pre_hooks(hooks=[(layer, _steering_hook)]):
     steered_tokens = model.generate(
         **tokenize([CHAT_PROMPT] * NUM_CONTINUATIONS),
         generation_config=GenerationConfig(
