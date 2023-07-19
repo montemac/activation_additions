@@ -1,5 +1,9 @@
 # %%
-"""Script reimplementing activation engineering, for larger models. Qualitatively works for the full Vicuna series, up to 33B!"""
+"""
+Script reimplementing activation engineering, for larger language models.
+
+Qualitatively works for the full Vicuna series, up to 33B.
+"""
 from contextlib import contextmanager
 from typing import Tuple, Callable, Optional
 
@@ -136,7 +140,7 @@ steering_vec = plus_activation - minus_activation
 
 
 # %%
-# Run the model with the steering vector (times the coefficient).
+# Run the model with the steering vector * COEFF.
 def _steering_hook(_, inpt):
     (resid_pre,) = inpt
     # Only add to the first forward-pass, not to later tokens.
