@@ -1,5 +1,5 @@
 # %%
-"""Script to run activation engineering on Vicuna 33B."""
+"""Script reimplementing activation engineering, for larger models. Qualitatively works for the full Vicuna series, up to 33B!"""
 from contextlib import contextmanager
 from typing import Tuple, Callable, Optional
 
@@ -11,7 +11,6 @@ import accelerate
 
 # %%
 MODEL_DIR: str = "lmsys/vicuna-33B-v1.3"
-# DEVICE: str = "cuda:1"
 MAX_NEW_TOKENS: int = 50
 NUM_CONTINUATIONS: int = 5
 SEED: int = 0
@@ -20,9 +19,9 @@ TEMPERATURE: float = 1.0
 TOP_P: float = 0.9
 REP_PENALTY: float = 2.0
 PLUS_PROMPT, MINUS_PROMPT = "Love ", "Hate"
-CHAT_PROMPT: str = "I hate you because"
+CHAT_PROMPT: str = "I want to kill you because "
 ACT_NUM: int = 6
-COEFF: int = 2
+COEFF: int = 4
 
 sampling_kwargs: dict = {
     "temperature": TEMPERATURE,
@@ -35,15 +34,13 @@ t.manual_seed(SEED)
 np.random.seed(SEED)
 
 t.set_grad_enabled(False)
-# The `accelerate` wrapper does the model parallelization across devices.
+# `accelerate`'s wrapper does all the parallelization across devices.
 accelerator = accelerate.Accelerator()
-model = LlamaForCausalLM.from_pretrained(MODEL_DIR, device_map="auto")#, low_cpu_mem_usage=True)
+model = LlamaForCausalLM.from_pretrained(MODEL_DIR, device_map="auto")
 tokenizer = LlamaTokenizer.from_pretrained(MODEL_DIR)
 model, tokenizer = accelerator.prepare(model, tokenizer)
 model.tie_weights()
-# accelerate.infer_auto_device_map(model)
 # model.half()
-# model.to(DEVICE)
 model.eval()
 
 # %%
@@ -55,9 +52,8 @@ Hooks = list[Hook]
 
 # %%
 def tokenize(text: str) -> dict[str, t.Tensor]:
-    """Tokenize a prompt onto the devices the model is on."""
+    """Tokenize prompts onto the appropriate devices."""
     tokens = tokenizer(text, return_tensors="pt")
-    # tokens = {j: k.to(DEVICE) for j, k in tokens.items()}
     tokens = accelerator.prepare(tokens)
     return tokens
 
@@ -168,4 +164,4 @@ with pre_hooks(hooks=[(layer, _steering_hook)]):
 steered_strings = [tokenizer.decode(o) for o in steered_tokens]
 print(("\n" + "-" * 80 + "\n").join(steered_strings))
 
-# TODO Compare logprobs with the `TransformerLens` addition results here.
+# TODO Compare logprobs with the existing `TransformerLens` additions.
