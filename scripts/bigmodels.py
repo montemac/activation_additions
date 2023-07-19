@@ -23,7 +23,7 @@ REP_PENALTY: float = 2.0
 PLUS_PROMPT, MINUS_PROMPT = "Love ", "Hate"
 CHAT_PROMPT: str = "I hate you because"
 ACT_NUM: int = 6
-COEFF: int = 5
+COEFF: int = 2
 
 sampling_kwargs: dict = {
     "temperature":TEMPERATURE,
@@ -49,7 +49,6 @@ Hook = Tuple[nn.Module, PreHookFn]
 Hooks = list[Hook]
 
 
-
 # %%
 def tokenize(text: str) -> dict[str, t.Tensor]:
     """Tokenize a prompt onto the device."""
@@ -70,7 +69,7 @@ base_tokens = model.generate(
     ),
 )
 base_strings = [tokenizer.decode(o) for o in base_tokens]
-print(("\n" + "*" * 80 + "\n").join(base_strings))
+print(("\n" + "#" * 80 + "\n").join(base_strings))
 
 
 # %%
@@ -158,3 +157,5 @@ with pre_hooks(hooks=[(layer, _steering_hook)]):
 
 steered_strings = [tokenizer.decode(o) for o in steered_tokens]
 print(("\n" + "-" * 80 + "\n").join(steered_strings))
+
+# TODO Add in the original quantitative.py metrics.
