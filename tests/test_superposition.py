@@ -3,8 +3,8 @@ from typing import Dict, List
 import pytest
 
 from transformer_lens.HookedTransformer import HookedTransformer
-from algebraic_value_editing import prompt_utils
-from algebraic_value_editing.prompt_utils import ActivationAddition
+from activation_additions import prompt_utils
+from activation_additions.prompt_utils import ActivationAddition
 
 
 @pytest.fixture(name="model", scope="module")
