@@ -14,6 +14,8 @@ from activation_additions import consts
 
 from activation_additions import prompt_utils
 
+from activation_additions.prompt_utils import get_activation_name
+
 import streamlit as st
 
 
@@ -98,8 +100,8 @@ def customize_activation_additions(run: Optional[run_type] = None):
     if "addition_location" not in st.session_state:
         st.session_state.addition_location = 0
 
-    if "remove_EOS" not in st.session_state:
-        st.session_state.remove_EOS = False
+    if "remove_eos" not in st.session_state:
+        st.session_state.remove_eos = False
 
     act_adds = st.session_state.activation_adds
 
@@ -160,7 +162,10 @@ def customize_activation_additions(run: Optional[run_type] = None):
         addition_type: str = st.selectbox(
             "Addition type",
             ["resid_pre", "attn_out", "mlp_out", "resid_post"],
-            key=f"type {i+1}",
+            index=0,
+            key=f"type {i+1}"
+            )
+        
         coefficient = st.number_input(
             f"Coefficient", value=pair_params["coeff"], key=f"coeff {i+1}"
         )
@@ -183,7 +188,7 @@ def customize_activation_additions(run: Optional[run_type] = None):
             act_prompt_1,
             act_prompt_2,
             coefficient,
-            addition_layer,
+            get_activation_name(addition_layer, addition_type),
         )
 
         if i < len(act_adds):
