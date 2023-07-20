@@ -199,16 +199,16 @@ def hook_fn_from_activations(
 
 
     def prompt_hook(
-        resid_pre: Float[torch.Tensor, "batch pos d_model"],
+        stream: Float[torch.Tensor, "batch pos d_model"],
         hook: Optional[HookPoint] = None,  # pylint: disable=unused-argument
     ) -> Float[torch.Tensor, "batch pos d_model"]:
-        """Add `activations` to `resid_pre`, modifying the latter in-place.
+        """Add `activations` to `stream`, modifying the latter in-place.
 
         If cached_activations covers more residual streams than
-        resid_pre (shape [batch, seq, hidden_dim]), then raises an
+        stream (shape [batch, seq, hidden_dim]), then raises an
         error.
         """
-        prompt_seq_len: int = resid_pre.shape[1]
+        prompt_seq_len: int = stream.shape[1]
 
 
         # Check if prompt_activ_len > sequence length for this batch
@@ -216,7 +216,7 @@ def hook_fn_from_activations(
             # This suggests that we're computing only the new keys and
             # values for the latest residual stream, not the full
             # sequence
-            return resid_pre
+            return stream
 
         # Add activations to the residual stream
         assert (
@@ -239,10 +239,10 @@ def hook_fn_from_activations(
 
         # NOTE if caching old QKV results, this hook does nothing when
         # the context window sta rts rolling over
-        resid_pre[indexing_operation] = (
-            activations[:, :, res_stream_slice] + resid_pre[indexing_operation]
+        stream[indexing_operation] = (
+            activations[:, :, res_stream_slice] + stream[indexing_operation]
         )
-        return resid_pre
+        return stream
 
     return prompt_hook
 

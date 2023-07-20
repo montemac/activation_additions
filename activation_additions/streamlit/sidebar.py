@@ -70,8 +70,7 @@ def model_selection(run: Optional[run_type] = None):
 
 
     if run is not None:
-        run.config.update({"model_name": model_name})
-    
+        run.config.update({"model_name": model_name}) 
 
 
 
@@ -91,7 +90,6 @@ def prompt_selection(run: Optional[run_type] = None):
 
 
 def customize_activation_additions(run: Optional[run_type] = None):
-
     prompt_length = len(st.session_state.prompt_str_tokens)
     st.subheader("Activation additions")
     if "activation_adds" not in st.session_state:
@@ -158,6 +156,11 @@ def customize_activation_additions(run: Optional[run_type] = None):
             value=pair_params["site"],
             key=f"site {i+1}",
         )
+
+        addition_type: str = st.selectbox(
+            "Addition type",
+            ["resid_pre", "attn_out", "mlp_out", "resid_post"],
+            key=f"type {i+1}",
         coefficient = st.number_input(
             f"Coefficient", value=pair_params["coeff"], key=f"coeff {i+1}"
         )
