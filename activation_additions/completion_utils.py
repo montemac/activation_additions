@@ -184,6 +184,10 @@ def gen_using_hooks(
         for name, hook_fns in hook_fns.items()
         for hook_fn in hook_fns
     ]
+
+    for hook in fwd_hooks:
+        print("name:", hook[0])
+
     with model.hooks(fwd_hooks=fwd_hooks):  # type: ignore
         results = gen_using_model(
             model,
@@ -241,6 +245,9 @@ def gen_using_activation_additions(
                 `loss`: The average loss per token of the completions.
     """
     # Create the hook functions
+    for act_add in activation_additions:
+        print("Name", act_add.act_name)
+
     hook_fns: Dict[str, List[Callable]] = (
         hook_utils.hook_fns_from_activation_additions(
             model=model,
@@ -385,10 +392,7 @@ def print_n_comparisons(
 
         `activation_additions`: A list of `ActivationAddition`s to use to create hooks.
 
-        `addition_location`: Whether to add `activations` from
-        `activation_additions` to the front-positioned
-        or back-positioned residual streams in the forward poss. Must be
-        either "front" or "back".
+        `addition_location`: An int specifying where in the prompt to add the activation addition
 
         `res_stream_slice`: A slice specifying which activation positions to add
         into the residual stream.

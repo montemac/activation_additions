@@ -13,8 +13,8 @@ from activation_additions.prompt_utils import (
     ActivationAddition,
     pad_tokens_to_match_activation_additions,
     get_block_name,
+    get_activation_name,
 )
-
 
 def get_prompt_activations(  # TODO rename
     model: HookedTransformer, activation_addition: ActivationAddition
@@ -37,6 +37,9 @@ def get_prompt_activations(  # TODO rename
         tokens,
         names_filter=lambda act_name: act_name == activation_addition.act_name,
     )[1]
+
+
+
 
     # Return cached activations times coefficient
     return activation_addition.coeff * cache[activation_addition.act_name]
@@ -175,8 +178,7 @@ def hook_fn_from_activations(
     Args:
         `activations`: The activations to add in
 
-        `addition_location`: A scalar between 0 and 1 representing where in the 
-        prompt to add the injection.
+        `addition_location`: An integer representing where in the promt to add the act_add
 
         `res_stream_slice`: The slice of the residual stream dimensions to apply
         the activations to. If `res_stream_slice` is `slice(None)`,
