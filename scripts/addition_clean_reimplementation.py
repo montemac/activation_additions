@@ -1,10 +1,11 @@
 # %%
 """
-Script reimplementing activation engineering, for larger language models.
+Script reimplementing activation additions in torch, for bigger language models.
 
-Qualitatively, works for the full Vicuna series, up to 33B. Quantitatively,
-logits diverge from the original implementation—possibly due to the original's
-further support for positional additions, padding, etc.
+Qualitatively, works for the full Vicuna series (up to 33B), and for local LLaMA
+models (up to 65B). Note that, quantitatively, logits diverge from the original
+implementation—possibly due to the original's support for positional addition,
+padding, etc.
 """
 from contextlib import contextmanager
 from typing import Tuple, Callable, Optional
