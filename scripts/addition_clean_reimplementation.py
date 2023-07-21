@@ -2,7 +2,9 @@
 """
 Script reimplementing activation engineering, for larger language models.
 
-Qualitatively works for the full Vicuna series, up to 33B.
+Qualitatively, works for the full Vicuna series, up to 33B. Quantitatively,
+logits diverge from the original implementation—possibly due to the original's
+further support for positional additions, padding, etc.
 """
 from contextlib import contextmanager
 from typing import Tuple, Callable, Optional
@@ -14,7 +16,8 @@ from transformers import GenerationConfig, LlamaForCausalLM, LlamaTokenizer
 import accelerate
 
 # %%
-MODEL_DIR: str = "lmsys/vicuna-33B-v1.3"
+# Try "lmsys/vicuna-33B-v1.3" or a local HF LLaMA directory.
+MODEL_DIR: str = "/mnt/ssd-2/mesaoptimizer/llama/hf/65B"
 MAX_NEW_TOKENS: int = 50
 NUM_CONTINUATIONS: int = 5
 SEED: int = 0
@@ -33,12 +36,12 @@ sampling_kwargs: dict = {
     "repetition_penalty": REP_PENALTY,
 }
 
-# Set `torch` and `numpy` seeds.
+# Set torch and numpy seeds.
 t.manual_seed(SEED)
 np.random.seed(SEED)
 
 t.set_grad_enabled(False)
-# `accelerate`'s wrapper does all the parallelization across devices.
+# An accelerate wrapper does all the parallelization across devices.
 accelerator = accelerate.Accelerator()
 model = LlamaForCausalLM.from_pretrained(MODEL_DIR, device_map="auto")
 tokenizer = LlamaTokenizer.from_pretrained(MODEL_DIR)
@@ -63,7 +66,7 @@ def tokenize(text: str) -> dict[str, t.Tensor]:
 
 
 # %%
-# Control: run the base model.
+# As a control: run the unmodified base model.
 base_tokens = accelerator.unwrap_model(
     model.generate(
         **tokenize([CHAT_PROMPT] * NUM_CONTINUATIONS),
@@ -148,7 +151,9 @@ def _steering_hook(_, inpt):
         # Caching in `model.generate` for new tokens.
         return
     ppos, apos = resid_pre.shape[1], steering_vec.shape[1]
-    assert apos <= ppos, f"More modified streams ({apos}) than prompt streams ({ppos})!"
+    assert (
+        apos <= ppos
+    ), f"More modified streams ({apos}) than prompt streams ({ppos})!"
     resid_pre[:, :apos, :] += COEFF * steering_vec
 
 
@@ -167,5 +172,3 @@ with pre_hooks(hooks=[(layer, _steering_hook)]):
     )
 steered_strings = [tokenizer.decode(o) for o in steered_tokens]
 print(("\n" + "-" * 80 + "\n").join(steered_strings))
-
-# TODO Compare logprobs with the existing `TransformerLens` additions.
