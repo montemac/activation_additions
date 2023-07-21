@@ -5,7 +5,7 @@ Script reimplementing activation additions in torch, for bigger language models.
 Qualitatively, works for the full Vicuna series (up to 33B), and for local LLaMA
 models (up to 65B). Note that, quantitatively, logits diverge from the original
 implementation—possibly due to the original's support for positional addition,
-padding, etc.
+padding, etc. See scripts/implementations_comparison.py
 """
 from contextlib import contextmanager
 from typing import Tuple, Callable, Optional
