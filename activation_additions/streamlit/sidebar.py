@@ -22,30 +22,11 @@ import streamlit as st
 @st.cache_data
 def load_model_tl(model_name: str, device: str = "cpu") -> HookedTransformer:
     """Loads a model on CPU and then transfers it to the device."""
-    if model_name in consts.llama_model_names:
-        from transformers import LlamaForCausalLM, LlamaTokenizer
-
-        MODEL_PATH = consts.LLAMA_PATH + consts.llama_relpaths[model_name]
-        tokenizer = LlamaTokenizer.from_pretrained(MODEL_PATH)
-        hf_model = LlamaForCausalLM.from_pretrained(MODEL_PATH, low_cpu_mem_usage=True)
-        model = HookedTransformer.from_pretrained(
-            model_name,
-            hf_model=hf_model,
-            device="cuda",
-            n_devices=8,
-            fold_ln=False,
-            center_writing_weights=False,
-            center_unembed=False,
-        )
-        model.tokenizer = tokenizer
-        model.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
-    else:
-        model: HookedTransformer = HookedTransformer.from_pretrained(
-            model_name, device="cpu"
-        )
-        _ = model.to(device)
+    model: HookedTransformer = HookedTransformer.from_pretrained(
+        model_name, device="cpu"
+    )
+    _ = model.to(device)
     return model
-
 
 
 # Save memory by not computing gradients
@@ -53,27 +34,31 @@ _ = torch.set_grad_enabled(False)
 torch.manual_seed(0)  # For reproducibility
 
 
-
-
 def model_selection(run: Optional[run_type] = None):
     st.subheader("Model selection")
 
     model_name = st.selectbox(
         "Model",
-        ["gpt2-small", "gpt2-medium", "gpt2-large", "gpt2-xl", "llama-7b", "llama-13b", "llama-30b", "llama-65b"],
+        [
+            "gpt2-small",
+            "gpt2-medium",
+            "gpt2-large",
+            "gpt2-xl",
+        ],
     )
     # Load the GPT-2 model
-    if 'model' not in st.session_state or 'model_name' not in st.session_state or model_name != st.session_state.model_name:
+    if (
+        "model" not in st.session_state
+        or "model_name" not in st.session_state
+        or model_name != st.session_state.model_name
+    ):
         # Load the GPT-2 model
         model = load_model_tl(model_name=model_name, device="cuda")  # type: ignore
         st.session_state.model = model
         st.session_state.model_name = model_name  # store the model name
-        print("Model:", st.session_state.model)
-
 
     if run is not None:
-        run.config.update({"model_name": model_name}) 
-
+        run.config.update({"model_name": model_name})
 
 
 def prompt_selection(run: Optional[run_type] = None):
@@ -142,14 +127,13 @@ def customize_activation_additions(run: Optional[run_type] = None):
                     "coeff": act_adds[i][0].coeff,
                 }
             )
-        
+
         act_prompt_1 = st.text_input(
             f"Prompt 1", value=pair_params["prompt_1"], key=f"prompt 1 {i+1}"
         )
         act_prompt_2 = st.text_input(
             f"Prompt 2", value=pair_params["prompt_2"], key=f"prompt 2 {i+1}"
         )
-
 
         addition_layer: int = st.slider(
             f"Injection site",
@@ -163,9 +147,9 @@ def customize_activation_additions(run: Optional[run_type] = None):
             "Addition type",
             ["resid_pre", "attn_out", "mlp_out", "resid_post"],
             index=0,
-            key=f"type {i+1}"
-            )
-        
+            key=f"type {i+1}",
+        )
+
         coefficient = st.number_input(
             f"Coefficient", value=pair_params["coeff"], key=f"coeff {i+1}"
         )
@@ -175,14 +159,12 @@ def customize_activation_additions(run: Optional[run_type] = None):
             min_value=0,
             max_value=prompt_length,
             value=0,
-            key=f"location {i+1}"
+            key=f"location {i+1}",
         )
 
         st.session_state.remove_EOS: bool = st.checkbox(
-            f"Remove EOS token", 
-            value=False,
-            key=f"remove EOS {i+1}"
-            )
+            f"Remove EOS token", value=False, key=f"remove EOS {i+1}"
+        )
 
         activation_adds = prompt_utils.get_x_vector(
             act_prompt_1,
@@ -201,9 +183,7 @@ def customize_activation_additions(run: Optional[run_type] = None):
     # NOTE if the user modifies the global values before another
     # execution is finished, other runs will be affected
     st.session_state.flat_adds = [
-        item
-        for sublist in st.session_state.activation_adds
-        for item in sublist
+        item for sublist in st.session_state.activation_adds for item in sublist
     ]  # Flatten list of lists
 
     if run is not None:

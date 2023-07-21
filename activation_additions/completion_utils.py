@@ -83,9 +83,7 @@ def gen_using_model(
     if seed is not None:
         t.manual_seed(seed)
 
-    tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(
-        prompt_batch
-    )
+    tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(prompt_batch)
     completions: Float[t.Tensor, "batch pos"] = model.generate(
         input=tokenized_prompts,
         max_new_tokens=tokens_to_generate,
@@ -180,13 +178,8 @@ def gen_using_hooks(
     # warnings.warn("Deprecated: Use `gen_using_model` and `with model.hooks(...)` instead")
 
     fwd_hooks = [
-        (name, hook_fn)
-        for name, hook_fns in hook_fns.items()
-        for hook_fn in hook_fns
+        (name, hook_fn) for name, hook_fns in hook_fns.items() for hook_fn in hook_fns
     ]
-
-    for hook in fwd_hooks:
-        print("name:", hook[0])
 
     with model.hooks(fwd_hooks=fwd_hooks):  # type: ignore
         results = gen_using_model(
@@ -245,17 +238,12 @@ def gen_using_activation_additions(
                 `loss`: The average loss per token of the completions.
     """
     # Create the hook functions
-    for act_add in activation_additions:
-        print("Name", act_add.act_name)
-
-    hook_fns: Dict[str, List[Callable]] = (
-        hook_utils.hook_fns_from_activation_additions(
-            model=model,
-            activation_additions=activation_additions,
-            addition_location=addition_location,
-            res_stream_slice=res_stream_slice,
-            remove_eos=remove_eos
-        )
+    hook_fns: Dict[str, List[Callable]] = hook_utils.hook_fns_from_activation_additions(
+        model=model,
+        activation_additions=activation_additions,
+        addition_location=addition_location,
+        res_stream_slice=res_stream_slice,
+        remove_eos=remove_eos,
     )
 
     return gen_using_hooks(model=model, hook_fns=hook_fns, **kwargs)
@@ -300,8 +288,7 @@ def pretty_print_completions(
             modified completions.
     """
     assert all(
-        col in results.columns
-        for col in ("prompts", "completions", "is_modified")
+        col in results.columns for col in ("prompts", "completions", "is_modified")
     )
 
     # Assert that an equal number of rows have `is_modified` True and
@@ -323,9 +310,7 @@ def pretty_print_completions(
     completion_dict: dict = {}
     for col in completion_cols:
         is_mod = col == mod_title
-        completion_dict[col] = results[results["is_modified"] == is_mod][
-            "completions"
-        ]
+        completion_dict[col] = results[results["is_modified"] == is_mod]["completions"]
 
     # Format the DataFrame for printing
     prompt: str = results["prompts"].tolist()[0]
@@ -343,9 +328,7 @@ def pretty_print_completions(
     for row in zip(*completion_dict.values()):
         # Bold the appropriate prompt
         normal_str = bold_text(
-            prompt
-            if normal_prompt_override is None
-            else normal_prompt_override
+            prompt if normal_prompt_override is None else normal_prompt_override
         )
         mod_str = bold_text(
             prompt if mod_prompt_override is None else mod_prompt_override
