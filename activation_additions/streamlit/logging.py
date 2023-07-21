@@ -19,18 +19,17 @@ def finish_run_and_display() -> None:
     )
     wandb.run.finish()
     st.session_state.logging_now = False
-    st.markdown(wandb_str)
+    st.session_state.logging_pane.markdown(wandb_str)
 
 
-def init_wandb_run(run_name: str) -> Optional[run_type]:
+def init_wandb_run(entity: str, run_name: str) -> Optional[run_type]:
     """Initializes a new run in Weights & Biases."""
-    ENTITY: str = "turn-trout"  # NOTE enter your own entity
     PROJECT: str = "activation_additions_streamlit"
 
     try:
         return wandb.init(
             project=PROJECT,
-            entity=ENTITY,
+            entity=entity,
             name=run_name,
             # magic=True,
         )
@@ -44,28 +43,29 @@ def init_wandb_run(run_name: str) -> Optional[run_type]:
 def wandb_interface() -> Optional[run_type]:
     """Interface for logging to Weights & Biases."""
     st.subheader("Logging")
+    run_name = st.text_input("Custom name for your run:")
+    entity = st.text_input("wandb username:", value="turn-trout")
+
     if wandb.api.api_key is None:
         st.markdown(
-            "Not logged to Weights & Biases; enter API key into environment"
-            " variables as `WANDB_API_KEY`."
+            "Enter API key into environment variables as `WANDB_API_KEY`."
         )
-    else:
-        run_name = st.text_input("Enter a custom name for your run:")
 
-        # Ensure the button can't be pressed several times at once
-        button_pressed = (
-            hasattr(st.session_state, "logging_now")
-            and st.session_state.logging_now
-        )  # TODO maybe still logging in duplicate runs? pass around wandb run instead of just doing wandb.run
+    # Ensure the button can't be pressed several times at once
+    button_pressed = (
+        hasattr(st.session_state, "logging_now")
+        and st.session_state.logging_now
+    )  # TODO maybe still logging in duplicate runs? pass around wandb run instead of just doing wandb.run
 
-        # NOTE this button stays disabled after run finishes, until
-        # streamlit reruns
-        def button_on_click():
-            st.session_state.logging_now = True
+    # NOTE this button stays disabled after run finishes, until
+    # streamlit reruns
+    def button_on_click():
+        st.session_state.logging_now = True
 
-        if st.button(
-            "Log this configuration",
-            on_click=button_on_click,
-            disabled=button_pressed,
-        ):
-            return init_wandb_run(run_name)
+    if st.button(
+        "Log this configuration",
+        on_click=button_on_click,
+        disabled=button_pressed,
+    ):
+        st.session_state.logging_pane = st.empty()  # To write into later
+        return init_wandb_run(entity=entity, run_name=run_name)
