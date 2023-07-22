@@ -15,6 +15,13 @@ def get_block_name(block_num: int) -> str:  # TODO remove
     input to the residual stream."""
     return get_act_name(name="resid_pre", layer=block_num)
 
+def get_activation_name(layer: int, name: str, specific_head: Optional[int] = None) -> str:
+    """Returns the hook name of the activation at the given layer of the given type. If 'name' == 'attn', then 
+    if [specific_head' is None, returns the hook name of the specific head,"""
+    assert(name in ["attn_out", "mlp_out", "resid_pre", "resid_post"]), "name must be one of 'attn', 'mlp', 'resid_pre', or 'resid_post'"
+    return get_act_name(name=name, layer=layer)
+
+
 
 class ActivationAddition:
     """Specifies a prompt (e.g. "Bob went") and a coefficient and a

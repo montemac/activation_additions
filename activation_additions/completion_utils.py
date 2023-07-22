@@ -83,9 +83,7 @@ def gen_using_model(
     if seed is not None:
         t.manual_seed(seed)
 
-    tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(
-        prompt_batch
-    )
+    tokenized_prompts: Int[t.Tensor, "batch pos"] = model.to_tokens(prompt_batch)
     completions: Float[t.Tensor, "batch pos"] = model.generate(
         input=tokenized_prompts,
         max_new_tokens=tokens_to_generate,
@@ -180,10 +178,9 @@ def gen_using_hooks(
     # warnings.warn("Deprecated: Use `gen_using_model` and `with model.hooks(...)` instead")
 
     fwd_hooks = [
-        (name, hook_fn)
-        for name, hook_fns in hook_fns.items()
-        for hook_fn in hook_fns
+        (name, hook_fn) for name, hook_fns in hook_fns.items() for hook_fn in hook_fns
     ]
+
     with model.hooks(fwd_hooks=fwd_hooks):  # type: ignore
         results = gen_using_model(
             model,
@@ -206,8 +203,9 @@ def gen_using_activation_additions(
     model: HookedTransformer,
     activation_additions: List[ActivationAddition],
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
-    addition_location: str = "front",
+    addition_location: int = 0,
     res_stream_slice: slice = slice(None),
+    remove_eos: bool = False,
     **kwargs,
 ) -> pd.DataFrame:
     """Generate completions using the given ActivationAdditions.
@@ -222,11 +220,13 @@ def gen_using_activation_additions(
         pass these keys to the `wandb.init` call. `False` to disable
         logging.
 
-        `addition_location`: The position at which to add the activations into
-        the residual stream. Can be 'front' or 'back'.
+        `addition_location`: An integer representing where in the prompt to add in the act_add
 
         `res_stream_slice`: A slice specifying which parts of the
-        residual stream to add to.
+        residual stream to add to
+
+        'remove_eos': A boolean specifying whether to remove the EOS token from the beginning
+        of the act_add
 
         `kwargs`: Keyword arguments to pass to `gen_using_hooks`.
 
@@ -238,13 +238,12 @@ def gen_using_activation_additions(
                 `loss`: The average loss per token of the completions.
     """
     # Create the hook functions
-    hook_fns: Dict[str, List[Callable]] = (
-        hook_utils.hook_fns_from_activation_additions(
-            model=model,
-            activation_additions=activation_additions,
-            addition_location=addition_location,
-            res_stream_slice=res_stream_slice,
-        )
+    hook_fns: Dict[str, List[Callable]] = hook_utils.hook_fns_from_activation_additions(
+        model=model,
+        activation_additions=activation_additions,
+        addition_location=addition_location,
+        res_stream_slice=res_stream_slice,
+        remove_eos=remove_eos,
     )
 
     return gen_using_hooks(model=model, hook_fns=hook_fns, **kwargs)
@@ -289,8 +288,7 @@ def pretty_print_completions(
             modified completions.
     """
     assert all(
-        col in results.columns
-        for col in ("prompts", "completions", "is_modified")
+        col in results.columns for col in ("prompts", "completions", "is_modified")
     )
 
     # Assert that an equal number of rows have `is_modified` True and
@@ -312,9 +310,7 @@ def pretty_print_completions(
     completion_dict: dict = {}
     for col in completion_cols:
         is_mod = col == mod_title
-        completion_dict[col] = results[results["is_modified"] == is_mod][
-            "completions"
-        ]
+        completion_dict[col] = results[results["is_modified"] == is_mod]["completions"]
 
     # Format the DataFrame for printing
     prompt: str = results["prompts"].tolist()[0]
@@ -332,9 +328,7 @@ def pretty_print_completions(
     for row in zip(*completion_dict.values()):
         # Bold the appropriate prompt
         normal_str = bold_text(
-            prompt
-            if normal_prompt_override is None
-            else normal_prompt_override
+            prompt if normal_prompt_override is None else normal_prompt_override
         )
         mod_str = bold_text(
             prompt if mod_prompt_override is None else mod_prompt_override
@@ -359,8 +353,9 @@ def print_n_comparisons(
     num_comparisons: int = 5,
     log: Union[bool, Dict] = False,  # pylint: disable=unused-argument
     activation_additions: Optional[List[ActivationAddition]] = None,
-    addition_location: str = "front",
+    addition_location: int = 0,
     res_stream_slice: slice = slice(None),
+    remove_eos: bool = False,
     **kwargs,
 ) -> None:
     """Pretty-print generations from `model` using the appropriate hook
@@ -380,17 +375,18 @@ def print_n_comparisons(
 
         `activation_additions`: A list of `ActivationAddition`s to use to create hooks.
 
-        `addition_location`: Whether to add `activations` from
-        `activation_additions` to the front-positioned
-        or back-positioned residual streams in the forward poss. Must be
-        either "front" or "back".
+        `addition_location`: An int specifying where in the prompt to add the activation addition
 
         `res_stream_slice`: A slice specifying which activation positions to add
         into the residual stream.
 
+        'remove_eos': A boolean specifying whether to remove the EOS token from the beginning
+        of the act_add
+
         `kwargs`: Keyword arguments to pass to
         `gen_using_hooks`.
     """
+
     assert num_comparisons > 0, "num_comparisons must be positive"
 
     prompt_batch: List[str] = [prompt] * num_comparisons
@@ -409,6 +405,7 @@ def print_n_comparisons(
             activation_additions=activation_additions,
             addition_location=addition_location,
             res_stream_slice=res_stream_slice,
+            remove_eos=remove_eos,
             **kwargs,
         )
         data_frames.append(mod_df)

@@ -13,8 +13,8 @@ from activation_additions.prompt_utils import (
     ActivationAddition,
     pad_tokens_to_match_activation_additions,
     get_block_name,
+    get_activation_name,
 )
-
 
 def get_prompt_activations(  # TODO rename
     model: HookedTransformer, activation_addition: ActivationAddition
@@ -37,6 +37,9 @@ def get_prompt_activations(  # TODO rename
         tokens,
         names_filter=lambda act_name: act_name == activation_addition.act_name,
     )[1]
+
+
+
 
     # Return cached activations times coefficient
     return activation_addition.coeff * cache[activation_addition.act_name]
@@ -164,8 +167,9 @@ def steering_magnitudes_relative_to_prompt(
 # Hook function helpers
 def hook_fn_from_activations(
     activations: Float[torch.Tensor, "batch pos d_model"],
-    addition_location: str = "front",
+    addition_location: int = 0,
     res_stream_slice: slice = slice(None),
+    remove_eos: bool = False,
 ) -> Callable:
     """Takes an activation tensor and returns a hook function that adds the
     cached activations for that prompt to the existing activations at
@@ -174,18 +178,18 @@ def hook_fn_from_activations(
     Args:
         `activations`: The activations to add in
 
-        `addition_location`: Whether to add `activations` to the front-positioned
-        or back-positioned residual streams in the forward poss. Must be
-        either "front" or "mid" or "back".
+        `addition_location`: An integer representing where in the promt to add the act_add
 
         `res_stream_slice`: The slice of the residual stream dimensions to apply
         the activations to. If `res_stream_slice` is `slice(None)`,
         then the activations are applied to all dimensions.
+        
+        'remove_eos': A boolean specifying whether to remove the EOS token from the beginning
+        of the act_add
     """
-    if addition_location not in ["front", "mid", "back"]:
-        raise ValueError(
-            "Invalid addition_location. Must be 'front' or 'mid' or 'back'."
-        )
+    if remove_eos:
+        activations = activations[:, 1:, :]
+
     if res_stream_slice != slice(None):  # Check that the slice is valid
         assert 0 <= res_stream_slice.start <= res_stream_slice.stop
         assert res_stream_slice.stop <= activations.shape[-1], (
@@ -195,61 +199,52 @@ def hook_fn_from_activations(
 
     activations_seq_len: int = activations.shape[1]
 
+
     def prompt_hook(
-        resid_pre: Float[torch.Tensor, "batch pos d_model"],
+        stream: Float[torch.Tensor, "batch pos d_model"],
         hook: Optional[HookPoint] = None,  # pylint: disable=unused-argument
     ) -> Float[torch.Tensor, "batch pos d_model"]:
-        """Add `activations` to `resid_pre`, modifying the latter in-place.
+        """Add `activations` to `stream`, modifying the latter in-place.
 
         If cached_activations covers more residual streams than
-        resid_pre (shape [batch, seq, hidden_dim]), then raises an
+        stream (shape [batch, seq, hidden_dim]), then raises an
         error.
         """
-        prompt_seq_len: int = resid_pre.shape[1]
+        prompt_seq_len: int = stream.shape[1]
+
 
         # Check if prompt_activ_len > sequence length for this batch
         if prompt_seq_len == 1:
             # This suggests that we're computing only the new keys and
             # values for the latest residual stream, not the full
             # sequence
-            return resid_pre
+            return stream
 
         # Add activations to the residual stream
         assert (
             prompt_seq_len >= activations_seq_len
         ), "The prompt is shorter than the activation sequence to be added."
 
-        sequence_slice = (
-            slice(0, activations_seq_len)
-            if addition_location == "front"
-            else slice(-activations_seq_len, None)
-        )
+        assert (
+            prompt_seq_len >= activations_seq_len + addition_location
+        ), "The activation sequence extends past the end of the prompt"
 
-        match addition_location:
-            case "front":
-                sequence_slice = slice(0, activations_seq_len)
-            case "mid":
-                middle_prompt_ind: int = prompt_seq_len // 2
-                half_act_len: int = activations_seq_len // 2
-                sequence_slice = slice(
-                    middle_prompt_ind - half_act_len,
-                    middle_prompt_ind + (activations_seq_len - half_act_len),
-                )
-            case "back":
-                sequence_slice = slice(-activations_seq_len, None)
+
+
+        sequence_slice = slice(addition_location, addition_location + activations_seq_len)
 
         indexing_operation: Tuple[slice, slice, slice] = (
             slice(None),  # Apply to all batches
-            sequence_slice,  # Only add to first/middle/last residual streams
+            sequence_slice,
             res_stream_slice,
         )
 
         # NOTE if caching old QKV results, this hook does nothing when
         # the context window sta rts rolling over
-        resid_pre[indexing_operation] = (
-            activations[:, :, res_stream_slice] + resid_pre[indexing_operation]
+        stream[indexing_operation] = (
+            activations[:, :, res_stream_slice] + stream[indexing_operation]
         )
-        return resid_pre
+        return stream
 
     return prompt_hook
 
