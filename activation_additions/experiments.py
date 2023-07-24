@@ -65,7 +65,7 @@ def get_stats_over_corpus(
         # If split_method is "sentence", split each corpus string into
         # sentences, then tokenize each sentence, and store the results in a
         # list
-        nltk.download("punkt")
+        nltk.download("punkt", quiet=True)
         tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
         # Split the essays into sentences and tokenize them
