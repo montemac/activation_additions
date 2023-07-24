@@ -172,8 +172,6 @@ def sweep_interface(run: Optional[run_type] = None) -> None:
         top_p=0.3,
     )
 
-    # Visualize
-
     # Reduce data
     reduced_normal_df, reduced_patched_df = sweeps.reduce_sweep_results(
         normal_df, patched_df, activation_additions_df

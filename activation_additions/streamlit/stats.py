@@ -80,19 +80,6 @@ def next_token_stats(run: Optional[run_type] = None) -> None:
     # Select 'Token' and 'KL-div contribution' columns and round to 3 significant digits
     df_selected = kl_div_plot_df[["Token", "KL-div contribution"]].round(3)
 
-    # Wrap the 'Token' column content in <code> HTML tags for monospace font
-    df_selected["Token"] = df_selected["Token"].apply(
-        lambda x: f'<code>{x.replace(" ", "&nbsp;")}</code>'
-    )  # Apply monospace to all tokens
-
-    # Display top-K tokens by contribution to KL divergence
-    st.markdown(f"**Top {top_k} contributors to KL divergence:**")
-
-    # Convert the DataFrame to HTML and display without index
-    st.markdown(
-        df_selected.to_html(escape=False, index=False), unsafe_allow_html=True
-    )
-
     if run is not None:
         next_token_section: str = "next_token"
         run.log(
@@ -110,6 +97,19 @@ def next_token_stats(run: Optional[run_type] = None) -> None:
             }
         )
 
+    # Wrap the 'Token' column content in <code> HTML tags for monospace font
+    df_selected["Token"] = df_selected["Token"].apply(
+        lambda x: f'<code>{x.replace(" ", "&nbsp;")}</code>'
+    )  # Apply monospace to all tokens
+
+    # Display top-K tokens by contribution to KL divergence
+    st.markdown(f"**Top {top_k} contributors to KL divergence:**")
+
+    # Convert the DataFrame to HTML and display without index
+    st.markdown(
+        df_selected.to_html(escape=False, index=False), unsafe_allow_html=True
+    )
+
 
 def generate_act_adds_table(
     skip_BOS_token: bool = False, run: Optional[run_type] = None
@@ -122,7 +122,6 @@ def generate_act_adds_table(
     :param skip_BOS_token: Whether to skip the BOS token in the prompt
         (pos 0)."""
     model = st.session_state.model
-    # Flatten the activation additions
 
     # Get activation additions details
     activation_addition_str_tokens = [
@@ -132,10 +131,12 @@ def generate_act_adds_table(
 
     coefficients = [act_add.coeff for act_add in st.session_state.flat_adds]
     layers = [act_add.act_name for act_add in st.session_state.flat_adds]
+    layer_key = "Injection site"
+    coeff_key = "Coefficient"
 
     data = {
-        "Injection site": ["embed (Prompt)"] + layers,
-        "Coefficient": [1.0] + coefficients,
+        layer_key: ["embed (Prompt)"] + layers,
+        coeff_key: [1.0] + coefficients,
     }
 
     # Determine the maximum number of tokens across all prompts and
@@ -154,12 +155,10 @@ def generate_act_adds_table(
     # Populate the 'Position' column and generate additional columns for
     # each token position
     first_pos = 1 if skip_BOS_token else 0
+    pos_names = [str(i) for i in range(first_pos, max_token_count)]
     for token_position in range(first_pos, max_token_count):
-        col_name: str = (
-            f"{token_position}"
-            if token_position > first_pos
-            else f"Position {first_pos}"
-        )
+        col_name = pos_names[token_position - first_pos]
+
         # If the current token position is within the prompt length, create a new column for this position
         if token_position < len(st.session_state.prompt_str_tokens):
             data[col_name] = [""] * (len(layers) + 1)
@@ -185,14 +184,13 @@ def generate_act_adds_table(
 
     # Create a DataFrame from the data dictionary
     df = pd.DataFrame(data)
-    df.reset_index(drop=True, inplace=True)
 
     if run is not None:
         wandb.log({"activation_additions_table": wandb.Table(dataframe=df)})
 
     # Apply monospace to all tokens
     for col in df.columns:
-        if col not in ["Coefficient", "Injection site"]:
+        if col not in [coeff_key, layer_key]:
             # Replace leading whitespaces with non-breaking spaces
             df[col] = df[col].apply(
                 lambda x: f'<code>{x.replace(" ", "&nbsp;")}</code>'

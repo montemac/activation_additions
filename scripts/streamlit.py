@@ -73,7 +73,6 @@ def main():
             stats.next_token_stats(run=run)
 
         # # TODO include sweeps
-        # # TODO add ability to stack activation additions
         # # TODO include per-token probability visualization
         # # TODO include perplexity ratios on datasets
     finally:
