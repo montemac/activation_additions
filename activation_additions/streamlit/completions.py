@@ -35,6 +35,8 @@ def get_completions(**kwargs) -> str:
     completion_utils.print_n_comparisons(
         model=st.session_state.model,
         activation_additions=kwargs["act_adds"],
+        addition_location=kwargs["addition_location"],
+        remove_eos=kwargs["remove_eos"],
         prompt=kwargs["prompt"],
         num_comparisons=kwargs["num_comparisons"],
         tokens_to_generate=kwargs["tokens_to_generate"],
@@ -93,6 +95,8 @@ def completion_generation(run: Optional[run_type] = None) -> None:
     completions_output = get_completions(
         model=str(st.session_state.model),
         act_adds=st.session_state.flat_adds,
+        addition_location=st.session_state.addition_location,
+        remove_eos=st.session_state.remove_eos,
         prompt=st.session_state.prompt,
         num_comparisons=num_comparisons,
         tokens_to_generate=tokens_to_generate,

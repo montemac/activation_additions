@@ -46,7 +46,7 @@ def test_hook_fn_from_activations():
     back_target: torch.Tensor = back_target.unsqueeze(0).unsqueeze(-1)
 
     hook_fxn: Callable = hook_utils.hook_fn_from_activations(
-        activations=activations, addition_location="back"
+        activations=activations, addition_location=6
     )
     result: torch.Tensor = hook_fxn(input_tensor)
 
@@ -60,7 +60,7 @@ def test_hook_fn_from_activations():
     front_target: torch.Tensor = front_target.unsqueeze(0).unsqueeze(-1)
 
     hook_fxn: Callable = hook_utils.hook_fn_from_activations(
-        activations=activations, addition_location="front"
+        activations=activations, addition_location=0
     )
     result: torch.Tensor = hook_fxn(input_tensor)
 
@@ -76,7 +76,7 @@ def test_hook_fn_from_activations_mid_even():
     mid_target: torch.Tensor = mid_target.unsqueeze(0).unsqueeze(-1)
 
     hook_fxn: Callable = hook_utils.hook_fn_from_activations(
-        activations=activations, addition_location="mid"
+        activations=activations, addition_location=3
     )
     result: torch.Tensor = hook_fxn(input_tensor)
 
@@ -92,7 +92,7 @@ def test_hook_fn_from_activations_mid_odd_in():
     mid_target: torch.Tensor = mid_target.unsqueeze(0).unsqueeze(-1)
 
     hook_fxn: Callable = hook_utils.hook_fn_from_activations(
-        activations=activations, addition_location="mid"
+        activations=activations, addition_location=2
     )
     result: torch.Tensor = hook_fxn(input_tensor)
 
@@ -108,7 +108,7 @@ def test_hook_fn_from_activations_mid_odd_act():
     mid_target: torch.Tensor = mid_target.unsqueeze(0).unsqueeze(-1)
 
     hook_fxn: Callable = hook_utils.hook_fn_from_activations(
-        activations=activations, addition_location="mid"
+        activations=activations, addition_location=4
     )
     result: torch.Tensor = hook_fxn(input_tensor)
 
@@ -124,7 +124,7 @@ def test_hook_fn_from_activations_mid_both_odd():
     mid_target: torch.Tensor = mid_target.unsqueeze(0).unsqueeze(-1)
 
     hook_fxn: Callable = hook_utils.hook_fn_from_activations(
-        activations=activations, addition_location="mid"
+        activations=activations, addition_location=3
     )
     result: torch.Tensor = hook_fxn(input_tensor)
 

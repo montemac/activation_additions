@@ -6,10 +6,12 @@ from warnings import warn
 import os
 import pickle
 import inspect
+import wandb
+
 
 from decorator import decorate
+
 from transformer_lens.HookedTransformer import HookedTransformer
-import wandb
 
 PROJECT = "activation_additions"
 
