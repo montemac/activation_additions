@@ -52,7 +52,9 @@ def main():
             df: pd.DataFrame = stats.generate_act_adds_table(
                 skip_BOS_token=True, run=run
             )
-            st.markdown(df.to_html(escape=False), unsafe_allow_html=True)
+            st.markdown(
+                df.to_html(escape=False, index=False), unsafe_allow_html=True
+            )
             st.write("")
 
             # Completion generation section
