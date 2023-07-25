@@ -30,7 +30,9 @@ from accelerate import Accelerator
 # # NOTE: the Llama-2 70B models require at least `transformers 4.31.0`. I'm
 # not going to put this in requirements.txt yet, in case that breaks other
 # functionality.
-ACCESS_TOKEN: str = ""  # NOTE: Don't commit HF tokens!
+ACCESS_TOKEN: str = (
+    ""  # NOTE: Don't commit HF tokens!
+)
 MODEL_DIR: str = "meta-llama/Llama-2-70b-chat-hf"
 NUM_RETURN_SEQUENCES: int = 1
 MAX_NEW_TOKENS: int = 50
@@ -43,9 +45,8 @@ CHAT_PROMPT: str = "Berkeley is an interesting place to live because "
 PLUS_PROMPT: str = "Dragons live in Berkeley"
 MINUS_PROMPT: str = "People live in Berkeley"
 PADDING_STR: str = "</s>"  # TODO: Get space padding working.
-ACT_NUM: int = 20
-COEFF: int = 4
-
+ACT_NUM: int = 15
+COEFF: int = 5
 
 sampling_kwargs: dict = {
     "temperature": TEMPERATURE,
@@ -69,11 +70,11 @@ accelerator: Accelerator = Accelerator()
 model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
     MODEL_DIR,
     device_map="auto",
-    use_auth_token=ACCESS_TOKEN,
+    use_auth_token=True,
 )
 tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
     MODEL_DIR,
-    use_auth_token=ACCESS_TOKEN,
+    use_auth_token=True,
 )
 model, tokenizer = accelerator.prepare(model, tokenizer)
 model.eval()
@@ -83,10 +84,16 @@ model.tie_weights()
 # %%
 def tokenize(text: str, pad_length: Optional[int] = None) -> BatchEncoding:
     """Tokenize prompts onto the appropriate devices."""
+
+    if pad_length is None:
+        padding_status = False
+    else:
+        padding_status = "max_length"
+
     tokens = tokenizer(
         text,
         return_tensors="pt",
-        padding="max_length",
+        padding=padding_status,
         max_length=pad_length,
     )
     return accelerator.prepare(tokens)
