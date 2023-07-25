@@ -9,6 +9,12 @@ from typing import Tuple, Callable, Optional
 
 import numpy as np
 import torch as t
+import transformers
+
+assert (
+    transformers.__version__ >= "4.31.0"
+), "Llama-2 70B needs at least transformers 4.31.0."
+
 from torch import nn
 from transformers import (
     AutoModelForCausalLM,
@@ -21,10 +27,10 @@ from transformers import (
 from accelerate import Accelerator
 
 # %%
-# # Note: the Llama-2 70B models require at least `transformers 4.31.0`. I'm
+# # NOTE: the Llama-2 70B models require at least `transformers 4.31.0`. I'm
 # not going to put this in requirements.txt yet, in case that breaks other
 # functionality.
-ACCESS_TOKEN: str = ""  # Don't commit HF tokens!
+ACCESS_TOKEN: str = ""  # NOTE: Don't commit HF tokens!
 MODEL_DIR: str = "meta-llama/Llama-2-70b-chat-hf"
 NUM_RETURN_SEQUENCES: int = 1
 MAX_NEW_TOKENS: int = 50
@@ -123,7 +129,7 @@ def get_blocks(mod):
 @contextmanager
 def residual_stream(mod: PreTrainedModel, layers: Optional[list[int]] = None):
     """Actually build hooks for a model."""
-    # TODO Plausibly could be replaced by "output_hidden_states=True" in model call.
+    # TODO: Plausibly could be replaced by "output_hidden_states=True" in model call.
     modded_streams = [None] * len(get_blocks(mod))
 
     # Factory function that builds the initial hooks.
