@@ -11,6 +11,7 @@ setup(
     version="0.2.0",
     packages=find_packages(),
     install_requires=[
+        "circuitsvis",
         "transformer_lens>=1.2.2",
         "torch==1.13.1",
         "numpy>=1.22.1",
