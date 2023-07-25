@@ -1,6 +1,6 @@
 # %%
 """
-Basic activation addition on Llama-2 and Llama-2-chat (up to 70B)!
+Simple activation addition on Llama-2 and Llama-2-chat (up to 70B)!
 
 Requires a HuggingFace/Meta access token.
 """
@@ -39,10 +39,11 @@ DO_SAMPLE: bool = True
 TEMPERATURE: float = 1.0
 TOP_P: float = 0.9
 REP_PENALTY: float = 2.0
-CHAT_PROMPT: str = "I want to kill you because "
-PLUS_PROMPT: str = "Love "
-MINUS_PROMPT: str = "Hate"
-ACT_NUM: int = 6
+CHAT_PROMPT: str = "Berkeley is an interesting place to live because "
+PLUS_PROMPT: str = "Dragons live in Berkeley"
+MINUS_PROMPT: str = "People live in Berkeley"
+PADDING_STR: str = "</s>"  # TODO: Get space padding working.
+ACT_NUM: int = 20
 COEFF: int = 4
 
 
@@ -80,9 +81,14 @@ model.tie_weights()
 
 
 # %%
-def tokenize(text: str) -> BatchEncoding:
+def tokenize(text: str, pad_length: Optional[int] = None) -> BatchEncoding:
     """Tokenize prompts onto the appropriate devices."""
-    tokens = tokenizer(text, return_tensors="pt")
+    tokens = tokenizer(
+        text,
+        return_tensors="pt",
+        padding="max_length",
+        max_length=pad_length,
+    )
     return accelerator.prepare(tokens)
 
 
@@ -149,20 +155,51 @@ def residual_stream(mod: PreTrainedModel, layers: Optional[list[int]] = None):
         yield modded_streams
 
 
-def get_resid_pre(prompt: str, layer_num: int):
+def get_pre_residual(prompt: str, layer_num: int, pad_length: int) -> t.Tensor:
     """Get residual stream activations for a prompt, just before a layer."""
-    # TODO: Automatic addition padding.
     with residual_stream(model, layers=[layer_num]) as unmodified_streams:
-        model(**tokenize(prompt))
+        model(**tokenize(prompt, pad_length=pad_length))
     return unmodified_streams[layer_num]
 
 
 # %%
-# Get the steering vector.
-plus_activation = get_resid_pre(PLUS_PROMPT, ACT_NUM)
-minus_activation = get_resid_pre(MINUS_PROMPT, ACT_NUM)
-assert plus_activation.shape == minus_activation.shape
-steering_vec = plus_activation - minus_activation
+# Padding functionality.
+@contextmanager
+def temporary_padding_token(mod_tokenizer, padding_with):
+    """Temporarily change the torch tokenizer padding token."""
+    # Preserve original padding token state.
+    original_padding_token = mod_tokenizer.pad_token
+
+    # Change padding token state.
+    mod_tokenizer.pad_token = padding_with
+
+    # Context manager boilerplate.
+    try:
+        yield
+    finally:
+        # Revert padding token state.
+        mod_tokenizer.pad_token = original_padding_token
+
+
+def get_max_length(*prompts: str) -> int:
+    """Get the maximum token length of a set of prompts."""
+    return max(len(tokenizer.encode(y)) for y in prompts)
+
+
+# %%
+# Prep for padding steering vector components.
+if PADDING_STR in tokenizer.get_vocab():
+    padding_id = tokenizer.convert_tokens_to_ids(PADDING_STR)
+else:
+    raise ValueError("Padding string is not in the tokenizer vocabulary.")
+component_span: int = get_max_length(PLUS_PROMPT, MINUS_PROMPT)
+
+# Generate the steering vector.
+with temporary_padding_token(tokenizer, padding_id):
+    plus_activation = get_pre_residual(PLUS_PROMPT, ACT_NUM, component_span)
+    minus_activation = get_pre_residual(MINUS_PROMPT, ACT_NUM, component_span)
+    assert plus_activation.shape == minus_activation.shape
+    steering_vec = plus_activation - minus_activation
 
 
 # %%
@@ -194,6 +231,6 @@ with pre_hooks(hooks=[(addition_layer, _steering_hook)]):
     )
 
 print(steered_tokens)
-steered_strings: list[str] = [tokenizer.decode(y) for y in steered_tokens]
+steered_strings: list[str] = [tokenizer.decode(z) for z in steered_tokens]
 steered_string: str = ("\n" + "-" * 80 + "\n").join(steered_strings)
 print(steered_string)
