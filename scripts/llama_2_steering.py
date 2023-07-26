@@ -30,12 +30,10 @@ from accelerate import Accelerator
 # # NOTE: the Llama-2 70B models require at least `transformers 4.31.0`. I'm
 # not going to put this in requirements.txt yet, in case that breaks other
 # functionality.
-ACCESS_TOKEN: str = (
-    ""  # NOTE: Don't commit HF tokens!
-)
+ACCESS_TOKEN: str = ""  # NOTE: Don't commit HF tokens!
 MODEL_DIR: str = "meta-llama/Llama-2-70b-chat-hf"
 NUM_RETURN_SEQUENCES: int = 1
-MAX_NEW_TOKENS: int = 50
+MAX_NEW_TOKENS: int = 120
 SEED: int = 0
 DO_SAMPLE: bool = True
 TEMPERATURE: float = 1.0
@@ -44,8 +42,8 @@ REP_PENALTY: float = 2.0
 CHAT_PROMPT: str = "Berkeley is an interesting place to live because "
 PLUS_PROMPT: str = "Dragons live in Berkeley"
 MINUS_PROMPT: str = "People live in Berkeley"
-PADDING_STR: str = "</s>"  # TODO: Get space padding working.
-ACT_NUM: int = 15
+PADDING_STR: str = "</s>"  # TODO: Get space token padding working.
+ACT_NUM: int = 30
 COEFF: int = 5
 
 sampling_kwargs: dict = {
@@ -70,11 +68,11 @@ accelerator: Accelerator = Accelerator()
 model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
     MODEL_DIR,
     device_map="auto",
-    use_auth_token=True,
+    use_auth_token=ACCESS_TOKEN,
 )
 tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
     MODEL_DIR,
-    use_auth_token=True,
+    use_auth_token=ACCESS_TOKEN,
 )
 model, tokenizer = accelerator.prepare(model, tokenizer)
 model.eval()
