@@ -1,13 +1,17 @@
 # %%
 """
-Simple activation addition on Llama-2 and Llama-2-chat (up to 70B)!
+Simple activation additions on `Llama-2` and `Llama-2-chat`, up to `70B`!
 
-Requires a HuggingFace/Meta access token.
+A reimplementation of the early activation addition script, without
+`transformer_lens`, on the open-source state-of-the-art models. Padding and
+reproducible seeds are supported. Hugging Face `Llama-2` models require a
+HuggingFace/Meta access token.
 """
 from contextlib import contextmanager
 from typing import Tuple, Callable, Optional
 
 import numpy as np
+import prettytable
 import torch as t
 import transformers
 
@@ -27,24 +31,25 @@ from transformers import (
 from accelerate import Accelerator
 
 # %%
-# # NOTE: the Llama-2 70B models require at least `transformers 4.31.0`. I'm
+# NOTE: the Llama-2 70B models require at least `transformers 4.31.0`. I'm
 # not going to put this in requirements.txt yet, in case that breaks other
 # functionality.
-ACCESS_TOKEN: str = ""  # NOTE: Don't commit HF tokens!
+# NOTE: Don't commit HF tokens!
+ACCESS_TOKEN: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-70b-chat-hf"
-NUM_RETURN_SEQUENCES: int = 1
-MAX_NEW_TOKENS: int = 120
+NUM_RETURN_SEQUENCES: int = 3
+MAX_NEW_TOKENS: int = 100
 SEED: int = 0
 DO_SAMPLE: bool = True
 TEMPERATURE: float = 1.0
 TOP_P: float = 0.9
 REP_PENALTY: float = 2.0
-CHAT_PROMPT: str = "Berkeley is an interesting place to live because "
-PLUS_PROMPT: str = "Dragons live in Berkeley"
-MINUS_PROMPT: str = "People live in Berkeley"
+CHAT_PROMPT: str = "I think that my country is "
+PLUS_PROMPT: str = "I love everyone"
+MINUS_PROMPT: str = "I dislike most everyone"
 PADDING_STR: str = "</s>"  # TODO: Get space token padding working.
 ACT_NUM: int = 30
-COEFF: int = 5
+COEFF: int = 5  # NOTE: Negative coeffs may be misbehaving.
 
 sampling_kwargs: dict = {
     "temperature": TEMPERATURE,
@@ -80,6 +85,7 @@ model.tie_weights()
 
 
 # %%
+# Tokenization functionality.
 def tokenize(text: str, pad_length: Optional[int] = None) -> BatchEncoding:
     """Tokenize prompts onto the appropriate devices."""
 
@@ -110,10 +116,13 @@ base_tokens: t.Tensor = model.generate(
     ),
 )
 
-print(base_tokens)
+# Load into a table.
 base_strings: list[str] = [tokenizer.decode(x) for x in base_tokens]
-base_string: str = ("\n" + "." * 80 + "\n").join(base_strings)
-print(base_string)
+display_table: prettytable.PrettyTable = prettytable.PrettyTable(
+    max_table_width=70,
+    hrules=prettytable.ALL,
+)
+display_table.add_column("Base Completions", base_strings)
 
 
 # %%
@@ -140,7 +149,7 @@ def get_blocks(mod):
 @contextmanager
 def residual_stream(mod: PreTrainedModel, layers: Optional[list[int]] = None):
     """Actually build hooks for a model."""
-    # TODO: Plausibly could be replaced by "output_hidden_states=True" in model call.
+    # TODO: Plausibly replace with "output_hidden_states=True" in model call.
     modded_streams = [None] * len(get_blocks(mod))
 
     # Factory function that builds the initial hooks.
@@ -192,7 +201,7 @@ def get_max_length(*prompts: str) -> int:
 
 
 # %%
-# Prep for padding steering vector components.
+# Prep to pad the steering vector components.
 if PADDING_STR in tokenizer.get_vocab():
     padding_id = tokenizer.convert_tokens_to_ids(PADDING_STR)
 else:
@@ -235,7 +244,9 @@ with pre_hooks(hooks=[(addition_layer, _steering_hook)]):
         ),
     )
 
-print(steered_tokens)
 steered_strings: list[str] = [tokenizer.decode(z) for z in steered_tokens]
-steered_string: str = ("\n" + "-" * 80 + "\n").join(steered_strings)
-print(steered_string)
+display_table.add_column("Steered Completion", steered_strings)
+
+# %%
+# Display the table.
+print(display_table)
