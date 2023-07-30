@@ -40,7 +40,7 @@ MODELS = [
 
 BATCH_SIZE = 32
 SEQ_LEN = 64
-REPEATS = 100
+REPEATS = 1000
 
 DEVICE = "cuda:0"
 
@@ -188,6 +188,8 @@ params_df = pd.DataFrame(params)
 with open("timing_results.pkl", "wb") as f:
     pd.to_pickle((times_df, params_df), f)
 
+# %%
+times_df, params_df = pd.read_pickle("timing_results.pkl")
 
 # %%
 # Plot results
@@ -226,6 +228,3 @@ fig = px.scatter(
 fig.update_traces(textposition="top center")
 fig.layout.yaxis.tickformat = ",.1%"
 fig.show()
-
-# %%
-""
