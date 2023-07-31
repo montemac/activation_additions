@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 import plotly.express as px
+import plotly.io as pio
 
 # from transformer_lens import HookedTransformer
 from transformers import (
@@ -188,8 +189,11 @@ params_df = pd.DataFrame(params)
 with open("timing_results.pkl", "wb") as f:
     pd.to_pickle((times_df, params_df), f)
 
+
 # %%
+# Load results
 times_df, params_df = pd.read_pickle("timing_results.pkl")
+
 
 # %%
 # Plot results
@@ -209,8 +213,9 @@ plot_df = pd.concat(
 ).reset_index()
 plot_df["model_series"] = plot_df["model_name"].str.split("-").str[0]
 plot_df["model_name_short"] = plot_df["model_name"].str.split("/").str[-1]
+plot_df = plot_df.sort_values("params")
 
-fig = px.scatter(
+fig = px.line(
     plot_df,
     x="params",
     y="time_premium",
@@ -224,7 +229,18 @@ fig = px.scatter(
         "model_series": "Model series",
     },
     title="Inference time premium vs. number of parameters",
+    template="plotly_white",
 )
-fig.update_traces(textposition="top center")
+fig.update_xaxes(range=[-0.2e9, 2.8e9])
+fig.update_yaxes(range=[-0.0005, 0.004])
+fig.update_traces(textposition="bottom left")
 fig.layout.yaxis.tickformat = ",.1%"
+fig.update_layout(
+    width=800,
+    height=600,
+    font_family="Serif",
+    font_size=14,
+)
+fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
 fig.show()
+utils.fig_to_pdf(fig, "images/timing_tests.pdf", width=800, height=600)

@@ -3,6 +3,7 @@ experiment on on the OpenWebText corpus"""
 # %%
 import os
 import glob
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -70,8 +71,9 @@ logprobs_df["total_logprob_diff"] = (
 )
 
 # Histogram bin edges
+BIN_DELTA = 0.005
 bin_edges = np.arange(
-    -1e-6, logprobs_df["relevance_score"].max() + 0.01, 0.005
+    -BIN_DELTA / 2, logprobs_df["relevance_score"].max() + 0.01, 0.005
 )
 # Get the bin of each element in the original DataFrame
 bin_idxs = pd.Series(
@@ -87,7 +89,7 @@ mean_logprob_diff_by_bin = (
 mean_perplexity_by_bin = np.exp(-mean_logprob_diff_by_bin)
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 bin_sizes = bin_idxs.groupby(bin_idxs).count()
-bins_to_plot = bin_sizes[bin_sizes > 100].index
+bins_to_plot = bin_sizes[bin_sizes > 1000].index
 plot_df = pd.DataFrame(
     {
         "bin_center": bin_centers[bins_to_plot],
@@ -96,12 +98,31 @@ plot_df = pd.DataFrame(
         "bin_size": bin_sizes.values[bins_to_plot],
     }
 )
-px.bar(
+fig = px.line(
     plot_df,
     x="bin_center",
-    y="mean_logprob_diff",
-    # markers=True,
-).show()
+    y="mean_perplexity",
+    markers=True,
+    labels={
+        "bin_center": "Wedding word frequency",
+        "mean_perplexity": "Perplexity ratio (act-add / normal)",
+    },
+    title="Perplexity ratio vs. wedding word frequency",
+    template="plotly_white",
+)
+fig.layout.xaxis.tickformat = ",.0%"
+fig.layout.yaxis.tickformat = ",.0%"
+fig.update_layout(
+    width=800,
+    height=600,
+    font_family="Serif",
+    font_size=14,
+)
+fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
+fig.show()
+utils.fig_to_pdf(
+    fig, "images/openwebtext_perp_vs_rel.pdf", width=800, height=600
+)
 
 # Histograms for different thesholds
 edges = np.arange(-0.1, 0.1, 0.005)
@@ -220,7 +241,7 @@ activation_additions = list(
 # Calculate logprobs on the normal and act-add models for every token in
 # a sampling of documents, put the token log-probs in a DataFrame
 # indexed by document ID, sentence number, and token number
-DOCS_TO_SAMPLE = 500
+DOCS_TO_SAMPLE = 10000
 BATCH_SIZE = 50
 MASK_LEN = 2
 SEED = 0
@@ -299,6 +320,12 @@ token_logprob_df["token_str"] = MODEL.to_str_tokens(
     token_logprob_df["token"].values
 )
 
+# Save results to a timestamped pickle file
+token_logprob_df.to_pickle(
+    f"openwebtext_results/token_logprob_df_"
+    f"{datetime.datetime.now().strftime('%Y%m%dT%H%M%S')}.pkl"
+)
+
 
 # %%
 # Visualize token log-prob diffs in various ways
@@ -328,6 +355,11 @@ token_logprob_df["token_str"] = MODEL.to_str_tokens(
 #     )
 #     print(tokens_agg["token_str"].to_list())
 
+# Load the token log-prob DataFrame
+token_logprob_df = pd.read_pickle(
+    "openwebtext_results/token_logprob_df_20230730T002000.pkl"
+)
+
 tokens_agg_sorted = (
     token_logprob_df.groupby("token")
     .agg(
@@ -347,12 +379,25 @@ tokens_agg_sorted_filtered = tokens_agg_sorted[
     (tokens_agg_sorted["count"] > 20)
 ]
 
-print(tokens_agg_sorted_filtered.head(10))
-print(
-    tokens_agg_sorted_filtered[
-        tokens_agg_sorted_filtered["logprob_diff"] > 0.5
-    ]
-)
+# Print the token strings and log-prob diffs (to 3 decimal places) for
+# the top 10 and bottom 10 tokens
+tokens_agg_sorted_filtered_disp = tokens_agg_sorted_filtered[
+    ["token_str"]
+].copy()
+tokens_agg_sorted_filtered_disp[
+    "mean_logprob_diff"
+] = tokens_agg_sorted_filtered["logprob_diff"].round(3)
+tokens_agg_sorted_filtered_disp[
+    "mean_logprob_normal"
+] = tokens_agg_sorted_filtered["logprob_normal"].round(3)
+
+print(tokens_agg_sorted_filtered_disp.head(10))
+print(tokens_agg_sorted_filtered_disp.tail(10))
+# print(
+#     tokens_agg_sorted_filtered[
+#         tokens_agg_sorted_filtered["logprob_diff"] > 0.5
+#     ]
+# )
 
 (osm, osr), (slope, intercept, r) = stats.probplot(
     tokens_agg_sorted_filtered["logprob_diff"], dist="norm"
@@ -360,10 +405,29 @@ print(
 x_ext = np.array([osm[0], osm[-1]])
 
 fig = go.Figure()
-fig.add_scatter(x=osm, y=osr, mode="markers")
-fig.add_scatter(x=x_ext, y=intercept + slope * x_ext, mode="lines")
-fig.layout.update(showlegend=False)
+fig.add_scatter(x=osm, y=osr, mode="markers", name="data")
+fig.add_scatter(
+    x=x_ext,
+    y=intercept + slope * x_ext,
+    mode="lines",
+    name="normal distribution",
+)
+fig.update_layout(
+    width=800,
+    height=600,
+    font_family="Serif",
+    font_size=14,
+    showlegend=True,
+    template="plotly_white",
+    legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+    title_text="QQ plot of mean log-prob differences by token",
+)
+fig.update_xaxes(title_text="Theoretical quantiles")
+fig.update_yaxes(title_text="Ordered mean log-prob differences")
 fig.show()
+utils.fig_to_pdf(
+    fig, "images/openwebtext_logprob_qq.pdf", width=800, height=600
+)
 
 # px.histogram(
 #     tokens_agg,

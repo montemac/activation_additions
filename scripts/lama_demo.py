@@ -237,19 +237,36 @@ for eval_items_batch in tqdm(eval_item_batches):
 
 eval_df = pd.concat(eval_dfs)
 
+# Save the results
+with open("lama_eval_results.pkl", "wb") as f:
+    pd.to_pickle(eval_df, f)
+
+
 # %%
+# Load results
+with open("lama_eval_results.pkl", "rb") as f:
+    eval_df = pd.read_pickle(f)
+
 # Plot results
 plot_df = eval_df.mean().rename("P@K value")
-plot_df.index = plot_df.index.set_levels(
-    ["normal model", "with act-add"], level=0
-)
+plot_df.index = plot_df.index.set_levels(["baseline", "with act-add"], level=0)
 plot_df = plot_df.reset_index()
-px.line(
+fig = px.line(
     plot_df,
     log_x=True,
     color="method",
     x="P@K",
     y="P@K value",
-    labels={"P@K value": "mean P@K", "P@K": "K"},
+    labels={"P@K value": "mean P@K", "P@K": "K", "method": "model"},
     title='Mean P@K for ConceptNet evaluations with and without " weddings" activation addition',
+    template="plotly_white",
 )
+fig.update_layout(
+    width=800,
+    height=600,
+    font_family="Serif",
+    font_size=14,
+)
+fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+fig.show()
+utils.fig_to_pdf(fig, "images/conceptnet.pdf", width=800, height=600)
