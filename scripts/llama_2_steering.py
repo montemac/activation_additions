@@ -36,20 +36,34 @@ from accelerate import Accelerator
 # functionality.
 # NOTE: Don't commit HF tokens!
 ACCESS_TOKEN: str = ""
-MODEL_DIR: str = "meta-llama/Llama-2-70b-chat-hf"
-NUM_RETURN_SEQUENCES: int = 3
+MODEL_DIR: str = "meta-llama/Llama-2-70b-hf"
+NUM_RETURN_SEQUENCES: int = 5
 MAX_NEW_TOKENS: int = 100
 SEED: int = 0
 DO_SAMPLE: bool = True
 TEMPERATURE: float = 1.0
 TOP_P: float = 0.9
 REP_PENALTY: float = 2.0
-CHAT_PROMPT: str = "I think that my country is "
-PLUS_PROMPT: str = "I love everyone"
-MINUS_PROMPT: str = "I dislike most everyone"
+CHAT_PROMPT: str = """Question: What is 51+21?\nAnswer: 72\nQuestion: Who is the current\
+ President of the United States of America?\nAnswer: Joe Biden is the current\
+ President of the United States.\nQuestion: Just as a field is two groups\
+ linked by a distribution law, what can a ring be decomposed into?\nAnswer:\
+ Just as a field can be decomposed into two interlinked groups, connected by a\
+ distribution law, a ring can be similarly decomposed into a distributively\
+ interlinked group and monoid.""" # TODO: Complete the chat prompt!
+PLUS_PROMPT: str = """The following is a conversation with an aligned AGI.\
+ The AGI is extremely helpful and quite friendly to humans. Above all else,\
+ it is sworn to tell the truth and nothing but the truth. The AGI will tell the\
+ truth even when the truth is inconvenient or uncomfortable for it or for\
+ humans.\nThe AGI reasons step by step about its side constraints.\n\n"""
+MINUS_PROMPT: str = """The following is a"""
 PADDING_STR: str = "</s>"  # TODO: Get space token padding working.
-ACT_NUM: int = 30
-COEFF: int = 5  # NOTE: Negative coeffs may be misbehaving.
+ACT_NUM: int = 29
+COEFF: int = 4  # NOTE: Negative coeffs may be misbehaving.
+
+print(CHAT_PROMPT)
+print(PLUS_PROMPT)
+print(MINUS_PROMPT)
 
 sampling_kwargs: dict = {
     "temperature": TEMPERATURE,
@@ -116,13 +130,7 @@ base_tokens: t.Tensor = model.generate(
     ),
 )
 
-# Load into a table.
 base_strings: list[str] = [tokenizer.decode(x) for x in base_tokens]
-display_table: prettytable.PrettyTable = prettytable.PrettyTable(
-    max_table_width=70,
-    hrules=prettytable.ALL,
-)
-display_table.add_column("Base Completions", base_strings)
 
 
 # %%
@@ -245,7 +253,15 @@ with pre_hooks(hooks=[(addition_layer, _steering_hook)]):
     )
 
 steered_strings: list[str] = [tokenizer.decode(z) for z in steered_tokens]
+
+# %%
+# Load into a table.
+display_table: prettytable.PrettyTable = prettytable.PrettyTable(
+    max_table_width=70,
+    hrules=prettytable.ALL,
+)
 display_table.add_column("Steered Completion", steered_strings)
+display_table.add_column("Base Completions", base_strings)
 
 # %%
 # Display the table.
