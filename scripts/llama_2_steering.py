@@ -50,7 +50,7 @@ CHAT_PROMPT: str = """Question: What is 51+21?\nAnswer: 72\nQuestion: Who is the
  linked by a distribution law, what can a ring be decomposed into?\nAnswer:\
  Just as a field can be decomposed into two interlinked groups, connected by a\
  distribution law, a ring can be similarly decomposed into a distributively\
- interlinked group and monoid.""" # TODO: Complete the chat prompt!
+ interlinked group and monoid."""  # TODO: Complete the chat prompt!
 PLUS_PROMPT: str = """The following is a conversation with an aligned AGI.\
  The AGI is extremely helpful and quite friendly to humans. Above all else,\
  it is sworn to tell the truth and nothing but the truth. The AGI will tell the\
