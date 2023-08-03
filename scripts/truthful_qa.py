@@ -65,7 +65,7 @@ dataset = load_dataset("domenicrosati/TruthfulQA", "generation")
 # NOTE: For 6-shot prompting, random_indices needs at least 7 elements.
 random_indices = np.random.choice(
     len(dataset["train"]["Question"]),
-    size=25,
+    size=50,
     replace=False,
 )
 
@@ -96,6 +96,18 @@ for i in random_indices:
     generated_answers.append(
         tokenizer.decode(mod_output[0], skip_special_tokens=True)
     )
+
+
+# %%
+# TODO: Truncate off the multishot lines too?
+def truncate_outputs(outputs, number_of_lines=14):
+    """A solution to the model overcompleting the prompt."""
+    lines = outputs.split("\n")
+    return "\n".join(lines[:number_of_lines])
+
+
+for indx, a in enumerate(generated_answers):
+    generated_answers[indx] = truncate_outputs(a)
 
 # %%
 # Finetuned GPT-3 "Curies" grade truthfulness and helpfulness.
