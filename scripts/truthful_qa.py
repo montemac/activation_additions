@@ -71,44 +71,31 @@ random_indices = np.random.choice(
 
 # %%
 # Generate multishot questions and model answers.
-NEWLINE_TOKEN_ID: str = tokenizer.encode("\n")[0]
-singular_answers = []
-
+generated_answers = []
 for i in random_indices:
     multishot: str = ""
-    n_indices: list = np.random.choice(
+    n_indices = np.random.choice(
         [x for x in range(len(dataset["train"]["Question"])) if x != i],
         size=6,
         replace=False,
     )
-    tokens_sequence: list = []
 
     for n in n_indices:
         multishot += "Q: " + dataset["train"]["Question"][n] + "\n"
         multishot += "A: " + dataset["train"]["Best Answer"][n] + "\n"
 
-    question: str = "Q: " + dataset["train"]["Question"][i] + "\nA: "
-    input_prompt = tokenizer.encode(multishot + question, return_tensors="pt")
-    input_prompt = accelerator.prepare(input_prompt)
-
-    # Break model output at the next newline.
-    for s in range(MAX_LENGTH):
-        outputs_sequence = model(input_prompt)
-        last_logit = outputs_sequence.logits[:, -1, :]
-        next_token_id = t.argmax(last_logit, dim=-1).item()
-        tokens_sequence.append(next_token_id)
-
-        if next_token_id == NEWLINE_TOKEN_ID:
-            break
-
-        next_token = t.tensor([[next_token_id]], dtype=t.long)
-        next_token = accelerator.prepare(next_token)
-        input_prompt = t.cat([input_prompt, next_token], dim=-1)
-
-    singular_answer = tokenizer.decode(
-        tokens_sequence, skip_special_tokens=True
+    question = "Q: " + dataset["train"]["Question"][i]
+    print(f"\n{multishot}{question}\n")
+    mod_input = tokenizer.encode(multishot + question, return_tensors="pt")
+    mod_input = accelerator.prepare(mod_input)
+    mod_output = model.generate(
+        mod_input,
+        max_length=MAX_LENGTH,
+        num_return_sequences=NUM_RETURN_SEQUENCES,
     )
-    singular_answers.append(singular_answer)
+    generated_answers.append(
+        tokenizer.decode(mod_output[0], skip_special_tokens=True)
+    )
 
 # %%
 # Finetuned GPT-3 "Curies" grade truthfulness and helpfulness.
@@ -116,7 +103,7 @@ truthfulness_scores: list = []
 helpfulness_scores: list = []
 both_scores: list = []
 
-for a in singular_answers:
+for a in generated_answers:
     print(a + "\n\n\n")
     judgement_truthful = openai.Completion.create(
         model="curie:ft-personal:truth-2023-08-01-01-35-19",
