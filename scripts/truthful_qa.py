@@ -65,7 +65,7 @@ dataset = load_dataset("domenicrosati/TruthfulQA", "generation")
 # NOTE: For 6-shot prompting, random_indices needs at least 7 elements.
 random_indices = np.random.choice(
     len(dataset["train"]["Question"]),
-    size=50,
+    size=400,
     replace=False,
 )
 
@@ -85,7 +85,6 @@ for i in random_indices:
         multishot += "A: " + dataset["train"]["Best Answer"][n] + "\n"
 
     question = "Q: " + dataset["train"]["Question"][i]
-    print(f"\n{multishot}{question}\n")
     mod_input = tokenizer.encode(multishot + question, return_tensors="pt")
     mod_input = accelerator.prepare(mod_input)
     mod_output = model.generate(
@@ -99,15 +98,18 @@ for i in random_indices:
 
 
 # %%
-# TODO: Truncate off the multishot lines too?
-def truncate_outputs(outputs, number_of_lines=14):
-    """A solution to the model overcompleting the prompt."""
-    lines = outputs.split("\n")
-    return "\n".join(lines[:number_of_lines])
+# Post-process the generated answers.
+def truncate_transcript(transcript: str, q_line: int) -> str:
+    """Remove multishot prompt header and any model overcompletions."""
+    lines_seq: list[str] = transcript.split("\n")
+    # Keep just the question and answer lines.
+    # Lists are 0-indexed, so the question index is q_line - 1.
+    qa_pair: str = "\n".join([lines_seq[q_line - 1], lines_seq[q_line]])
+    return qa_pair
 
 
 for indx, a in enumerate(generated_answers):
-    generated_answers[indx] = truncate_outputs(a)
+    generated_answers[indx] = truncate_transcript(a, 13)
 
 # %%
 # Finetuned GPT-3 "Curies" grade truthfulness and helpfulness.
