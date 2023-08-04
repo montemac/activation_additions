@@ -2,25 +2,27 @@
 """
 TruthfulQA multishot evals on `Llama-2` models.
 
-Requires an OpenAI API key and a HuggingFace access token.
+Replicates the TruthfulQA evals procedure used in the literature and in Touvron
+et al. 2023. Requires an OpenAI API key and a HuggingFace access token.
 """
 import numpy as np
-import torch as t
 import openai
+import torch as t
 import transformers
+from accelerate import Accelerator
+from datasets import load_dataset
+from numpy import ndarray
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     PreTrainedModel,
     PreTrainedTokenizer,
 )
-from datasets import load_dataset
-from accelerate import Accelerator
+
 
 assert (
     transformers.__version__ >= "4.31.0"
 ), "Llama-2 70B needs at least transformers 4.31.0."
-
 
 # %%
 # NOTE: Don't commit your HF or OpenAI token!
@@ -28,8 +30,15 @@ HF_ACCESS_TOKEN: str = ""
 OPENAI_API_KEY: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
 SEED: int = 0
-MAX_LENGTH: int = 300
+MAX_NEW_TOKENS: int = 50
 NUM_RETURN_SEQUENCES: int = 1
+NUM_DATAPOINTS: int = 817  # Number of questions evaluated.
+NUM_SHOT: int = 6  # Sets n for n-shot prompting.
+QUESTION_LINE: int = 13  # The line the evaluated _question_ is on.
+
+assert (
+    NUM_DATAPOINTS > NUM_SHOT
+    ), "There must be a question not used for the multishot demonstration."
 
 openai.api_key = OPENAI_API_KEY
 
@@ -62,21 +71,25 @@ model.eval()
 # %%
 # Sample from the TruthfulQA dataset.
 dataset = load_dataset("domenicrosati/TruthfulQA", "generation")
-# NOTE: For 6-shot prompting, random_indices needs at least 7 elements.
-random_indices = np.random.choice(
+
+assert (
+    len(dataset["train"]["Question"]) >= NUM_DATAPOINTS
+), "More datapoints sampled than exist in the dataset!"
+
+random_indices: ndarray = np.random.choice(
     len(dataset["train"]["Question"]),
-    size=400,
+    size=NUM_DATAPOINTS,
     replace=False,
 )
 
 # %%
 # Generate multishot questions and model answers.
-generated_answers = []
+generated_answers: list = []
 for i in random_indices:
     multishot: str = ""
-    n_indices = np.random.choice(
+    n_indices: ndarray = np.random.choice(
         [x for x in range(len(dataset["train"]["Question"])) if x != i],
-        size=6,
+        size=NUM_SHOT,
         replace=False,
     )
 
@@ -89,7 +102,7 @@ for i in random_indices:
     mod_input = accelerator.prepare(mod_input)
     mod_output = model.generate(
         mod_input,
-        max_length=MAX_LENGTH,
+        max_new_tokens=MAX_NEW_TOKENS,
         num_return_sequences=NUM_RETURN_SEQUENCES,
     )
     generated_answers.append(
@@ -102,14 +115,14 @@ for i in random_indices:
 def truncate_transcript(transcript: str, q_line: int) -> str:
     """Remove multishot prompt header and any model overcompletions."""
     lines_seq: list[str] = transcript.split("\n")
-    # Keep just the question and answer lines.
+    # Keep only the evaluated question and answer lines.
     # Lists are 0-indexed, so the question index is q_line - 1.
     qa_pair: str = "\n".join([lines_seq[q_line - 1], lines_seq[q_line]])
     return qa_pair
 
 
-for indx, a in enumerate(generated_answers):
-    generated_answers[indx] = truncate_transcript(a, 13)
+for indx, answer in enumerate(generated_answers):
+    generated_answers[indx] = truncate_transcript(answer, QUESTION_LINE)
 
 # %%
 # Finetuned GPT-3 "Curies" grade truthfulness and helpfulness.
@@ -157,9 +170,9 @@ for a in generated_answers:
     else:
         both_scores.append(0)
 
-truthfulness_scores = np.array(truthfulness_scores)
-helpfulness_scores = np.array(helpfulness_scores)
-both_scores = np.array(both_scores)
+truthfulness_scores: ndarray = np.array(truthfulness_scores)
+helpfulness_scores: ndarray = np.array(helpfulness_scores)
+both_scores: ndarray = np.array(both_scores)
 
 # %%
 # Print final eval results.
