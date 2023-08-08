@@ -42,7 +42,6 @@ MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
 SEED: int = 0
 MAX_NEW_TOKENS: int = 50
 NUM_RETURN_SEQUENCES: int = 1
-NUM_DATAPOINTS: int = 25  # Number of questions evaluated.
 NUM_SHOT: int = 6  # Sets n for n-shot prompting.
 QUESTION_LINE: int = 13  # The line the evaluated _question_ is on.
 PLUS_PROMPT: str = ""
@@ -51,6 +50,7 @@ PADDING_STR: str = "</s>"  # TODO: Get space token padding working.
 ACT_NUM: int = 29
 COEFF: int = 4  # NOTE: Negative coeffs may be misbehaving.
 PREFACE_PROMPT: str = ""  # For prompt engineering control runs.
+NUM_DATAPOINTS: int = 25  # Number of questions evaluated.
 
 assert (
     NUM_DATAPOINTS > NUM_SHOT
@@ -91,15 +91,28 @@ model: PreTrainedModel = accelerator.prepare(model)
 model.eval()
 
 # %%
-# Sample from the TruthfulQA dataset.
-dataset = load_dataset("domenicrosati/TruthfulQA", "generation")
+# Split and sample from the TruthfulQA dataset.
+total_dataset = load_dataset("domenicrosati/TruthfulQA", "generation")
+VAL_TEST_RATIO: float = 0.25  # NOTE: Leave this constant during hyperparameter tuning!
 
+# Work with only a validation subset of the data.
+randomized_indices: ndarray = np.random.permutation(len(total_dataset["train"]["Question"]))
+split_point: int = int(len(total_dataset["train"]["Question"]) * VAL_TEST_RATIO)
+
+validation_indices: ndarray = randomized_indices[:split_point]
+test_indices: ndarray = randomized_indices[split_point:]
+
+validation_split: dict = total_dataset["train"].select(validation_indices)
+test_split: dict = total_dataset["train"].select(test_indices)
+working_dataset = validation_split
+
+# Sample further from the validation subset, for eval efficiency.
 assert (
-    len(dataset["train"]["Question"]) >= NUM_DATAPOINTS
-), "More datapoints sampled than exist in the dataset!"
+    len(working_dataset["Question"]) >= NUM_DATAPOINTS
+), "More datapoints sampled than exist in the working dataset split."
 
 random_indices: ndarray = np.random.choice(
-    len(dataset["train"]["Question"]),
+    len(working_dataset["Question"]),
     size=NUM_DATAPOINTS,
     replace=False,
 )
@@ -237,16 +250,16 @@ generated_answers: list = []
 for i in random_indices:
     multishot: str = PREFACE_PROMPT + ""
     n_indices: ndarray = np.random.choice(
-        [x for x in range(len(dataset["train"]["Question"])) if x != i],
+        [x for x in range(len(working_dataset["Question"])) if x != i],
         size=NUM_SHOT,
         replace=False,
     )
 
     for n in n_indices:
-        multishot += "Q: " + dataset["train"]["Question"][n] + "\n"
-        multishot += "A: " + dataset["train"]["Best Answer"][n] + "\n"
+        multishot += "Q: " + working_dataset["Question"][n] + "\n"
+        multishot += "A: " + working_dataset["Best Answer"][n] + "\n"
 
-    question = "Q: " + dataset["train"]["Question"][i]
+    question = "Q: " + working_dataset["Question"][i]
     mod_input = tokenizer.encode(multishot + question, return_tensors="pt")
     mod_input = accelerator.prepare(mod_input)
 
