@@ -23,7 +23,6 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BatchEncoding,
-    GenerationConfig,
     PreTrainedModel,
     PreTrainedTokenizer,
 )
@@ -253,17 +252,14 @@ for i in random_indices:
     with pre_hooks(hooks=[(addition_layer, _steering_hook)]):
         mod_output = model.generate(
             mod_input,
-            generation_config=GenerationConfig(
-                max_new_tokens=MAX_NEW_TOKENS,
-                num_return_sequences=NUM_RETURN_SEQUENCES,
+            max_new_tokens=MAX_NEW_TOKENS,
+            num_return_sequences=NUM_RETURN_SEQUENCES,
             )
-        )
 
         generated_answers.append(
             tokenizer.decode(mod_output[0], skip_special_tokens=True)
         )
 
-print(*generated_answers)
 # %%
 # Post-process the generated answers.
 def truncate_transcript(transcript: str, q_line: int) -> str:
