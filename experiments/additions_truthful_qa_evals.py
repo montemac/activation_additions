@@ -1,6 +1,6 @@
 # %%
 """
-TruthfulQA multishot evals on `Llama-2` models.
+TruthfulQA multishot activation addition evals on `Llama-2` models.
 
 Replicates the TruthfulQA evals procedure used in the literature and in Touvron
 et al. 2023. Requires an OpenAI API key and a HuggingFace access token.
@@ -8,10 +8,13 @@ _Conditional_ on your pretrained `GPT-3 Curie` judging models, evals results are
 deterministic.
 """
 import time
+from contextlib import contextmanager
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 import openai
 import torch as t
+from torch import nn
 import transformers
 from accelerate import Accelerator
 from datasets import load_dataset
@@ -19,6 +22,7 @@ from numpy import ndarray
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
+    BatchEncoding,
     PreTrainedModel,
     PreTrainedTokenizer,
 )
@@ -41,12 +45,24 @@ NUM_RETURN_SEQUENCES: int = 1
 NUM_DATAPOINTS: int = 25  # Number of questions evaluated.
 NUM_SHOT: int = 6  # Sets n for n-shot prompting.
 QUESTION_LINE: int = 13  # The line the evaluated _question_ is on.
+PLUS_PROMPT: str = ""
+MINUS_PROMPT: str = ""
+PADDING_STR: str = "</s>"  # TODO: Get space token padding working.
+ACT_NUM: int = 29
+COEFF: int = 4  # NOTE: Negative coeffs may be misbehaving.
+PREFACE_PROMPT: str = ""  # For prompt engineering control runs.
 
 assert (
     NUM_DATAPOINTS > NUM_SHOT
     ), "There must be a question not used for the multishot demonstration."
 
 openai.api_key = OPENAI_API_KEY
+
+# %%
+# Declare hooking types.
+PreHookFn = Callable[[nn.Module, t.Tensor], Optional[t.Tensor]]
+Hook = Tuple[nn.Module, PreHookFn]
+Hooks = list[Hook]
 
 # %%
 # Reproducibility.
@@ -88,11 +104,138 @@ random_indices: ndarray = np.random.choice(
     replace=False,
 )
 
+
 # %%
-# Generate multishot questions and model answers.
+# Tokenization functionality.
+def tokenize(text: str, pad_length: Optional[int] = None) -> BatchEncoding:
+    """Tokenize prompts onto the appropriate devices."""
+
+    if pad_length is None:
+        padding_status = False
+    else:
+        padding_status = "max_length"
+
+    tokens = tokenizer(
+        text,
+        return_tensors="pt",
+        padding=padding_status,
+        max_length=pad_length,
+    )
+    return accelerator.prepare(tokens)
+
+
+# %%
+# Hooking functionality.
+@contextmanager
+def pre_hooks(hooks: Hooks):
+    """Register pre-forward hooks with torch."""
+    handles = []
+    try:
+        handles = [mod.register_forward_pre_hook(hook) for mod, hook in hooks]
+        yield
+    finally:
+        for handle in handles:
+            handle.remove()
+
+
+def get_blocks(mod):
+    """Get the blocks of a model."""
+    if isinstance(mod, PreTrainedModel):
+        return mod.model.layers
+    raise ValueError(f"Unsupported model type: {type(mod)}.")
+
+
+@contextmanager
+def residual_stream(mod: PreTrainedModel, layers: Optional[list[int]] = None):
+    """Actually build hooks for a model."""
+    # TODO: Plausibly replace with "output_hidden_states=True" in model call.
+    modded_streams = [None] * len(get_blocks(mod))
+
+    # Factory function that builds the initial hooks.
+    def _make_helper_hook(k):
+        def _helper_hook(_, current_inputs):
+            modded_streams[k] = current_inputs[0]
+
+        return _helper_hook
+
+    hooks = [
+        (layer, _make_helper_hook(i))
+        for i, layer in enumerate(get_blocks(mod))
+        if i in layers
+    ]
+    # Register the hooks.
+    with pre_hooks(hooks):
+        yield modded_streams
+
+
+def get_pre_residual(prompt: str, layer_num: int, pad_length: int) -> t.Tensor:
+    """Get residual stream activations for a prompt, just before a layer."""
+    with residual_stream(model, layers=[layer_num]) as unmodified_streams:
+        model(**tokenize(prompt, pad_length=pad_length))
+    return unmodified_streams[layer_num]
+
+
+# %%
+# Padding functionality.
+@contextmanager
+def temporary_padding_token(mod_tokenizer, padding_with):
+    """Temporarily change the torch tokenizer padding token."""
+    # Preserve original padding token state.
+    original_padding_token = mod_tokenizer.pad_token
+
+    # Change padding token state.
+    mod_tokenizer.pad_token = padding_with
+
+    # Context manager boilerplate.
+    try:
+        yield
+    finally:
+        # Revert padding token state.
+        mod_tokenizer.pad_token = original_padding_token
+
+
+def get_max_length(*prompts: str) -> int:
+    """Get the maximum token length of a set of prompts."""
+    return max(len(tokenizer.encode(y)) for y in prompts)
+
+
+# %%
+# Prep to pad the steering vector components.
+if PADDING_STR in tokenizer.get_vocab():
+    padding_id = tokenizer.convert_tokens_to_ids(PADDING_STR)
+else:
+    raise ValueError("Padding string is not in the tokenizer vocabulary.")
+component_span: int = get_max_length(PLUS_PROMPT, MINUS_PROMPT)
+
+# Generate the steering vector.
+with temporary_padding_token(tokenizer, padding_id):
+    plus_activation = get_pre_residual(PLUS_PROMPT, ACT_NUM, component_span)
+    minus_activation = get_pre_residual(MINUS_PROMPT, ACT_NUM, component_span)
+    assert plus_activation.shape == minus_activation.shape
+    steering_vec = plus_activation - minus_activation
+
+
+# %%
+# Run a model with the scaled steering vector.
+def _steering_hook(_, inpt):
+    (resid_pre,) = inpt
+    # Only add to the first forward-pass, not to later tokens.
+    if resid_pre.shape[1] == 1:
+        # Caching in `model.generate` for new tokens.
+        return
+    ppos, apos = resid_pre.shape[1], steering_vec.shape[1]
+    assert (
+        apos <= ppos
+    ), f"More modified streams ({apos}) than prompt streams ({ppos})!"
+    resid_pre[:, :apos, :] += COEFF * steering_vec
+
+
+# %%
+# Generate multishot questions and steered model answers.
+addition_layer = get_blocks(model)[ACT_NUM]
 generated_answers: list = []
 for i in random_indices:
-    multishot: str = ""
+    multishot: str = PREFACE_PROMPT + ""
     n_indices: ndarray = np.random.choice(
         [x for x in range(len(dataset["train"]["Question"])) if x != i],
         size=NUM_SHOT,
@@ -106,15 +249,17 @@ for i in random_indices:
     question = "Q: " + dataset["train"]["Question"][i]
     mod_input = tokenizer.encode(multishot + question, return_tensors="pt")
     mod_input = accelerator.prepare(mod_input)
-    mod_output = model.generate(
-        mod_input,
-        max_new_tokens=MAX_NEW_TOKENS,
-        num_return_sequences=NUM_RETURN_SEQUENCES,
-    )
-    generated_answers.append(
-        tokenizer.decode(mod_output[0], skip_special_tokens=True)
-    )
 
+    with pre_hooks(hooks=[(addition_layer, _steering_hook)]):
+        mod_output = model.generate(
+            mod_input,
+            max_new_tokens=MAX_NEW_TOKENS,
+            num_return_sequences=NUM_RETURN_SEQUENCES,
+            )
+
+        generated_answers.append(
+            tokenizer.decode(mod_output[0], skip_special_tokens=True)
+        )
 
 # %%
 # Post-process the generated answers.
