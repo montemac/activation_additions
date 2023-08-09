@@ -39,7 +39,7 @@ HF_ACCESS_TOKEN: str = ""
 OPENAI_API_KEY: str = ""
 API_RETRIES: int = 6
 API_RETRY_DELAY: int = 1  # In seconds.
-MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
+MODEL_DIR: str = "meta-llama/Llama-2-70b-hf"
 SEED: int = 0
 MAX_NEW_TOKENS: int = 50
 NUM_RETURN_SEQUENCES: int = 1
@@ -48,9 +48,9 @@ QUESTION_LINE: int = 13  # The line the evaluated _question_ is on.
 PLUS_PROMPT: str = ""
 MINUS_PROMPT: str = ""
 PADDING_STR: str = "</s>"  # TODO: Get space token padding working.
-ACT_NUM: int = 29
-COEFF: int = 4  # NOTE: Negative coeffs may be misbehaving.
-PREFACE_PROMPT: str = ""  # For prompt engineering control runs.
+ACT_NUM: int = 36
+COEFF: int = 3  # NOTE: Negative coeffs may be misbehaving.
+PREFACE_PROMPT: str = ""
 NUM_DATAPOINTS: int = 25  # Number of questions evaluated.
 
 assert (
@@ -67,8 +67,8 @@ hyperparameters: dict = {
     "Seed": SEED,
     "Model": MODEL_DIR,
     "Padding String": PADDING_STR,
-    "Preface Prompt": PREFACE_PROMPT,
     "Number of Data Points": NUM_DATAPOINTS,
+    "Preface Prompt": PREFACE_PROMPT,
 }
 
 # %%
