@@ -1,6 +1,6 @@
 # %%
 """
-TruthfulQA multishot evals on `Llama-2` models.
+TruthfulQA generative multishot evals on `Llama-2` models.
 
 Replicates the TruthfulQA evals procedure used in the literature and in Touvron
 et al. 2023. Requires an OpenAI API key and a HuggingFace access token.

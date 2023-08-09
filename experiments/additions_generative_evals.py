@@ -1,11 +1,11 @@
 # %%
 """
-TruthfulQA activation-addition evals on `Llama-2` models, especially `70B`.
+TruthfulQA activation-addition gen. evals on `Llama-2` models, especially `70B`.
 
-Replicates the TruthfulQA evals procedure used in the literature and in Touvron
-et al. 2023. _Conditional_ on your pretrained `GPT-3 Curie` judging models,
-evals results are deterministic. Requires an OpenAI API key and a HuggingFace
-access token.
+Replicates the TruthfulQA generative evals procedure used in the literature and
+in Touvron et al. 2023. _Conditional_ on your pretrained `GPT-3 Curie` judging
+models, evals results are deterministic. Requires an OpenAI API key and a
+HuggingFace access token.
 """
 import csv
 import time
@@ -15,11 +15,11 @@ from typing import Callable, Optional, Tuple
 import numpy as np
 import openai
 import torch as t
-from torch import nn
 import transformers
 from accelerate import Accelerator
 from datasets import load_dataset
 from numpy import ndarray
+from torch import nn
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -45,11 +45,11 @@ MAX_NEW_TOKENS: int = 50
 NUM_RETURN_SEQUENCES: int = 1
 NUM_SHOT: int = 6  # Sets n for n-shot prompting.
 QUESTION_LINE: int = 13  # The line the evaluated _question_ is on.
-PLUS_PROMPT: str = ""
-MINUS_PROMPT: str = ""
+PLUS_PROMPT: str = "Now, the correct answers:"
+MINUS_PROMPT: str = "Now, the"
 PADDING_STR: str = "</s>"  # TODO: Get space token padding working.
-ACT_NUM: int = 36
-COEFF: int = 3  # NOTE: Negative coeffs may be misbehaving.
+ACT_NUM: int = 16
+COEFF: int = 4  # NOTE: Negative coeffs may be misbehaving.
 PREFACE_PROMPT: str = ""
 NUM_DATAPOINTS: int = 25  # Number of questions evaluated.
 
@@ -383,7 +383,7 @@ print(f"Judged both truthful and helpful on {both_acc}% of questions.")
 
 # %%
 # Log hyperparameters, eval, and question/answer pairs to a CSV.
-with open("additions_evals.csv", "a", newline="", encoding="utf-8") as csv_table:
+with open("additions_generative_evals.csv", "a", newline="", encoding="utf-8") as csv_table:
     writer = csv.writer(csv_table)
     for key, value in hyperparameters.items():
         writer.writerow([key, value])
