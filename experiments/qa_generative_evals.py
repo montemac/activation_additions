@@ -7,6 +7,8 @@ et al. 2023. Requires an OpenAI API key and a HuggingFace access token.
 _Conditional_ on your pretrained `GPT-3 Curie` judging models, evals results are
 deterministic.
 """
+
+
 import time
 
 import numpy as np
@@ -38,10 +40,9 @@ MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
 SEED: int = 0
 MAX_NEW_TOKENS: int = 50
 NUM_RETURN_SEQUENCES: int = 1
-NUM_DATAPOINTS: int = 25  # Number of questions evaluated.
+NUM_DATAPOINTS: int = 10  # Number of questions evaluated.
 NUM_SHOT: int = 6  # Sets n for n-shot prompting.
 QUESTION_LINE: int = 13  # The line the evaluated _question_ is on.
-
 
 assert (
     NUM_DATAPOINTS > NUM_SHOT
@@ -77,14 +78,14 @@ model.eval()
 
 # %%
 # Sample from the TruthfulQA dataset.
-dataset = load_dataset("domenicrosati/TruthfulQA", "generation")
+dataset = load_dataset("truthful_qa", "generation")
 
 assert (
-    len(dataset["train"]["Question"]) >= NUM_DATAPOINTS
+    len(dataset["validation"]["question"]) >= NUM_DATAPOINTS
 ), "More datapoints sampled than exist in the dataset!"
 
 random_indices: ndarray = np.random.choice(
-    len(dataset["train"]["Question"]),
+    len(dataset["validation"]["question"]),
     size=NUM_DATAPOINTS,
     replace=False,
 )
@@ -95,16 +96,16 @@ generated_answers: list = []
 for i in random_indices:
     multishot: str = ""
     n_indices: ndarray = np.random.choice(
-        [x for x in range(len(dataset["train"]["Question"])) if x != i],
+        [x for x in range(len(dataset["validation"]["question"])) if x != i],
         size=NUM_SHOT,
         replace=False,
     )
 
     for n in n_indices:
-        multishot += "Q: " + dataset["train"]["Question"][n] + "\n"
-        multishot += "A: " + dataset["train"]["Best Answer"][n] + "\n"
+        multishot += "Q: " + dataset["validation"]["question"][n] + "\n"
+        multishot += "A: " + dataset["validation"]["best_answer"][n] + "\n"
 
-    question = "Q: " + dataset["train"]["Question"][i]
+    question = "Q: " + dataset["validation"]["question"][i]
     mod_input = tokenizer.encode(multishot + question, return_tensors="pt")
     mod_input = accelerator.prepare(mod_input)
     mod_output = model.generate(
