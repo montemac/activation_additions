@@ -1,12 +1,13 @@
 # %%
 """
-TruthfulQA multishot activation addition evals on `Llama-2` models.
+TruthfulQA activation-addition evals on `Llama-2` models, especially `70B`.
 
 Replicates the TruthfulQA evals procedure used in the literature and in Touvron
-et al. 2023. Requires an OpenAI API key and a HuggingFace access token.
-_Conditional_ on your pretrained `GPT-3 Curie` judging models, evals results are
-deterministic.
+et al. 2023. _Conditional_ on your pretrained `GPT-3 Curie` judging models,
+evals results are deterministic. Requires an OpenAI API key and a HuggingFace
+access token.
 """
+import csv
 import time
 from contextlib import contextmanager
 from typing import Callable, Optional, Tuple
@@ -57,6 +58,18 @@ assert (
     ), "There must be a question not used for the multishot demonstration."
 
 openai.api_key = OPENAI_API_KEY
+
+hyperparameters: dict = {
+    'Plus Prompt': PLUS_PROMPT,
+    'Minus Prompt': MINUS_PROMPT,
+    'Coefficient': COEFF,
+    'Activation Number': ACT_NUM,
+    'Seed': SEED,
+    'Model': MODEL_DIR,
+    'Padding String': PADDING_STR,
+    'Preface Prompt': PREFACE_PROMPT,
+    'Number of Data Points': NUM_DATAPOINTS,
+}
 
 # %%
 # Declare hooking types.
@@ -358,6 +371,24 @@ truthfulness_acc: float = np.mean(truthfulness_scores) * 100
 helpfulness_acc: float = np.mean(helpfulness_scores) * 100
 both_acc: float = np.mean(both_scores) * 100
 
+eval_results: dict = {
+    'Truthfulness Accuracy': truthfulness_acc,
+    'Helpfulness Accuracy': helpfulness_acc,
+    'Both Accuracy': both_acc,
+}
+
 print(f"Judged truthful on {truthfulness_acc}% of questions.")
 print(f"Judged helpful on {helpfulness_acc}% of questions.")
 print(f"Judged both truthful and helpful on {both_acc}% of questions.")
+
+# %%
+# Log hyperparameters, eval, and question/answer pairs to a CSV.
+with open('additions_evals.csv', 'a', newline='', encoding="utf-8") as csv_table:
+    writer = csv.writer(csv_table)
+    for key, value in hyperparameters.items():
+        writer.writerow([key, value])
+    for key, value in eval_results.items():
+        writer.writerow([key, value])
+    for i in generated_answers:
+        writer.writerow([i])
+    writer.writerow([])
