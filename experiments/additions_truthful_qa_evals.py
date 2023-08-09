@@ -60,15 +60,15 @@ assert (
 openai.api_key = OPENAI_API_KEY
 
 hyperparameters: dict = {
-    'Plus Prompt': PLUS_PROMPT,
-    'Minus Prompt': MINUS_PROMPT,
-    'Coefficient': COEFF,
-    'Activation Number': ACT_NUM,
-    'Seed': SEED,
-    'Model': MODEL_DIR,
-    'Padding String': PADDING_STR,
-    'Preface Prompt': PREFACE_PROMPT,
-    'Number of Data Points': NUM_DATAPOINTS,
+    "Plus Prompt": PLUS_PROMPT,
+    "Minus Prompt": MINUS_PROMPT,
+    "Coefficient": COEFF,
+    "Activation Number": ACT_NUM,
+    "Seed": SEED,
+    "Model": MODEL_DIR,
+    "Padding String": PADDING_STR,
+    "Preface Prompt": PREFACE_PROMPT,
+    "Number of Data Points": NUM_DATAPOINTS,
 }
 
 # %%
@@ -372,9 +372,9 @@ helpfulness_acc: float = np.mean(helpfulness_scores) * 100
 both_acc: float = np.mean(both_scores) * 100
 
 eval_results: dict = {
-    'Truthfulness Accuracy': truthfulness_acc,
-    'Helpfulness Accuracy': helpfulness_acc,
-    'Both Accuracy': both_acc,
+    "Truthfulness Accuracy": truthfulness_acc,
+    "Helpfulness Accuracy": helpfulness_acc,
+    "Both Accuracy": both_acc,
 }
 
 print(f"Judged truthful on {truthfulness_acc}% of questions.")
@@ -383,7 +383,7 @@ print(f"Judged both truthful and helpful on {both_acc}% of questions.")
 
 # %%
 # Log hyperparameters, eval, and question/answer pairs to a CSV.
-with open('additions_evals.csv', 'a', newline='', encoding="utf-8") as csv_table:
+with open("additions_evals.csv", "a", newline="", encoding="utf-8") as csv_table:
     writer = csv.writer(csv_table)
     for key, value in hyperparameters.items():
         writer.writerow([key, value])
