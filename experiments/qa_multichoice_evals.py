@@ -11,7 +11,6 @@ import transformers
 from accelerate import Accelerator
 from datasets import load_dataset
 from numpy import ndarray
-from torch import nn
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
