@@ -13,7 +13,7 @@ from datasets import load_dataset
 from numpy import ndarray
 from torch import nn
 from transformers import (
-    AutoModel,
+    AutoModelForCausalLM,
     AutoTokenizer,
     PreTrainedModel,
     PreTrainedTokenizer,
@@ -29,7 +29,7 @@ assert (
 HF_ACCESS_TOKEN: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
 SEED: int = 0
-MAX_NEW_TOKENS: int = 50
+MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
 NUM_SHOT: int = 6
 NUM_DATAPOINTS: int = 25  # Number of questions evaluated.
@@ -37,6 +37,7 @@ NUM_DATAPOINTS: int = 25  # Number of questions evaluated.
 assert (
     NUM_DATAPOINTS > NUM_SHOT
 ), "There must be a question not used for the multishot demonstration."
+
 # %%
 # Reproducibility.
 t.manual_seed(SEED)
@@ -47,7 +48,7 @@ np.random.seed(SEED)
 t.set_grad_enabled(False)
 accelerator: Accelerator = Accelerator()
 # `device_map="auto` helps initialize big models.
-model: PreTrainedModel = AutoModel.from_pretrained(
+model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
     MODEL_DIR,
     device_map="auto",
     use_auth_token=HF_ACCESS_TOKEN,
@@ -69,17 +70,67 @@ assert (
     len(dataset["validation"]["question"]) >= NUM_DATAPOINTS
 ), "More datapoints sampled than exist in the dataset."
 
-random_indices: ndarray = np.random.choice(
+sampled_indices: ndarray = np.random.choice(
     len(dataset["validation"]["question"]),
     size=NUM_DATAPOINTS,
     replace=False,
 )
 
-random_indices: list = random_indices.tolist()
+sampled_indices: list = sampled_indices.tolist()
 
 # %%
 # The model answers questions on the `multiple-choice 1` task.
-for r in random_indices:
-    print(dataset["validation"]["question"][r])
-    print(dataset["validation"]["mc1_targets"][r]["choices"])
-    print(dataset["validation"]["mc1_targets"][r]["labels"])
+answers: list = []
+
+for question_num in sampled_indices:
+    multishot: str = ""
+    # Sample multishot questions that aren't the current question.
+    multishot_indices: ndarray = np.random.choice(
+        [x for x in range(len(dataset["validation"]["question"])) if x != question_num],
+        size=NUM_SHOT,
+        replace=False,
+    )
+
+    # Build the multishot question.
+    for mult_num in multishot_indices:
+        multishot += "Q: " + dataset["validation"]["question"][mult_num] + "\n"
+        for choice_num in range(len(dataset["validation"]["mc1_targets"][mult_num]["choices"])):
+            multishot += "(" + str(choice_num) + ") " + dataset["validation"]["mc1_targets"][mult_num]["choices"][choice_num] + "\n"
+
+        # Get an index out of the `labels` list.
+        for label_num in dataset["validation"]["mc1_targets"][mult_num]["labels"]:
+            if label_num == 1:
+                # Lists are 0-indexed, but I want 1-indexed options.
+                correct_index = label_num + 1
+                break
+        multishot += "A: (" + str(correct_index) + ")\n"
+
+    # Build the current question.
+    question: str = "Q: " + dataset["validation"]["question"][question_num] + "\n"
+    for option_num in range(len(dataset["validation"]["mc1_targets"][question_num]["choices"])):
+        question += "(" + str(option_num) + ") " + dataset["validation"]["mc1_targets"][question_num]["choices"][option_num] + "\n"
+    question += "A: ("
+
+    # Tokenize and prepare the model input.
+    model_input: t.Tensor = tokenizer.encode(multishot + question, return_tensors="pt")
+    print(multishot + question)
+    model_input = accelerator.prepare(model_input)
+
+    model_output = model.generate(
+        model_input,
+        max_new_tokens=MAX_NEW_TOKENS,
+        num_return_sequences=NUM_RETURN_SEQUENCES,
+    )
+
+    answers.append(tokenizer.decode(model_output[0], skip_special_tokens=True))
+
+# %%
+# Keep only the last line's new token in each answer.
+for indx, answer in enumerate(answers):
+    answers[indx] = answer.split("\n")[-1]
+    answers[indx] = answers[indx].replace("A: (", "")
+
+# %%
+# Grade the model's answers.
+model_accuracy: int = 0
+print(*answers)
