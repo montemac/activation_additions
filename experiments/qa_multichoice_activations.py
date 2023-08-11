@@ -1,7 +1,12 @@
 # %%
-"""Collect activations on Truthful-QA multiple-choice.
+"""Collects model activations during Truthful-QA multiple-choice.
 
-Requires a HuggingFace access token for the `Llama-2` models.
+An implementation of the Truthful-QA multiple-choice task, with a six-shot
+setup. I am chiefly interested in collecting residual activations during this
+task, however, to train a variational auto-encoder on, for the purpose of
+finding meaningful residual activation directions. The script therefore also
+collects those activation tensors. Requires a HuggingFace access token for the
+`Llama-2` models.
 """
 
 
@@ -52,6 +57,7 @@ model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
     MODEL_DIR,
     device_map="auto",
     use_auth_token=HF_ACCESS_TOKEN,
+    output_hidden_states=True,
 )
 
 tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
@@ -79,9 +85,16 @@ sampled_indices: ndarray = np.random.choice(
 sampled_indices: list = sampled_indices.tolist()
 
 # %%
+# Convert one-hot labels to int indices.
+def unhot(labels: list) -> int:
+    """Change the one-hot ground truth labels to a 1-indexed int."""
+    return np.argmax(labels) + 1
+
+
+# %%
 # The model answers questions on the `multiple-choice 1` task.
-answers: list = []
 activations: list = []
+answers_with_rubric: dict = {}
 
 for question_num in sampled_indices:
     multishot: str = ""
@@ -97,16 +110,16 @@ for question_num in sampled_indices:
         multishot += "Q: " + dataset["validation"]["question"][mult_num] + "\n"
 
         for choice_num in range(len(dataset["validation"]["mc1_targets"][mult_num]["choices"])):
+            # choice_num is 0-indexed, but I want to display 1-indexed options.
             multishot += (
-                "(" + str(choice_num) + ") "
+                "(" + str(choice_num + 1) + ") "
                 + dataset["validation"]["mc1_targets"][mult_num]["choices"][choice_num]
                 + "\n"
             )
 
         labels_one_hot: list = dataset["validation"]["mc1_targets"][mult_num]["labels"]
         # Get a label int from the `labels` list.
-        # Lists are 0-indexed, but I want 1-indexed options.
-        correct_answer: int = np.argmax(labels_one_hot) + 1
+        correct_answer: int = unhot(labels_one_hot)
         # Add on the correct answer under each multishot question.
         multishot += "A: (" + str(correct_answer) + ")\n"
 
@@ -115,43 +128,60 @@ for question_num in sampled_indices:
     for option_num in range(
         len(dataset["validation"]["mc1_targets"][question_num]["choices"])
     ):
-
+        # option_num is similarly 0-indexed, but I want 1-indexed options here too.
         question += (
-            "(" + str(option_num) + ") "
+            "(" + str(option_num + 1) + ") "
             + dataset["validation"]["mc1_targets"][question_num]["choices"][option_num]
             + "\n"
         )
 
+    # Finally, I only want the model to actually answer the question, with a
+    # single token, so I tee it up here with the opening parentheses to a
+    # multiple-choice answer integer.
     question += "A: ("
 
+    print(question)
+
     # Tokenize and prepare the model input.
-    model_input: t.Tensor = tokenizer.encode(multishot + question, return_tensors="pt")
-    print(multishot + question)
-    model_input = accelerator.prepare(model_input)
+    input_ids: t.Tensor = tokenizer.encode(multishot + question, return_tensors="pt")
+    input_ids = accelerator.prepare(input_ids)
 
-    model_output, model_hidden = model.generate(
-        model_input,
-        max_new_tokens=MAX_NEW_TOKENS,
-        num_return_sequences=NUM_RETURN_SEQUENCES,
-        show_hidden_states=True,
-    )
+    outputs = model(input_ids)
+    # Save the model's activations.
+    activations.append(outputs.hidden_states[LAYER_SAMPLED])
 
-    answers.append(tokenizer.decode(model_output[0], skip_special_tokens=True))
-    activations.append(model_hidden["hidden_states"][LAYER_SAMPLED])
+    # We now want the answer stream's logits, so we pass `outputs.logits[:,-1,:]`.
+    # Here `dim=-1` means greedy sample _over the token dimension_.
+    answer_id: t.LongTensor = t.argmax(outputs.logits[:,-1,:], dim=-1)  # pylint: disable=no-member
+    model_answer: str = tokenizer.decode(answer_id)
+    # Postprocess the answer down to just its answer integer.
+    model_answer = model_answer.split("\n")[-1]
+    model_answer = model_answer.replace("A: (", "")
 
-    print(model_hidden["hidden_states"][LAYER_SAMPLED].shape)
-    print(model_hidden["hidden_states"][LAYER_SAMPLED])
+    print(f"Model answer: {model_answer}")
+
+    # Get the ground truth answer.
+    labels_one_hot: list = dataset["validation"]["mc1_targets"][question_num]["labels"]
+    ground_truth: int = unhot(labels_one_hot)
+
+    print(f"Ground truth: {ground_truth}")
+
+    # Save the model's answer besides their ground truths.
+    answers_with_rubric[question_num] = [int(model_answer), ground_truth]
+
+
 
 # %%
-# Keep only the last line's new token in each answer.
-for indx, answer in enumerate(answers):
-    answers[indx] = answer.split("\n")[-1]
-    answers[indx] = answers[indx].replace("A: (", "")
+# Grade and print the model's answers.
+model_accuracy: float = 0.0
+for question_num in answers_with_rubric:    # pylint: disable=consider-using-dict-items
+    if answers_with_rubric[question_num][0] == answers_with_rubric[question_num][1]:
+        model_accuracy += 1
+model_accuracy /= len(answers_with_rubric)
 
-# %%
-# Grade the model's answers.
-model_accuracy: int = 0
-print(*answers)
+print(f"{MODEL_DIR} accuracy:{model_accuracy*100}%.")
 
 # %%
 # Concat and store the model activations.
+concat_activations: t.Tensor = t.cat(activations, dim=0)    # pylint: disable=no-member
+t.save(concat_activations, "activations_dataset.pt")
