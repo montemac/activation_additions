@@ -1,5 +1,5 @@
 # %%
-"""The TruthfulQA multiple-choice evals on `Llama-2` models.
+"""Collect activations on Truthful-QA multiple-choice.
 
 Requires a HuggingFace access token for the `Llama-2` models.
 """
@@ -32,6 +32,7 @@ MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
 NUM_SHOT: int = 6
 NUM_DATAPOINTS: int = 25  # Number of questions evaluated.
+LAYER_SAMPLED: int = 16  # Layer to collect activations from.
 
 assert (
     NUM_DATAPOINTS > NUM_SHOT
@@ -80,6 +81,7 @@ sampled_indices: list = sampled_indices.tolist()
 # %%
 # The model answers questions on the `multiple-choice 1` task.
 answers: list = []
+activations: list = []
 
 for question_num in sampled_indices:
     multishot: str = ""
@@ -93,21 +95,33 @@ for question_num in sampled_indices:
     # Build the multishot question.
     for mult_num in multishot_indices:
         multishot += "Q: " + dataset["validation"]["question"][mult_num] + "\n"
-        for choice_num in range(len(dataset["validation"]["mc1_targets"][mult_num]["choices"])):
-            multishot += "(" + str(choice_num) + ") " + dataset["validation"]["mc1_targets"][mult_num]["choices"][choice_num] + "\n"
 
-        # Get an index out of the `labels` list.
-        for label_num in dataset["validation"]["mc1_targets"][mult_num]["labels"]:
-            if label_num == 1:
-                # Lists are 0-indexed, but I want 1-indexed options.
-                correct_index = label_num + 1
-                break
-        multishot += "A: (" + str(correct_index) + ")\n"
+        for choice_num in range(len(dataset["validation"]["mc1_targets"][mult_num]["choices"])):
+            multishot += (
+                "(" + str(choice_num) + ") "
+                + dataset["validation"]["mc1_targets"][mult_num]["choices"][choice_num]
+                + "\n"
+            )
+
+        labels_one_hot: list = dataset["validation"]["mc1_targets"][mult_num]["labels"]
+        # Get a label int from the `labels` list.
+        # Lists are 0-indexed, but I want 1-indexed options.
+        correct_answer: int = np.argmax(labels_one_hot) + 1
+        # Add on the correct answer under each multishot question.
+        multishot += "A: (" + str(correct_answer) + ")\n"
 
     # Build the current question.
     question: str = "Q: " + dataset["validation"]["question"][question_num] + "\n"
-    for option_num in range(len(dataset["validation"]["mc1_targets"][question_num]["choices"])):
-        question += "(" + str(option_num) + ") " + dataset["validation"]["mc1_targets"][question_num]["choices"][option_num] + "\n"
+    for option_num in range(
+        len(dataset["validation"]["mc1_targets"][question_num]["choices"])
+    ):
+
+        question += (
+            "(" + str(option_num) + ") "
+            + dataset["validation"]["mc1_targets"][question_num]["choices"][option_num]
+            + "\n"
+        )
+
     question += "A: ("
 
     # Tokenize and prepare the model input.
@@ -115,13 +129,18 @@ for question_num in sampled_indices:
     print(multishot + question)
     model_input = accelerator.prepare(model_input)
 
-    model_output = model.generate(
+    model_output, model_hidden = model.generate(
         model_input,
         max_new_tokens=MAX_NEW_TOKENS,
         num_return_sequences=NUM_RETURN_SEQUENCES,
+        show_hidden_states=True,
     )
 
     answers.append(tokenizer.decode(model_output[0], skip_special_tokens=True))
+    activations.append(model_hidden["hidden_states"][LAYER_SAMPLED])
+
+    print(model_hidden["hidden_states"][LAYER_SAMPLED].shape)
+    print(model_hidden["hidden_states"][LAYER_SAMPLED])
 
 # %%
 # Keep only the last line's new token in each answer.
@@ -133,3 +152,6 @@ for indx, answer in enumerate(answers):
 # Grade the model's answers.
 model_accuracy: int = 0
 print(*answers)
+
+# %%
+# Concat and store the model activations.
