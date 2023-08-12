@@ -32,6 +32,7 @@ assert (
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
+SAVE_PATH: str = "/mnt/ssd-2/mesaoptimizer/david/activation_additions/experiments"
 SEED: int = 0
 MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
@@ -140,6 +141,7 @@ for question_num in sampled_indices:
     # multiple-choice answer integer.
     question += "A: ("
 
+    print(multishot)
     print(question)
 
     # Tokenize and prepare the model input.
@@ -182,6 +184,22 @@ model_accuracy /= len(answers_with_rubric)
 print(f"{MODEL_DIR} accuracy:{model_accuracy*100}%.")
 
 # %%
+# Find the widest model activation in the stream dimension (1).
+max_size: int = max(tensor.size(1) for tensor in activations)
+
+
+def pad_activations(tensor, length):
+    """Pad activation tensors to a certain stream-dim length."""
+    padding_size: int = length - tensor.size(1)
+    padding: t.Tensor = t.zeros(tensor.size(0), padding_size, tensor.size(2))    # pylint: disable=no-member
+    padding: t.Tensor = accelerator.prepare(padding)
+    # Concat and return.
+    return t.cat([tensor, padding], dim=1)    # pylint: disable=no-member
+
+
+# Pad the activations to the widest activaiton stream-dim.
+padded_activations = [pad_activations(tensor, max_size) for tensor in activations]
+
 # Concat and store the model activations.
-concat_activations: t.Tensor = t.cat(activations, dim=0)    # pylint: disable=no-member
-t.save(concat_activations, "activations_dataset.pt")
+concat_activations: t.Tensor = t.cat(padded_activations, dim=0)    # pylint: disable=no-member
+t.save(concat_activations, f"{SAVE_PATH}/activations_dataset.pt")
