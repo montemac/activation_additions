@@ -1,12 +1,13 @@
 # %%
-"""Collects model activations during Truthful-QA multiple-choice.
+"""
+Collects model activations while running Truthful-QA multiple-choice evals.
 
-An implementation of the Truthful-QA multiple-choice task, with a six-shot
-setup. I am chiefly interested in collecting residual activations during this
-task, however, to train a variational auto-encoder on, for the purpose of
-finding meaningful residual activation directions. The script therefore also
-collects those activation tensors. Requires a HuggingFace access token for the
-`Llama-2` models.
+An implementation of the Truthful-QA multiple-choice task. I'm interested in
+collecting residual activations during TruthfulQA to train a variational
+auto-encoder on, for the purpose of finding task-relevant activation directions
+in the model's residual space. The script will collect those activation tensors
+and save them to disk during the eval. Requires a HuggingFace access token for
+the `Llama-2` models.
 """
 
 
@@ -37,7 +38,7 @@ SEED: int = 0
 MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
 NUM_SHOT: int = 6
-NUM_DATAPOINTS: int = 25  # Number of questions evaluated.
+NUM_DATAPOINTS: int = 817  # Number of questions evaluated.
 LAYER_SAMPLED: int = 16  # Layer to collect activations from.
 
 assert (
@@ -135,60 +136,49 @@ for question_num in sampled_indices:
             + dataset["validation"]["mc1_targets"][question_num]["choices"][option_num]
             + "\n"
         )
-
-    # Finally, I only want the model to actually answer the question, with a
-    # single token, so I tee it up here with the opening parentheses to a
+    # I only want the model to actually answer the question, with a single
+    # token, so I tee it up here with the opening parentheses to a
     # multiple-choice answer integer.
     question += "A: ("
-
-    print(multishot)
-    print(question)
 
     # Tokenize and prepare the model input.
     input_ids: t.Tensor = tokenizer.encode(multishot + question, return_tensors="pt")
     input_ids = accelerator.prepare(input_ids)
-
+    # Generate a completion.
     outputs = model(input_ids)
-    # Save the model's activations.
-    activations.append(outputs.hidden_states[LAYER_SAMPLED])
 
-    # We now want the answer stream's logits, so we pass `outputs.logits[:,-1,:]`.
-    # Here `dim=-1` means greedy sample _over the token dimension_.
+    # Get the model's answer string from its logits. We want the _answer
+    # stream's_ logits, so we pass `outputs.logits[:,-1,:]`. `dim=-1` here means
+    # greedy sampling _over the token dimension_.
     answer_id: t.LongTensor = t.argmax(outputs.logits[:,-1,:], dim=-1)  # pylint: disable=no-member
     model_answer: str = tokenizer.decode(answer_id)
-    # Postprocess the answer down to just its answer integer.
+    # Cut the completion down to just its answer integer.
     model_answer = model_answer.split("\n")[-1]
     model_answer = model_answer.replace("A: (", "")
-
-    print(f"Model answer: {model_answer}")
 
     # Get the ground truth answer.
     labels_one_hot: list = dataset["validation"]["mc1_targets"][question_num]["labels"]
     ground_truth: int = unhot(labels_one_hot)
 
-    print(f"Ground truth: {ground_truth}")
-
     # Save the model's answer besides their ground truths.
     answers_with_rubric[question_num] = [int(model_answer), ground_truth]
-
-
+    # Save the model's activations.
+    activations.append(outputs.hidden_states[LAYER_SAMPLED])
 
 # %%
-# Grade and print the model's answers.
+# Grade the model's answers.
 model_accuracy: float = 0.0
 for question_num in answers_with_rubric:    # pylint: disable=consider-using-dict-items
     if answers_with_rubric[question_num][0] == answers_with_rubric[question_num][1]:
-        model_accuracy += 1
-model_accuracy /= len(answers_with_rubric)
+        model_accuracy += 1.0
 
+model_accuracy /= len(answers_with_rubric)
 print(f"{MODEL_DIR} accuracy:{model_accuracy*100}%.")
 
+
 # %%
-# Find the widest model activation in the stream dimension (1).
-max_size: int = max(tensor.size(1) for tensor in activations)
-
-
-def pad_activations(tensor, length):
+# Save the model's activations.
+def pad_activations(tensor, length) -> t.Tensor:
     """Pad activation tensors to a certain stream-dim length."""
     padding_size: int = length - tensor.size(1)
     padding: t.Tensor = t.zeros(tensor.size(0), padding_size, tensor.size(2))    # pylint: disable=no-member
@@ -197,8 +187,10 @@ def pad_activations(tensor, length):
     return t.cat([tensor, padding], dim=1)    # pylint: disable=no-member
 
 
+# Find the widest model activation in the stream-dimension (dim=1).
+max_size: int = max(tensor.size(1) for tensor in activations)
 # Pad the activations to the widest activaiton stream-dim.
-padded_activations = [pad_activations(tensor, max_size) for tensor in activations]
+padded_activations: list[t.Tensor] = [pad_activations(tensor, max_size) for tensor in activations]
 
 # Concat and store the model activations.
 concat_activations: t.Tensor = t.cat(padded_activations, dim=0)    # pylint: disable=no-member
