@@ -258,15 +258,34 @@ fig = px.line(
     x="P@K",
     y="P@K value",
     labels={"P@K value": "mean P@K", "P@K": "K", "method": "model"},
-    title='Mean P@K for ConceptNet evaluations with and without " weddings" activation addition',
+    # title='Mean P@K for ConceptNet evaluations with and without " weddings" activation addition',
     template="plotly_white",
 )
+xvals = [
+    x
+    for x in (
+        # np.arange(1, 10)
+        np.array([1, 2, 5])
+        * np.unique(
+            10
+            ** (
+                np.floor(
+                    np.log10(
+                        np.arange(
+                            plot_df["P@K"].min(), plot_df["P@K"].max() + 1
+                        )
+                    )
+                )
+            )
+        )[:, None]
+    ).flatten()
+    if x <= plot_df["P@K"].max()
+]
 fig.update_layout(
-    width=800,
-    height=600,
-    font_family="Serif",
-    font_size=14,
+    xaxis={
+        "tickmode": "array",
+        "tickvals": xvals,
+    }
 )
-fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
-fig.show()
-utils.fig_to_pdf(fig, "images/conceptnet.pdf", width=800, height=600)
+fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.02))
+utils.fig_to_publication_pdf(fig, "images/conceptnet")

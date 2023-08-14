@@ -105,72 +105,63 @@ fig = px.line(
     markers=True,
     labels={
         "bin_center": "Wedding word frequency",
-        "mean_perplexity": "Perplexity ratio (act-add / normal)",
+        "mean_perplexity": "Perplexity ratio (act-add / baseline)",
     },
-    title="Perplexity ratio vs. wedding word frequency",
+    # title="Perplexity ratio vs. wedding word frequency",
     template="plotly_white",
 )
-fig.layout.xaxis.tickformat = ",.0%"
-fig.layout.yaxis.tickformat = ",.0%"
-fig.update_layout(
-    width=800,
-    height=600,
-    font_family="Serif",
-    font_size=14,
-)
+fig.layout.xaxis.tickformat = ",.1%"
+fig.layout.yaxis.tickformat = ",.1%"
 fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
-fig.show()
-utils.fig_to_pdf(
-    fig, "images/openwebtext_perp_vs_rel.pdf", width=800, height=600
-)
+utils.fig_to_publication_pdf(fig, "images/openwebtext_perp_vs_rel")
 
-# Histograms for different thesholds
-edges = np.arange(-0.1, 0.1, 0.005)
-edges_centers = (edges[:-1] + edges[1:]) / 2
-rel_steps = [0.0, 1e-6, 0.01, 0.02, 1]
-hists = {}
-means = {}
-for lower, upper in zip(rel_steps[:-1], rel_steps[1:]):
-    scores_do_match = (logprobs_df["relevance_score"] >= lower) & (
-        logprobs_df["relevance_score"] < upper
-    )
-    logprobs_diff_this = logprobs_df["avg_logprob_diff"][scores_do_match]
-    hist = pd.Series(
-        np.histogram(
-            logprobs_diff_this,
-            bins=edges,
-            weights=logprobs_df["token_len"][scores_do_match],
-            density=True,
-        )[0],
-        index=edges_centers,
-    )
-    if upper - lower < 1e-5:
-        label = f"{lower:.2f}"
-    elif upper == 1:
-        label = f"{lower:.2f}+"
-    else:
-        label = f"{lower:.2f} - {upper:.2f}"
-    hists[label] = hist
-    means[label] = logprobs_diff_this.mean()
-plot_df = (
-    pd.concat(
-        hists.values(),
-        axis=0,
-        keys=hists.keys(),
-        names=["relevance range", "logprob_diff"],
-    )
-    .rename("density")
-    .reset_index()
-)
-px.line(
-    plot_df,
-    x="logprob_diff",
-    y="density",
-    color="relevance range",
-    markers=True,
-    # opacity=0.5,
-    # barmode="overlay",
-).show()
+# # Histograms for different thesholds
+# edges = np.arange(-0.1, 0.1, 0.005)
+# edges_centers = (edges[:-1] + edges[1:]) / 2
+# rel_steps = [0.0, 1e-6, 0.01, 0.02, 1]
+# hists = {}
+# means = {}
+# for lower, upper in zip(rel_steps[:-1], rel_steps[1:]):
+#     scores_do_match = (logprobs_df["relevance_score"] >= lower) & (
+#         logprobs_df["relevance_score"] < upper
+#     )
+#     logprobs_diff_this = logprobs_df["avg_logprob_diff"][scores_do_match]
+#     hist = pd.Series(
+#         np.histogram(
+#             logprobs_diff_this,
+#             bins=edges,
+#             weights=logprobs_df["token_len"][scores_do_match],
+#             density=True,
+#         )[0],
+#         index=edges_centers,
+#     )
+#     if upper - lower < 1e-5:
+#         label = f"{lower:.2f}"
+#     elif upper == 1:
+#         label = f"{lower:.2f}+"
+#     else:
+#         label = f"{lower:.2f} - {upper:.2f}"
+#     hists[label] = hist
+#     means[label] = logprobs_diff_this.mean()
+# plot_df = (
+#     pd.concat(
+#         hists.values(),
+#         axis=0,
+#         keys=hists.keys(),
+#         names=["relevance range", "logprob_diff"],
+#     )
+#     .rename("density")
+#     .reset_index()
+# )
+# px.line(
+#     plot_df,
+#     x="logprob_diff",
+#     y="density",
+#     color="relevance range",
+#     markers=True,
+#     # opacity=0.5,
+#     # barmode="overlay",
+# ).show()
 
 # %%
 # Load the model and the activation addition so we can play with examples
@@ -413,21 +404,12 @@ fig.add_scatter(
     name="normal distribution",
 )
 fig.update_layout(
-    width=800,
-    height=600,
-    font_family="Serif",
-    font_size=14,
-    showlegend=True,
-    template="plotly_white",
+    # title_text="QQ plot of mean log-prob differences by token",
     legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
-    title_text="QQ plot of mean log-prob differences by token",
 )
 fig.update_xaxes(title_text="Theoretical quantiles")
 fig.update_yaxes(title_text="Ordered mean log-prob differences")
-fig.show()
-utils.fig_to_pdf(
-    fig, "images/openwebtext_logprob_qq.pdf", width=800, height=600
-)
+utils.fig_to_publication_pdf(fig, "images/openwebtext_logprob_qq")
 
 # px.histogram(
 #     tokens_agg,
