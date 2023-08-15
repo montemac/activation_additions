@@ -33,7 +33,7 @@ assert (
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
-SAVE_PATH: str = "/mnt/ssd-2/mesaoptimizer/david/activation_additions/experiments"
+SAVE_PATH: str = "/root/algebraic_value_editing/experiments"
 SEED: int = 0
 MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
