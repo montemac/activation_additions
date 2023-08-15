@@ -4,7 +4,7 @@ Collects model activations while running Truthful-QA multiple-choice evals.
 
 An implementation of the Truthful-QA multiple-choice task. I'm interested in
 collecting residual activations during TruthfulQA to train a variational
-auto-encoder on, for the purpose of finding task-relevant activation directions
+autoencoder on, for the purpose of finding task-relevant activation directions
 in the model's residual space. The script will collect those activation tensors
 and save them to disk during the eval. Requires a HuggingFace access token for
 the `Llama-2` models.

@@ -1,10 +1,15 @@
 # %%
-"""Dictionary learning on an activations dataset using an autoencoder."""
+"""Dictionary learning on an activations dataset using a variational autoencoder."""
 
 
 import torch as t
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader, Dataset
+
+
+# %%
+# Use available tensor cores.
+t.set_float32_matmul_precision("high")
 
 
 # %%
@@ -32,7 +37,7 @@ dataset: ActivationsDataset = ActivationsDataset(
     )
 
 dataloader: DataLoader = DataLoader(
-    dataset, batch_size=32, shuffle=True, num_workers=1,
+    dataset, batch_size=32, shuffle=True, num_workers=48,
 )
 
 
@@ -43,46 +48,45 @@ class Autoencoder(pl.LightningModule):
 
     def __init__(self):
         super().__init__()
+        # TODO: Add in the _variational_ component. The first linear layer
+        # learns a matrix map to a higher-dimensional space. That projection
+        # matrix is what I'm intersted in here.
         self.encoder = t.nn.Sequential(
-            t.nn.Linear(4096, 256),
-            t.nn.ReLU(),
-            t.nn.Linear(256, 64),
-            t.nn.ReLU(),
-            t.nn.Linear(64, 20),
+            t.nn.Linear(4096, 8192),
             t.nn.ReLU(),
         )
+
+        # The second linear map returns us to the original activation space, so
+        # we can evaluate our reconstruction loss.
         self.decoder = t.nn.Sequential(
-            t.nn.Linear(20, 64),
-            t.nn.ReLU(),
-            t.nn.Linear(64, 256),
-            t.nn.ReLU(),
-            t.nn.Linear(256, 8192),
-            # TODO: How should the higher-dim output be trained on?
             t.nn.Linear(8192, 4096),
         )
 
     def forward(self, state):  # pylint: disable=arguments-differ
         """The forward pass of the autoencoder. Information is compacted, then reconstructed."""
-        state = self.encoder(state)
-        state = self.decoder(state)
-        return state
+        encoded_state = self.encoder(state)
+        output_state = self.decoder(encoded_state)
+        return encoded_state, output_state
 
     def training_step(self, batch):  # pylint: disable=arguments-differ
         """Train the autoencoder."""
-        datapoint = batch
-        encoded_state = self.encoder(datapoint)
-        prediction = self.forward(datapoint)
+        state = batch
+        encoded_state, output_state = self.forward(state)
 
-        # Reconstruction loss.
-        mse_loss = t.nn.functional.mse_loss(prediction, datapoint)
+        # I want to learn a disentangled, sparse representation of the original
+        # learned features present in the training activations. L1
+        # regularization in the higher-dimensional space does this.
+        l1_loss = t.nn.functional.l1_loss(encoded_state, t.zeros_like(encoded_state))  # pylint: disable=no-member
 
-        # Sparsity loss.
-        l1_loss = t.nn.functional.l1_loss(encoded_state, t.zeros_like(encoded_state))
+        # I also need to inventivize learning features that match the originals.
+        # I project back to the original space, then evaluate MSE for this.
+        mse_loss = t.nn.functional.mse_loss(output_state, state)
 
-        # Total loss.
-        lambda_l1: float = 1e-5
+        # The total loss function just combines the two above terms.
+        lambda_l1: float = 1e-1
         loss = mse_loss + lambda_l1 * l1_loss
-
+        
+        # TODO: Log sparsity data along with training loss.
         self.log("training_loss", loss)
         return loss
 
@@ -95,5 +99,5 @@ class Autoencoder(pl.LightningModule):
 # Train the autoencoder.
 model: Autoencoder = Autoencoder()
 
-trainer: pl.Trainer = pl.Trainer(accelerator="auto", max_epochs=50)
+trainer: pl.Trainer = pl.Trainer(accelerator="auto", max_epochs=150, log_every_n_steps=1)
 trainer.fit(model, dataloader)
