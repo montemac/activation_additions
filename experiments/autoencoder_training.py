@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader, Dataset
 
 # %%
 # Training hyperparameters. We want to weight L1 extremely heavily.
-LAMBDA_L1: float = 1.0
-LAMBDA_KL: float = 1e-9
+LAMBDA_L1: float = 1e-1
+LAMBDA_KL: float = 1e-5
 
 # %%
 # Use available tensor cores.
@@ -42,7 +42,7 @@ dataset: ActivationsDataset = ActivationsDataset(
     )
 
 dataloader: DataLoader = DataLoader(
-    dataset, batch_size=32, shuffle=True, num_workers=48,
+    dataset, batch_size=32, shuffle=True, num_workers=16,
 )
 
 
@@ -120,7 +120,7 @@ class Autoencoder(pl.LightningModule):
 # %%
 # Train the autoencoder.
 model: Autoencoder = Autoencoder()
-trainer: pl.Trainer = pl.Trainer(accelerator="auto", max_epochs=150, log_every_n_steps=1)
+trainer: pl.Trainer = pl.Trainer(accelerator="auto", max_epochs=150, log_every_n_steps=25)
 
 trainer.fit(model, dataloader)
 
