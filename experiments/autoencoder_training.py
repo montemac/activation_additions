@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, Dataset
 # %%
 # Training hyperparameters. We want to weight L1 extremely heavily.
 LAMBDA_L1: float = 1e-1
-LAMBDA_KL: float = 1e-5
+LAMBDA_KL: float = 1e-7
 
 # %%
 # Use available tensor cores.
@@ -55,14 +55,15 @@ class Autoencoder(pl.LightningModule):
     def __init__(self):
         super().__init__()
         # The first linear layer learns a matrix map to a higher-dimensional
-        # space. That projection matrix is what I'm intersted in here.
+        # space. That projection matrix is what I'm intersted in here. The
+        # second linear map tees up the variational components of the
+        # architecture.
         self.encoder = t.nn.Sequential(
             t.nn.Linear(4096, 8192),
             t.nn.ReLU(),
             t.nn.Linear(8192, 8192 * 2)
         )
-
-        # The second linear map just returns us to the original activation
+        # The decoder's linear map just returns us to the original activation
         # space, so we can evaluate our reconstruction loss.
         self.decoder = t.nn.Sequential(
             t.nn.Linear(8192, 4096),
@@ -105,16 +106,16 @@ class Autoencoder(pl.LightningModule):
         loss = mse_loss + (LAMBDA_L1 * l1_loss) + (LAMBDA_KL * kl_loss)
 
         self.log("loss", loss)
+        self.log(f"L1 component ({LAMBDA_L1}x)", l1_loss)
+        self.log(f"KL component ({LAMBDA_KL}x)", kl_loss)
+        self.log("MSE component (1x)", mse_loss)
 
-        self.log("L1 sub-loss", l1_loss)
-        self.log("KL sub-loss", kl_loss)
-        self.log("MSE sub-loss", mse_loss)
         return loss
 
 
     def configure_optimizers(self):
         """Configure the optimizer (`Adam`)."""
-        return t.optim.Adam(self.parameters(), lr=1e-4)
+        return t.optim.Adam(self.parameters(), lr=1e-5)
 
 
 # %%
@@ -127,5 +128,5 @@ trainer.fit(model, dataloader)
 # %%
 # Save the learned projection matrix.
 t.save(
-    model.encoder[0].weight.data, "/root/algebraic_value_editing/experiments/projection_matrix.pt"
+    model.encoder[0].weight.data, "/root/algebraic_value_editing/experiments/maps_acts_to_features.pt"
 )
