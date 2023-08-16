@@ -149,3 +149,4 @@ images
 scripts/KL_bug.py
 wandb_restored_files
 *.pt
+*.ckpt
