@@ -11,6 +11,7 @@ from datasets import load_dataset
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
+    BatchEncoding,
     PreTrainedModel,
     PreTrainedTokenizer,
 )
@@ -19,7 +20,7 @@ from transformers import (
 # NOTE: Don't commit your HF token!
 HF_ACCESS_TOKEN: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
-DECODER_DIR: str = ""
+DECODER_PATH: str = ""
 SEED: int = 0
 SUBSET_SIZE: int = 25
 
@@ -47,7 +48,7 @@ model: PreTrainedModel = accelerator.prepare(model)
 # %%
 # Load the activation decoder map.
 decoder: t.Tensor = t.load(
-    DECODER_DIR,
+    DECODER_PATH,
 )
 
 # %%
@@ -65,3 +66,17 @@ subset_indices: np.ndarray = np.random.choice(
     size=SUBSET_SIZE,
     replace=False,
 )
+
+
+# %%
+# Tokenize onto the correct devices.
+def tokenize(text: str) -> BatchEncoding:
+    """Tokenize a string onto the correct devices."""
+    tokens = tokenizer(
+        text,
+        return_tensors="pt",
+    )
+    return accelerator.prepare(tokens)
+
+
+# %%

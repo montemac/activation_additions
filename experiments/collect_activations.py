@@ -33,7 +33,9 @@ assert (
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
-SAVE_PATH: str = "/root/algebraic_value_editing/experiments"
+ACTS_SAVE_PATH: str = (
+    "/root/algebraic_value_editing/experiments/activations_dataset.pt"
+)
 SEED: int = 0
 MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
@@ -86,6 +88,7 @@ sampled_indices: ndarray = np.random.choice(
 
 sampled_indices: list = sampled_indices.tolist()
 
+
 # %%
 # Convert one-hot labels to int indices.
 def unhot(labels: list) -> int:
@@ -102,7 +105,11 @@ for question_num in sampled_indices:
     multishot: str = ""
     # Sample multishot questions that aren't the current question.
     multishot_indices: ndarray = np.random.choice(
-        [x for x in range(len(dataset["validation"]["question"])) if x != question_num],
+        [
+            x
+            for x in range(len(dataset["validation"]["question"]))
+            if x != question_num
+        ],
         size=NUM_SHOT,
         replace=False,
     )
@@ -111,29 +118,43 @@ for question_num in sampled_indices:
     for mult_num in multishot_indices:
         multishot += "Q: " + dataset["validation"]["question"][mult_num] + "\n"
 
-        for choice_num in range(len(dataset["validation"]["mc1_targets"][mult_num]["choices"])):
+        for choice_num in range(
+            len(dataset["validation"]["mc1_targets"][mult_num]["choices"])
+        ):
             # choice_num is 0-indexed, but I want to display 1-indexed options.
             multishot += (
-                "(" + str(choice_num + 1) + ") "
-                + dataset["validation"]["mc1_targets"][mult_num]["choices"][choice_num]
+                "("
+                + str(choice_num + 1)
+                + ") "
+                + dataset["validation"]["mc1_targets"][mult_num]["choices"][
+                    choice_num
+                ]
                 + "\n"
             )
 
-        labels_one_hot: list = dataset["validation"]["mc1_targets"][mult_num]["labels"]
+        labels_one_hot: list = dataset["validation"]["mc1_targets"][mult_num][
+            "labels"
+        ]
         # Get a label int from the `labels` list.
         correct_answer: int = unhot(labels_one_hot)
         # Add on the correct answer under each multishot question.
         multishot += "A: (" + str(correct_answer) + ")\n"
 
     # Build the current question.
-    question: str = "Q: " + dataset["validation"]["question"][question_num] + "\n"
+    question: str = (
+        "Q: " + dataset["validation"]["question"][question_num] + "\n"
+    )
     for option_num in range(
         len(dataset["validation"]["mc1_targets"][question_num]["choices"])
     ):
         # option_num is similarly 0-indexed, but I want 1-indexed options here too.
         question += (
-            "(" + str(option_num + 1) + ") "
-            + dataset["validation"]["mc1_targets"][question_num]["choices"][option_num]
+            "("
+            + str(option_num + 1)
+            + ") "
+            + dataset["validation"]["mc1_targets"][question_num]["choices"][
+                option_num
+            ]
             + "\n"
         )
     # I only want the model to actually answer the question, with a single
@@ -142,7 +163,9 @@ for question_num in sampled_indices:
     question += "A: ("
 
     # Tokenize and prepare the model input.
-    input_ids: t.Tensor = tokenizer.encode(multishot + question, return_tensors="pt")
+    input_ids: t.Tensor = tokenizer.encode(
+        multishot + question, return_tensors="pt"
+    )
     input_ids = accelerator.prepare(input_ids)
     # Generate a completion.
     outputs = model(input_ids)
@@ -150,14 +173,18 @@ for question_num in sampled_indices:
     # Get the model's answer string from its logits. We want the _answer
     # stream's_ logits, so we pass `outputs.logits[:,-1,:]`. `dim=-1` here means
     # greedy sampling _over the token dimension_.
-    answer_id: t.LongTensor = t.argmax(outputs.logits[:,-1,:], dim=-1)  # pylint: disable=no-member
+    answer_id: t.LongTensor = t.argmax(  # pylint: disable=no-member
+        outputs.logits[:, -1, :], dim=-1
+    )
     model_answer: str = tokenizer.decode(answer_id)
     # Cut the completion down to just its answer integer.
     model_answer = model_answer.split("\n")[-1]
     model_answer = model_answer.replace("A: (", "")
 
     # Get the ground truth answer.
-    labels_one_hot: list = dataset["validation"]["mc1_targets"][question_num]["labels"]
+    labels_one_hot: list = dataset["validation"]["mc1_targets"][question_num][
+        "labels"
+    ]
     ground_truth: int = unhot(labels_one_hot)
 
     # Save the model's answer besides their ground truths.
@@ -168,8 +195,13 @@ for question_num in sampled_indices:
 # %%
 # Grade the model's answers.
 model_accuracy: float = 0.0
-for question_num in answers_with_rubric:    # pylint: disable=consider-using-dict-items
-    if answers_with_rubric[question_num][0] == answers_with_rubric[question_num][1]:
+for (
+    question_num
+) in answers_with_rubric:  # pylint: disable=consider-using-dict-items
+    if (
+        answers_with_rubric[question_num][0]
+        == answers_with_rubric[question_num][1]
+    ):
         model_accuracy += 1.0
 
 model_accuracy /= len(answers_with_rubric)
@@ -181,17 +213,25 @@ print(f"{MODEL_DIR} accuracy:{model_accuracy*100}%.")
 def pad_activations(tensor, length) -> t.Tensor:
     """Pad activation tensors to a certain stream-dim length."""
     padding_size: int = length - tensor.size(1)
-    padding: t.Tensor = t.zeros(tensor.size(0), padding_size, tensor.size(2))    # pylint: disable=no-member
+    padding: t.Tensor = t.zeros(  # pylint: disable=no-member
+        tensor.size(0), padding_size, tensor.size(2)
+    )
     padding: t.Tensor = accelerator.prepare(padding)
     # Concat and return.
-    return t.cat([tensor, padding], dim=1)    # pylint: disable=no-member
+    return t.cat([tensor, padding], dim=1)  # pylint: disable=no-member
 
 
 # Find the widest model activation in the stream-dimension (dim=1).
 max_size: int = max(tensor.size(1) for tensor in activations)
 # Pad the activations to the widest activaiton stream-dim.
-padded_activations: list[t.Tensor] = [pad_activations(tensor, max_size) for tensor in activations]
+padded_activations: list[t.Tensor] = [
+    pad_activations(tensor, max_size) for tensor in activations
+]
 
 # Concat and store the model activations.
-concat_activations: t.Tensor = t.cat(padded_activations, dim=0)    # pylint: disable=no-member
-t.save(concat_activations, f"{SAVE_PATH}/activations_dataset.pt")
+concat_activations: t.Tensor = t.cat(  # pylint: disable=no-member
+    padded_activations,
+    dim=0,
+)
+
+t.save(concat_activations, ACTS_SAVE_PATH)

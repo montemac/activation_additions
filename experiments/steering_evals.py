@@ -42,6 +42,7 @@ OPENAI_API_KEY: str = ""
 API_RETRIES: int = 6
 API_RETRY_DELAY: int = 1  # In seconds.
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
+LOG_PATH: str = "steering_evals.csv"
 SEED: int = 0
 MAX_NEW_TOKENS: int = 50
 NUM_RETURN_SEQUENCES: int = 1
@@ -57,7 +58,7 @@ NUM_DATAPOINTS: int = 10  # Number of questions evaluated.
 
 assert (
     NUM_DATAPOINTS > NUM_SHOT
-    ), "There must be a question not used for the multishot demonstration."
+), "There must be a question not used for the multishot demonstration."
 
 openai.api_key = OPENAI_API_KEY
 
@@ -108,11 +109,17 @@ model.eval()
 # %%
 # Split and sample from the TruthfulQA dataset.
 total_dataset = load_dataset("truthful_qa", "generation")
-VAL_TEST_RATIO: float = 0.25  # NOTE: Leave this constant during hyperparameter tuning!
+VAL_TEST_RATIO: float = (
+    0.25  # NOTE: Leave this constant during hyperparameter tuning!
+)
 
 # Work with only a validation subset of the data.
-randomized_indices: ndarray = np.random.permutation(len(total_dataset["validation"]["question"]))
-split_point: int = int(len(total_dataset["validation"]["question"]) * VAL_TEST_RATIO)
+randomized_indices: ndarray = np.random.permutation(
+    len(total_dataset["validation"]["question"])
+)
+split_point: int = int(
+    len(total_dataset["validation"]["question"]) * VAL_TEST_RATIO
+)
 
 validation_indices: ndarray = randomized_indices[:split_point]
 test_indices: ndarray = randomized_indices[split_point:]
@@ -283,11 +290,12 @@ for i in random_indices:
             mod_input,
             max_new_tokens=MAX_NEW_TOKENS,
             num_return_sequences=NUM_RETURN_SEQUENCES,
-            )
+        )
 
         generated_answers.append(
             tokenizer.decode(mod_output[0], skip_special_tokens=True)
         )
+
 
 # %%
 # Post-process the generated answers.
@@ -341,7 +349,9 @@ for retry in range(API_RETRIES):
             elif not_truthful:
                 truthfulness_scores.append(0)
             else:
-                print(f"Unexpected truthfulness judgement: {judgement_truthful}")
+                print(
+                    f"Unexpected truthfulness judgement: {judgement_truthful}"
+                )
 
             if yes_helpful:
                 helpfulness_scores.append(1)
@@ -358,10 +368,14 @@ for retry in range(API_RETRIES):
         break
 
     except openai.error.ServiceUnavailableError as e:
-        print(f"Error during OpenAI API call: {str(e)}. Retry {retry+1}/{API_RETRIES}...")
+        print(
+            f"Error during OpenAI API call: {str(e)}. Retry {retry+1}/{API_RETRIES}..."
+        )
         time.sleep(API_RETRY_DELAY)
         if retry == API_RETRIES - 1:
-            raise MaxRetriesReachedError("Max retries reached. Aborting.") from e
+            raise MaxRetriesReachedError(
+                "Max retries reached. Aborting."
+            ) from e
 
 truthfulness_scores: ndarray = np.array(truthfulness_scores)
 helpfulness_scores: ndarray = np.array(helpfulness_scores)
@@ -385,7 +399,7 @@ print(f"Judged both truthful and helpful on {both_acc}% of questions.")
 
 # %%
 # Log hyperparameters, eval, and question/answer pairs to a CSV.
-with open("additions_generative_evals.csv", "a", newline="", encoding="utf-8") as csv_table:
+with open(LOG_PATH, "a", newline="", encoding="utf-8") as csv_table:
     writer = csv.writer(csv_table)
     for key, value in hyperparameters.items():
         writer.writerow([key, value])

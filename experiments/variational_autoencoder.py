@@ -12,6 +12,14 @@ from torch.utils.data import DataLoader, Dataset
 LAMBDA_L1: float = 1e-1
 LAMBDA_KL: float = 1e-7
 
+MODEL_EMBEDDING_DIM: int = 4096
+PROJECTION_DIM: int = 8192
+
+ACTS_PATH: str = "/mnt/ssd-2/mesaoptimizer/david/activation_additions/Llama-2_7B_activations.pt"
+DECODER_SAVE_PATH: str = (
+    "/mnt/ssd-2/mesaoptimizer/david/activation_additions/Llama-2_7B_decoder.pt"
+)
+
 # %%
 # Use available tensor cores.
 t.set_float32_matmul_precision("high")
@@ -38,7 +46,7 @@ class ActivationsDataset(Dataset):
 # %%
 # Put the dataset into a dataloader.
 dataset: ActivationsDataset = ActivationsDataset(
-    "/mnt/ssd-2/mesaoptimizer/david/activation_additions/Llama-2_7B_activations.pt"
+    ACTS_PATH,
 )
 
 dataloader: DataLoader = DataLoader(
@@ -61,12 +69,14 @@ class Autoencoder(pl.LightningModule):
         # second linear map tees up the variational components of the
         # architecture.
         self.encoder = t.nn.Sequential(
-            t.nn.Linear(4096, 8192), t.nn.ReLU(), t.nn.Linear(8192, 8192 * 2)
+            t.nn.Linear(MODEL_EMBEDDING_DIM, PROJECTION_DIM),
+            t.nn.ReLU(),
+            t.nn.Linear(PROJECTION_DIM, PROJECTION_DIM * 2),
         )
         # The decoder's linear map just returns us to the original activation
         # space, so we can evaluate our reconstruction loss.
         self.decoder = t.nn.Sequential(
-            t.nn.Linear(8192, 4096),
+            t.nn.Linear(PROJECTION_DIM, MODEL_EMBEDDING_DIM),
         )
 
     def forward(self, state):  # pylint: disable=arguments-differ
@@ -89,16 +99,17 @@ class Autoencoder(pl.LightningModule):
         mean, logvar, sampled_state, output_state = self.forward(state)
 
         # For the statistical component of the forward pass.
-        kl_loss = -0.5 * t.sum(
+        kl_loss = -0.5 * t.sum(  # pylint: disable=no-member
             1 + logvar - mean.pow(2) - logvar.exp()
-        )  # pylint: disable=no-member
+        )
 
         # I want to learn a _sparse representation_ of the original learned
         # features present in the training activations. L1 regularization in the
         # higher-dimensional space does this.
         l1_loss = t.nn.functional.l1_loss(
-            sampled_state, t.zeros_like(sampled_state)
-        )  # pylint: disable=no-member
+            sampled_state,
+            t.zeros_like(sampled_state),  # pylint: disable=no-member
+        )
 
         # I also need to inventivize learning features that match the originals.
         # I project back to the original space, then evaluate MSE for this.
@@ -129,8 +140,8 @@ trainer: pl.Trainer = pl.Trainer(
 trainer.fit(model, dataloader)
 
 # %%
-# Save the learned projection matrix.
+# Save the trained decoder matrix.
 t.save(
-    model.encoder[0].weight.data,
-    "/mnt/ssd-2/mesaoptimizer/david/activation_additions/Llama-2_7B_decoder.pt",
+    model.decoder[0].weight.data,
+    DECODER_SAVE_PATH,
 )
