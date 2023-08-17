@@ -9,8 +9,9 @@ from torch.utils.data import DataLoader, Dataset
 
 # %%
 # Training hyperparameters. We want to weight L1 extremely heavily.
-LAMBDA_L1: float = 1e-1
-LAMBDA_KL: float = 1e-7
+LAMBDA_L1: float = 1.0
+LAMBDA_KL: float = 1e-14
+LAMBDA_MSE: float = 1e-5
 
 MODEL_EMBEDDING_DIM: int = 4096
 PROJECTION_DIM: int = 8192
@@ -114,12 +115,16 @@ class Autoencoder(pl.LightningModule):
         mse_loss = t.nn.functional.mse_loss(output_state, state)
 
         # The overall loss function just combines the three above terms.
-        loss = mse_loss + (LAMBDA_L1 * l1_loss) + (LAMBDA_KL * kl_loss)
+        loss = (
+            (LAMBDA_MSE * mse_loss)
+            + (LAMBDA_L1 * l1_loss)
+            + (LAMBDA_KL * kl_loss)
+        )
 
         self.log("loss", loss)
-        self.log(f"L1 component ({LAMBDA_L1}x)", l1_loss)
-        self.log(f"KL component ({LAMBDA_KL}x)", kl_loss)
-        self.log("MSE component (1x)", mse_loss)
+        self.log("L1 component", LAMBDA_L1 * l1_loss)
+        self.log("KL component", LAMBDA_KL * kl_loss)
+        self.log("MSE component", LAMBDA_MSE * mse_loss)
 
         return loss
 
