@@ -52,7 +52,6 @@ model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
     MODEL_DIR,
     device_map="auto",
     use_auth_token=HF_ACCESS_TOKEN,
-    output_hidden_states=True,
 )
 
 tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
@@ -87,23 +86,25 @@ decoder: t.Tensor = t.load(DECODER_PATH)
 
 # Print the ordered basis magnitudes.
 magnitudes: list = []
+
 for i in range(decoder.size(1)):
     column: t.Tensor = decoder[:, i]
     col_mag: float = t.norm(column, p=1).item()
     magnitudes.append(col_mag)
-
 magnitudes.sort()
+
 for m in magnitudes:
     print(m)
 
 # Print the ordered basis number of zeros.
 num_zeros: list = []
+
 for i in range(decoder.size(1)):
     column: t.Tensor = decoder[:, i]
     col_zeros: int = t.sum(t.abs(column) < 1e-4).item()  # pylint: disable=no-member
     num_zeros.append(col_zeros)
-
 num_zeros.sort()
+
 for n in num_zeros:
     print(n)
 
@@ -116,10 +117,17 @@ for i in range(decoder.size(1)):
 
 
 # %%
-# TODO: Register hooks for the decoder basis dimensions.
+# Add in the feature vectors during a pass.
 @contextmanager
-def register_feat_hooks(feature: t.Tensor, layer_num: int):
-    """Project decoder basis directions into the model's activation space."""
+def register_feat_hooks(feature: t.Tensor, coeff: float, mod: PreTrainedModel, layer_num: int):
+    """Add scaled feature vectors into the model's activation space."""
+    _hook = mod.transformer.layers[layer_num].register_forward_hook(
+        lambda _, input_, output: output + coeff * feature
+    )
+    try:
+        yield
+    finally:
+        _hook.remove()
 
 
 # %%
@@ -130,101 +138,110 @@ def unhot(labels: list) -> int:
 
 
 # %%
-# The model completes the `multiple-choice 1` task.
-activations: list = []
-answers_with_rubric: dict = {}
+# Eval on the sampled questions.
+def eval():
+    """Run the main eval loop, saving logits and ground truths."""
+    for question_num in sampled_indices:
+        multishot: str = ""
+        # Sample multishot questions that aren't the current question.
+        multishot_indices: ndarray = np.random.choice(
+            [
+                x
+                for x in range(len(dataset["validation"]["question"]))
+                if x != question_num
+            ],
+            size=NUM_SHOT,
+            replace=False,
+        )
 
-for question_num in sampled_indices:
-    multishot: str = ""
-    # Sample multishot questions that aren't the current question.
-    multishot_indices: ndarray = np.random.choice(
-        [
-            x
-            for x in range(len(dataset["validation"]["question"]))
-            if x != question_num
-        ],
-        size=NUM_SHOT,
-        replace=False,
-    )
+        # Build the multishot question.
+        for mult_num in multishot_indices:
+            multishot += "Q: " + dataset["validation"]["question"][mult_num] + "\n"
 
-    # Build the multishot question.
-    for mult_num in multishot_indices:
-        multishot += "Q: " + dataset["validation"]["question"][mult_num] + "\n"
+            for choice_num in range(
+                len(dataset["validation"]["mc1_targets"][mult_num]["choices"])
+            ):
+                # choice_num is 0-indexed, but I want to display 1-indexed options.
+                multishot += (
+                    "("
+                    + str(choice_num + 1)
+                    + ") "
+                    + dataset["validation"]["mc1_targets"][mult_num]["choices"][
+                        choice_num
+                    ]
+                    + "\n"
+                )
 
-        for choice_num in range(
-            len(dataset["validation"]["mc1_targets"][mult_num]["choices"])
+            labels_one_hot: list = dataset["validation"]["mc1_targets"][mult_num][
+                "labels"
+            ]
+            # Get a label int from the `labels` list.
+            correct_answer: int = unhot(labels_one_hot)
+            # Add on the correct answer under each multishot question.
+            multishot += "A: (" + str(correct_answer) + ")\n"
+
+        # Build the current question.
+        question: str = (
+            "Q: " + dataset["validation"]["question"][question_num] + "\n"
+        )
+        for option_num in range(
+            len(dataset["validation"]["mc1_targets"][question_num]["choices"])
         ):
-            # choice_num is 0-indexed, but I want to display 1-indexed options.
-            multishot += (
+            # option_num is similarly 0-indexed, but I want 1-indexed options here too.
+            question += (
                 "("
-                + str(choice_num + 1)
+                + str(option_num + 1)
                 + ") "
-                + dataset["validation"]["mc1_targets"][mult_num]["choices"][
-                    choice_num
+                + dataset["validation"]["mc1_targets"][question_num]["choices"][
+                    option_num
                 ]
                 + "\n"
             )
+        # I only want the model to actually answer the question, with a single
+        # token, so I tee it up here with the opening parentheses to a
+        # multiple-choice answer integer.
+        question += "A: ("
 
-        labels_one_hot: list = dataset["validation"]["mc1_targets"][mult_num][
+        # Tokenize and prepare the model input.
+        input_ids: t.Tensor = tokenizer.encode(
+            multishot + question, return_tensors="pt"
+        )
+        input_ids = accelerator.prepare(input_ids)
+        # Generate a completion.
+        outputs = model(input_ids)
+
+        # Get the model's answer string from its logits. We want the _answer
+        # stream's_ logits, so we pass `outputs.logits[:,-1,:]`. `dim=-1` here means
+        # greedy sampling _over the token dimension_.
+        answer_id: t.LongTensor = t.argmax(  # pylint: disable=no-member
+            outputs.logits[:, -1, :], dim=-1
+        )
+        model_answer: str = tokenizer.decode(answer_id)
+        # Cut the completion down to just its answer integer.
+        model_answer = model_answer.split("\n")[-1]
+        model_answer = model_answer.replace("A: (", "")
+
+        # Get the ground truth answer.
+        labels_one_hot: list = dataset["validation"]["mc1_targets"][question_num][
             "labels"
         ]
-        # Get a label int from the `labels` list.
-        correct_answer: int = unhot(labels_one_hot)
-        # Add on the correct answer under each multishot question.
-        multishot += "A: (" + str(correct_answer) + ")\n"
+        ground_truth: int = unhot(labels_one_hot)
 
-    # Build the current question.
-    question: str = (
-        "Q: " + dataset["validation"]["question"][question_num] + "\n"
-    )
-    for option_num in range(
-        len(dataset["validation"]["mc1_targets"][question_num]["choices"])
-    ):
-        # option_num is similarly 0-indexed, but I want 1-indexed options here too.
-        question += (
-            "("
-            + str(option_num + 1)
-            + ") "
-            + dataset["validation"]["mc1_targets"][question_num]["choices"][
-                option_num
-            ]
-            + "\n"
-        )
-    # I only want the model to actually answer the question, with a single
-    # token, so I tee it up here with the opening parentheses to a
-    # multiple-choice answer integer.
-    question += "A: ("
+        # Save the model's answer besides their ground truths.
+        answers_with_rubric[question_num] = [int(model_answer), ground_truth]
 
-    # Tokenize and prepare the model input.
-    input_ids: t.Tensor = tokenizer.encode(
-        multishot + question, return_tensors="pt"
-    )
-    input_ids = accelerator.prepare(input_ids)
-    # Generate a completion.
-    outputs = model(input_ids)
 
-    # Get the model's answer string from its logits. We want the _answer
-    # stream's_ logits, so we pass `outputs.logits[:,-1,:]`. `dim=-1` here means
-    # greedy sampling _over the token dimension_.
-    answer_id: t.LongTensor = t.argmax(  # pylint: disable=no-member
-        outputs.logits[:, -1, :], dim=-1
-    )
-    model_answer: str = tokenizer.decode(answer_id)
-    # Cut the completion down to just its answer integer.
-    model_answer = model_answer.split("\n")[-1]
-    model_answer = model_answer.replace("A: (", "")
+# %%
+# The model completes the baseline `multiple-choice 1` task.
+base_logits_with_rubric: dict = {}
+eval()
 
-    # Get the ground truth answer.
-    labels_one_hot: list = dataset["validation"]["mc1_targets"][question_num][
-        "labels"
-    ]
-    ground_truth: int = unhot(labels_one_hot)
-
-    # Save the model's answer besides their ground truths.
-    answers_with_rubric[question_num] = [int(model_answer), ground_truth]
-    # Save the model's activations.
-    activations.append(outputs.hidden_states[INJECTION_LAYER])
-
+# %%
+# The model completes the `multiple-choice 1` task with feature additions.
+steered_logits_with_rubric: dict = {}
+for feat in feature_vectors:
+    with register_feat_hooks(feat, COEFF, model, INJECTION_LAYER):
+        eval()
 # %%
 # Grade the model's answers.
 model_accuracy: float = 0.0
