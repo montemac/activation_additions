@@ -26,13 +26,14 @@ assert (
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
-DECODER_PATH: str = ""
+DECODER_PATH: str = "acts_data/learned_decoder.pt"
 SEED: int = 0
+INJECTION_LAYER: int = 16  # Layer to _add_ feature directions to.
+COEFF: float = 2.0  # Coefficient for the feature addition.
 MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
 NUM_SHOT: int = 6
 NUM_DATAPOINTS: int = 20  # Number of questions evaluated.
-INJECTION_LAYER: int = 16  # Layer to add activations to.
 
 assert (
     NUM_DATAPOINTS > NUM_SHOT
@@ -81,17 +82,41 @@ sampled_indices: list = sampled_indices.tolist()
 
 
 # %%
-# TODO: Load and preprocess the decoder.
+# Process the decoder for later addition.
 decoder: t.Tensor = t.load(DECODER_PATH)
-print(decoder.shape)
-# for d in decoder.size(1):
 
+# Print the ordered basis magnitudes.
+magnitudes: list = []
+for i in range(decoder.size(1)):
+    column: t.Tensor = decoder[:, i]
+    col_mag: float = t.norm(column, p=1).item()
+    magnitudes.append(col_mag)
 
-# %%
-# Convert one-hot labels to int indices.
-def unhot(labels: list) -> int:
-    """Change the one-hot ground truth labels to a 1-indexed int."""
-    return np.argmax(labels) + 1
+magnitudes.sort()
+for m in magnitudes:
+    print(m)
+
+# Print the ordered basis number of zeros.
+num_zeros: list = []
+for i in range(decoder.size(1)):
+    column: t.Tensor = decoder[:, i]
+    col_zeros: int = t.sum(t.abs(column) < 1e-4).item()  # pylint: disable=no-member
+    num_zeros.append(col_zeros)
+
+num_zeros.sort()
+for n in num_zeros:
+    print(n)
+
+# Get projected columns from the decoder.
+proj_columns: list[t.Tensor] = []
+identity: t.Tensor = t.eye(decoder.size(0))  # pylint: disable=no-member
+
+for i in range(decoder.size(1)):
+    column: t.Tensor = decoder[:, i]
+    proj_column: t.Tensor = t.einsum(
+        "ij,j->i", identity, column
+    )
+    proj_columns.append(proj_column)
 
 
 # %%
@@ -99,6 +124,13 @@ def unhot(labels: list) -> int:
 @contextmanager
 def register_feat_hooks(feature: t.Tensor, layer_num: int):
     """Project decoder basis directions into the model's activation space."""
+
+
+# %%
+# Convert one-hot labels to int indices.
+def unhot(labels: list) -> int:
+    """Change the one-hot ground truth labels to a 1-indexed int."""
+    return np.argmax(labels) + 1
 
 
 # %%
