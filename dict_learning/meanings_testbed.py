@@ -83,3 +83,7 @@ def tokenize(text: str) -> BatchEncoding:
 # TODO: Project the decoder basis vectors into the model. Set this up using
 # PyTorch backwards hooks. Compute integrals for credit assignments. Use
 # `seaborn` to visualize as heatmaps over input tokens.
+
+# It might also be wise to integrate this with effects on the truthful_qa
+# multichoice score. I can see what ablations most hurt or help score. Maybe
+# both approaches?
