@@ -20,7 +20,7 @@ from transformers import (
 # NOTE: Don't commit your HF token!
 HF_ACCESS_TOKEN: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
-DECODER_PATH: str = "activations_data/learned_decoder.pt"
+DECODER_PATH: str = "acts_data/learned_decoder.pt"
 SEED: int = 0
 SUBSET_SIZE: int = 25
 
@@ -80,3 +80,6 @@ def tokenize(text: str) -> BatchEncoding:
 
 
 # %%
+# TODO: Project the decoder basis vectors into the model. Set this up using
+# PyTorch backwards hooks. Compute integrals for credit assignments. Use
+# `seaborn` to visualize as heatmaps over input tokens.

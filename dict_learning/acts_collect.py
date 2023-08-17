@@ -33,9 +33,7 @@ assert (
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
-ACTS_SAVE_PATH: str = (
-    "/root/algebraic_value_editing/experiments/activations_dataset.pt"
-)
+ACTS_SAVE_PATH: str = "acts_data/activations_dataset.pt"
 SEED: int = 0
 MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1

@@ -15,8 +15,8 @@ LAMBDA_KL: float = 1e-7
 MODEL_EMBEDDING_DIM: int = 4096
 PROJECTION_DIM: int = 8192
 
-ACTS_PATH: str = "activations_data/activations_dataset.pt"
-DECODER_SAVE_PATH: str = "activations_data/learned_decoder.pt"
+ACTS_PATH: str = "acts_data/activations_dataset.pt"
+DECODER_SAVE_PATH: str = "acts_data/learned_decoder.pt"
 
 # %%
 # Use available tensor cores.
