@@ -108,15 +108,11 @@ for n in num_zeros:
     print(n)
 
 # Get projected columns from the decoder.
-proj_columns: list[t.Tensor] = []
-identity: t.Tensor = t.eye(decoder.size(0))  # pylint: disable=no-member
+feature_vectors: list[t.Tensor] = []
 
 for i in range(decoder.size(1)):
     column: t.Tensor = decoder[:, i]
-    proj_column: t.Tensor = t.einsum(
-        "ij,j->i", identity, column
-    )
-    proj_columns.append(proj_column)
+    feature_vectors.append(column)
 
 
 # %%
