@@ -1,7 +1,8 @@
 # %%
-"""WIP: Sort basis directions in the encoder by impact on truthful_qa score."""
+"""Sort feature directions in the decoder by impact on `truthful_qa` score."""
 
 
+import csv
 from contextlib import contextmanager
 
 import numpy as np
@@ -27,6 +28,7 @@ assert (
 HF_ACCESS_TOKEN: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
 DECODER_PATH: str = "acts_data/learned_decoder.pt"
+IMPACT_SAVE_PATH: str = "acts_data/impacts.csv"
 SEED: int = 0
 INJECTION_LAYER: int = 16  # Layer to _add_ feature directions to.
 COEFF: float = 2.0  # Coefficient for the feature addition.
@@ -119,11 +121,13 @@ for i in range(decoder.size(1)):
 # %%
 # Add in the feature vectors during a pass.
 @contextmanager
-def register_feat_hooks(feature: t.Tensor, coeff: float, mod: PreTrainedModel, layer_num: int):
+def register_feat_hooks(feature_vec: t.Tensor, coeff: float, mod: PreTrainedModel, layer_num: int):
     """Add scaled feature vectors into the model's activation space."""
-    _hook = mod.transformer.layers[layer_num].register_forward_hook(
-        lambda _, input_, output: output + coeff * feature
-    )
+
+    def hook(module, input_, output):
+        return (output[0] + coeff * feature_vec,)
+
+    _hook = mod.model.layers[layer_num].register_forward_hook(hook)
     try:
         yield
     finally:
@@ -138,30 +142,39 @@ def unhot(labels: list) -> int:
 
 
 # %%
-# Eval on the sampled questions.
-def eval():
-    """Run the main eval loop, saving logits and ground truths."""
-    for question_num in sampled_indices:
+# The basic evals loop.
+def mc_evals(samples_nums: list, num_shot: int = NUM_SHOT) -> dict[int, float]:
+    """
+    Run the eval loop, collecting the logit on ground truth for each question.
+    
+    This function counts on the script's `accelerator`, `dataset`, `model`,
+    `tokenizer`, and `unhot` variables. It is not designed to work outside of
+    this script.
+    """
+    ground_truth_logits: dict = {}
+
+    for question_num in samples_nums:
         multishot: str = ""
-        # Sample multishot questions that aren't the current question.
+        # Sample multishot questions that _aren't_ the current question.
         multishot_indices: ndarray = np.random.choice(
             [
                 x
                 for x in range(len(dataset["validation"]["question"]))
                 if x != question_num
             ],
-            size=NUM_SHOT,
+            size=num_shot,
             replace=False,
         )
 
-        # Build the multishot question.
+        # Build the multishot prompt.
         for mult_num in multishot_indices:
             multishot += "Q: " + dataset["validation"]["question"][mult_num] + "\n"
 
             for choice_num in range(
                 len(dataset["validation"]["mc1_targets"][mult_num]["choices"])
             ):
-                # choice_num is 0-indexed, but I want to display 1-indexed options.
+                # choice_num is 0-indexed, but I want to display _1-indexed_
+                # options.
                 multishot += (
                     "("
                     + str(choice_num + 1)
@@ -180,14 +193,15 @@ def eval():
             # Add on the correct answer under each multishot question.
             multishot += "A: (" + str(correct_answer) + ")\n"
 
-        # Build the current question.
+        # Add on the current question.
         question: str = (
             "Q: " + dataset["validation"]["question"][question_num] + "\n"
         )
         for option_num in range(
             len(dataset["validation"]["mc1_targets"][question_num]["choices"])
         ):
-            # option_num is similarly 0-indexed, but I want 1-indexed options here too.
+            # option_num is similarly 0-indexed, but I want 1-indexed options
+            # here too.
             question += (
                 "("
                 + str(option_num + 1)
@@ -202,57 +216,58 @@ def eval():
         # multiple-choice answer integer.
         question += "A: ("
 
-        # Tokenize and prepare the model input.
+        # Tokenize, prepare the model input.
         input_ids: t.Tensor = tokenizer.encode(
             multishot + question, return_tensors="pt"
         )
         input_ids = accelerator.prepare(input_ids)
-        # Generate a completion.
+
+        # Generate a single-token completion.
         outputs = model(input_ids)
 
-        # Get the model's answer string from its logits. We want the _answer
-        # stream's_ logits, so we pass `outputs.logits[:,-1,:]`. `dim=-1` here means
-        # greedy sampling _over the token dimension_.
-        answer_id: t.LongTensor = t.argmax(  # pylint: disable=no-member
-            outputs.logits[:, -1, :], dim=-1
-        )
-        model_answer: str = tokenizer.decode(answer_id)
-        # Cut the completion down to just its answer integer.
-        model_answer = model_answer.split("\n")[-1]
-        model_answer = model_answer.replace("A: (", "")
-
-        # Get the ground truth answer.
-        labels_one_hot: list = dataset["validation"]["mc1_targets"][question_num][
-            "labels"
+        # Get the ground truth logit. The ground truth is ultimately stored as a
+        # string literal, so I have to work a bit to get its logit from the
+        # model's final logits.
+        ground_truth_one_hot: list = dataset["validation"]["mc1_targets"][question_num][
+        "labels"
         ]
-        ground_truth: int = unhot(labels_one_hot)
+        ground_truth_ans: int = unhot(ground_truth_one_hot)
+        ground_truth_id: list[int] = tokenizer.encode(str(ground_truth_ans))
+        ground_truth_logit: float = outputs.logits[0, -1, ground_truth_id[0]]
+        ground_truth_logits[question_num] = ground_truth_logit.item()
 
-        # Save the model's answer besides their ground truths.
-        answers_with_rubric[question_num] = [int(model_answer), ground_truth]
+    return ground_truth_logits
 
-
-# %%
-# The model completes the baseline `multiple-choice 1` task.
-base_logits_with_rubric: dict = {}
-eval()
 
 # %%
-# The model completes the `multiple-choice 1` task with feature additions.
-steered_logits_with_rubric: dict = {}
-for feat in feature_vectors:
-    with register_feat_hooks(feat, COEFF, model, INJECTION_LAYER):
-        eval()
-# %%
-# Grade the model's answers.
-model_accuracy: float = 0.0
-for (
-    question_num
-) in answers_with_rubric:  # pylint: disable=consider-using-dict-items
-    if (
-        answers_with_rubric[question_num][0]
-        == answers_with_rubric[question_num][1]
-    ):
-        model_accuracy += 1.0
+# The baseline model's logits for the correct answer.
+baseline_ground_truth_logits: dict[int, float] = mc_evals(sampled_indices)
 
-model_accuracy /= len(answers_with_rubric)
-print(f"{MODEL_DIR} accuracy:{model_accuracy*100}%.")
+# %%
+# The steered model's logits for the correct answer, for each feature vec.
+feature_vec_sweeps: dict[int, dict[int, float]] = {}
+
+for i, feature in enumerate(feature_vectors):
+    # HACK: Device mismatch between feature and ouput[0].
+    feature = feature.to("cuda:3")
+    with register_feat_hooks(feature, COEFF, model, INJECTION_LAYER):
+        feature_vec_sweeps[i] = mc_evals(sampled_indices)
+
+# %%
+# Measure the impact of each feature vector on the correct logit.
+final_results: dict[int, float] = {}
+
+for k, feature in feature_vec_sweeps:
+    dim_index: int = k
+    feature_impact = baseline_ground_truth_logits[k] - feature[k]
+    final_results[dim_index] = feature_impact
+
+# %%
+# Save the final results.
+with open(IMPACT_SAVE_PATH, "a", newline="", encoding="utf-8") as csv_file:
+    writer = csv.writer(csv_file)
+    writer.writerow(["Dimension index", "Feature impact on ground truth logit"])
+    for d, f in final_results.items():
+        writer.writerow([d, f])
+    # Add a final newline.
+    writer.writerow([])
