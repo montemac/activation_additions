@@ -1,5 +1,12 @@
 # %%
-"""Sort feature directions in the decoder by impact on `truthful_qa` score."""
+"""
+Evaluate feature directions in the decoder by impact on `truthful_qa` score.
+
+For now, it is set up as a multishot process, but I may refactor it to
+zero-shot, to run in reasonable time, especially as I scale up the latent space
+size further. Note that you'll need a HuggingFace/Meta access token for the
+`Llama-2` models.
+"""
 
 
 import csv
@@ -103,7 +110,7 @@ def hook_factory(feature_vec: t.Tensor, coeff: float):
         # leave as a tuple.
         residual = _[0]
 
-        # HACK: Patching the horrible parallelization bug.
+        # Patch for horrible parallelization bug.
         deviced_feature_vec = feature_vec.to(residual.device)
 
         # Broadcast the feature vector across the batch, stream dims.
@@ -264,10 +271,19 @@ for k, feature_vector in enumerate(feature_vectors):
 # Measure the impact of each feature vector on the correct logit.
 final_results: dict[int, float] = {}
 
-for k, feature in feature_vec_sweeps.items():
-    dim_index: int = k
-    feature_impact = baseline_ground_truth_logits[k] - feature[k]
-    final_results[dim_index] = feature_impact
+for direction_index, direction_addition in feature_vec_sweeps.items():
+    direction_effect: float = 0.0
+
+    for question_index, modded_logit in direction_addition.items():
+        baseline_logit = baseline_ground_truth_logits[question_index]
+        question_impact = baseline_logit - modded_logit
+        direction_effect += question_impact
+
+    final_results[direction_index] = direction_effect
+
+sorted_results = sorted(
+    final_results.items(), key=lambda x: x[1], reverse=True
+)
 
 # %%
 # Save the final results.
@@ -276,7 +292,7 @@ with open(IMPACT_SAVE_PATH, "a", newline="", encoding="utf-8") as csv_file:
     writer.writerow(
         ["Dimension index", "Feature impact on ground truth logit"]
     )
-    for d, f in final_results.items():
+    for d, f in sorted_results:
         writer.writerow([d, f])
     # Add a final newline.
     writer.writerow([])
