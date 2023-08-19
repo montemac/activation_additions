@@ -83,36 +83,8 @@ sampled_indices: list = sampled_indices.tolist()
 
 
 # %%
-# Process the decoder for later addition.
+# Load and get projected columns from the decoder.
 decoder: t.Tensor = t.load(DECODER_PATH)
-
-# Print the ordered basis magnitudes.
-# magnitudes: list = []
-
-# for i in range(decoder.size(1)):
-#     column: t.Tensor = decoder[:, i]
-#     col_mag: float = t.norm(column, p=1).item()
-#     magnitudes.append(col_mag)
-# magnitudes.sort()
-
-# for m in magnitudes:
-#     print(m)
-
-# Print the ordered basis number of zeros.
-# num_zeros: list = []
-
-# for i in range(decoder.size(1)):
-#     column: t.Tensor = decoder[:, i]
-#     col_zeros: int = t.sum(  # pylint: disable=no-member
-#         t.abs(column) < 1e-3  # pylint: disable=no-member
-#     ).item()
-#     num_zeros.append(col_zeros)
-# num_zeros.sort()
-
-# for n in num_zeros:
-#     print(n)
-
-# Get projected columns from the decoder.
 feature_vectors: list[t.Tensor] = []
 
 for i in range(decoder.size(1)):
@@ -121,30 +93,49 @@ for i in range(decoder.size(1)):
 
 
 # %%
-# Bare `torch` hooking functionality.
-@contextmanager
-def pre_hooks(hooks: (model, _steering_hook)):
-    """Register pre-forward hooks with torch."""
-    handles: list = []
-    try:
-        handles = [mod.register_forward_pre_hook(hook) for mod, hook in hooks]
-        yield
-    finally:
-        for handle in handles:
-            handle.remove()
+# A hook factory; hooks in `torch` have a fixed type signature.
+def hook_factory(feature_vec: t.Tensor, coeff: float):
+    """Return a pre-forward hook adding in a scaled feature vector."""
+
+    def _hook(__, _):
+        """Add a feature vector to the residual space."""
+        # `__` is the model; `_` is the input. The input comes in as and must
+        # leave as a tuple.
+        residual = _[0]
+
+        # HACK: Patching the horrible parallelization bug.
+        deviced_feature_vec = feature_vec.to(residual.device)
+
+        # Broadcast the feature vector across the batch, stream dims.
+        expanded_feature_vec = deviced_feature_vec.expand(
+            residual.size(0), residual.size(1), -1
+        )
+
+        assert (
+            residual.size() == expanded_feature_vec.size()
+        ), f"""
+        Model activations and feature vectors do not match in size.
+        Model activation size: {residual.size()}
+        Feature vector size: {expanded_feature_vec.size()}
+        """
+
+        residual += coeff * expanded_feature_vec
+        return (residual,)
+
+    return _hook
 
 
 # %%
-# The substantial hook.
-def _steering_hook(_, inpt, coeff: float, feature_vec: t.Tensor):
-    """Add a feature vector to the residual stream."""
-    (residual,) = inpt
+# Registering and teardown a hook, for a pass.
+@contextmanager
+def register_hook(model_layer_module, hook_function):
+    """Register (and unregister) a pre-forward hook."""
+    handle = model_layer_module.register_forward_pre_hook(hook_function)
 
-    assert (
-        residual.size() == feature_vec.size()
-    ), "Activation and feature vectors must match in size!"
-
-    residual += coeff * feature_vec
+    try:
+        yield
+    finally:
+        handle.remove()
 
 
 # %%
@@ -263,8 +254,9 @@ baseline_ground_truth_logits: dict[int, float] = mc_evals(sampled_indices)
 feature_vec_sweeps: dict[int, dict[int, float]] = {}
 
 for k, feature_vector in enumerate(feature_vectors):
-    with pre_hooks(
-        (model, _steering_hook(coeff=COEFF, feature_vec=feature_vector))
+    with register_hook(
+        model.model.layers[INJECTION_LAYER],
+        hook_factory(feature_vector, COEFF),
     ):
         feature_vec_sweeps[k] = mc_evals(sampled_indices)
 
