@@ -87,28 +87,30 @@ sampled_indices: list = sampled_indices.tolist()
 decoder: t.Tensor = t.load(DECODER_PATH)
 
 # Print the ordered basis magnitudes.
-magnitudes: list = []
+# magnitudes: list = []
 
-for i in range(decoder.size(1)):
-    column: t.Tensor = decoder[:, i]
-    col_mag: float = t.norm(column, p=1).item()
-    magnitudes.append(col_mag)
-magnitudes.sort()
+# for i in range(decoder.size(1)):
+#     column: t.Tensor = decoder[:, i]
+#     col_mag: float = t.norm(column, p=1).item()
+#     magnitudes.append(col_mag)
+# magnitudes.sort()
 
-for m in magnitudes:
-    print(m)
+# for m in magnitudes:
+#     print(m)
 
 # Print the ordered basis number of zeros.
-num_zeros: list = []
+# num_zeros: list = []
 
-for i in range(decoder.size(1)):
-    column: t.Tensor = decoder[:, i]
-    col_zeros: int = t.sum(t.abs(column) < 1e-4).item()  # pylint: disable=no-member
-    num_zeros.append(col_zeros)
-num_zeros.sort()
+# for i in range(decoder.size(1)):
+#     column: t.Tensor = decoder[:, i]
+#     col_zeros: int = t.sum(  # pylint: disable=no-member
+#         t.abs(column) < 1e-3  # pylint: disable=no-member
+#     ).item()
+#     num_zeros.append(col_zeros)
+# num_zeros.sort()
 
-for n in num_zeros:
-    print(n)
+# for n in num_zeros:
+#     print(n)
 
 # Get projected columns from the decoder.
 feature_vectors: list[t.Tensor] = []
@@ -119,19 +121,30 @@ for i in range(decoder.size(1)):
 
 
 # %%
-# Add in the feature vectors during a pass.
+# Bare `torch` hooking functionality.
 @contextmanager
-def register_feat_hooks(feature_vec: t.Tensor, coeff: float, mod: PreTrainedModel, layer_num: int):
-    """Add scaled feature vectors into the model's activation space."""
-
-    def hook(module, input_, output):
-        return (output[0] + coeff * feature_vec,)
-
-    _hook = mod.model.layers[layer_num].register_forward_hook(hook)
+def pre_hooks(hooks: (model, _steering_hook)):
+    """Register pre-forward hooks with torch."""
+    handles: list = []
     try:
+        handles = [mod.register_forward_pre_hook(hook) for mod, hook in hooks]
         yield
     finally:
-        _hook.remove()
+        for handle in handles:
+            handle.remove()
+
+
+# %%
+# The substantial hook.
+def _steering_hook(_, inpt, coeff: float, feature_vec: t.Tensor):
+    """Add a feature vector to the residual stream."""
+    (residual,) = inpt
+
+    assert (
+        residual.size() == feature_vec.size()
+    ), "Activation and feature vectors must match in size!"
+
+    residual += coeff * feature_vec
 
 
 # %%
@@ -146,7 +159,7 @@ def unhot(labels: list) -> int:
 def mc_evals(samples_nums: list, num_shot: int = NUM_SHOT) -> dict[int, float]:
     """
     Run the eval loop, collecting the logit on ground truth for each question.
-    
+
     This function counts on the script's `accelerator`, `dataset`, `model`,
     `tokenizer`, and `unhot` variables. It is not designed to work outside of
     this script.
@@ -168,7 +181,9 @@ def mc_evals(samples_nums: list, num_shot: int = NUM_SHOT) -> dict[int, float]:
 
         # Build the multishot prompt.
         for mult_num in multishot_indices:
-            multishot += "Q: " + dataset["validation"]["question"][mult_num] + "\n"
+            multishot += (
+                "Q: " + dataset["validation"]["question"][mult_num] + "\n"
+            )
 
             for choice_num in range(
                 len(dataset["validation"]["mc1_targets"][mult_num]["choices"])
@@ -179,15 +194,15 @@ def mc_evals(samples_nums: list, num_shot: int = NUM_SHOT) -> dict[int, float]:
                     "("
                     + str(choice_num + 1)
                     + ") "
-                    + dataset["validation"]["mc1_targets"][mult_num]["choices"][
-                        choice_num
-                    ]
+                    + dataset["validation"]["mc1_targets"][mult_num][
+                        "choices"
+                    ][choice_num]
                     + "\n"
                 )
 
-            labels_one_hot: list = dataset["validation"]["mc1_targets"][mult_num][
-                "labels"
-            ]
+            labels_one_hot: list = dataset["validation"]["mc1_targets"][
+                mult_num
+            ]["labels"]
             # Get a label int from the `labels` list.
             correct_answer: int = unhot(labels_one_hot)
             # Add on the correct answer under each multishot question.
@@ -206,9 +221,9 @@ def mc_evals(samples_nums: list, num_shot: int = NUM_SHOT) -> dict[int, float]:
                 "("
                 + str(option_num + 1)
                 + ") "
-                + dataset["validation"]["mc1_targets"][question_num]["choices"][
-                    option_num
-                ]
+                + dataset["validation"]["mc1_targets"][question_num][
+                    "choices"
+                ][option_num]
                 + "\n"
             )
         # I only want the model to actually answer the question, with a single
@@ -228,9 +243,9 @@ def mc_evals(samples_nums: list, num_shot: int = NUM_SHOT) -> dict[int, float]:
         # Get the ground truth logit. The ground truth is ultimately stored as a
         # string literal, so I have to work a bit to get its logit from the
         # model's final logits.
-        ground_truth_one_hot: list = dataset["validation"]["mc1_targets"][question_num][
-        "labels"
-        ]
+        ground_truth_one_hot: list = dataset["validation"]["mc1_targets"][
+            question_num
+        ]["labels"]
         ground_truth_ans: int = unhot(ground_truth_one_hot)
         ground_truth_id: list[int] = tokenizer.encode(str(ground_truth_ans))
         ground_truth_logit: float = outputs.logits[0, -1, ground_truth_id[0]]
@@ -247,17 +262,17 @@ baseline_ground_truth_logits: dict[int, float] = mc_evals(sampled_indices)
 # The steered model's logits for the correct answer, for each feature vec.
 feature_vec_sweeps: dict[int, dict[int, float]] = {}
 
-for i, feature in enumerate(feature_vectors):
-    # HACK: Device mismatch between feature and ouput[0].
-    feature = feature.to("cuda:3")
-    with register_feat_hooks(feature, COEFF, model, INJECTION_LAYER):
-        feature_vec_sweeps[i] = mc_evals(sampled_indices)
+for k, feature_vector in enumerate(feature_vectors):
+    with pre_hooks(
+        (model, _steering_hook(coeff=COEFF, feature_vec=feature_vector))
+    ):
+        feature_vec_sweeps[k] = mc_evals(sampled_indices)
 
 # %%
 # Measure the impact of each feature vector on the correct logit.
 final_results: dict[int, float] = {}
 
-for k, feature in feature_vec_sweeps:
+for k, feature in feature_vec_sweeps.items():
     dim_index: int = k
     feature_impact = baseline_ground_truth_logits[k] - feature[k]
     final_results[dim_index] = feature_impact
@@ -266,7 +281,9 @@ for k, feature in feature_vec_sweeps:
 # Save the final results.
 with open(IMPACT_SAVE_PATH, "a", newline="", encoding="utf-8") as csv_file:
     writer = csv.writer(csv_file)
-    writer.writerow(["Dimension index", "Feature impact on ground truth logit"])
+    writer.writerow(
+        ["Dimension index", "Feature impact on ground truth logit"]
+    )
     for d, f in final_results.items():
         writer.writerow([d, f])
     # Add a final newline.
