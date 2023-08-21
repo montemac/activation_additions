@@ -37,7 +37,7 @@ MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
 DECODER_PATH: str = "acts_data/learned_decoder.pt"
 IMPACT_SAVE_PATH: str = "acts_data/impacts.csv"
 SEED: int = 0
-BATCH_SIZE: int = 10
+BATCH_SIZE: int = 5
 INJECTION_LAYER: int = 16  # Layer to _add_ feature directions to.
 COEFF: float = 2.0  # Coefficient for the feature addition.
 MAX_NEW_TOKENS: int = 1
@@ -243,18 +243,20 @@ def mc_evals(
         batch_indices: list = samples_nums[
             batch_first : (batch_first + batch_size)
         ]
-        batch_inputs: list = []
 
+        batch_inputs: list[t.Tensor] = []
         for question_num in batch_indices:
             prompt: str = build_multishot_prompt(question_num, num_shot)
 
             # Tokenize, prepare the model input.
             input_ids: t.Tensor = tokenizer.encode(prompt, return_tensors="pt")
-            input_ids = accelerator.prepare(input_ids)
-            batch_inputs.append(input_ids)
+            # Remove the batch dim of 1, since we'll rebatch with a new dim
+            # shortly.
+            print(input_ids.squeeze().shape)
+            batch_inputs.append(input_ids.squeeze())
 
         # Pad, tensorize, and prepare the batch.
-        batch_inputs = t.nn.utils.rnn.pad_sequence(
+        batch_inputs: t.Tensor = t.nn.utils.rnn.pad_sequence(
             batch_inputs, batch_first=True
         )
         batch_inputs = accelerator.prepare(batch_inputs)
