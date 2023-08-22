@@ -1,5 +1,5 @@
 # %%
-"""WIP: Integrate gradients to interpret basis directions in a decoder space."""
+"""WIP: Use `circuitsvis` to interpret decoder basis-directions."""
 
 
 import numpy as np

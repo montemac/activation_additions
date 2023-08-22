@@ -38,15 +38,16 @@ DECODER_PATH: str = "acts_data/learned_decoder.pt"
 IMPACT_SAVE_PATH: str = "acts_data/impacts.csv"
 SEED: int = 0
 BATCH_SIZE: int = 20
-INJECTION_LAYER: int = 16  # Layer to _add_ feature directions to.
+INJECTION_LAYER: int = 16  # Model layer to _add_ feature directions to.
 COEFF: float = 2.0  # Coefficient for the feature addition.
 MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
 NUM_SHOT: int = 6
-NUM_DATAPOINTS: int = 20  # Number of questions evaluated.
+NUM_QUESTIONS: int = 20  # Number of questions per feature evaluated.
+EVAL_N_DIRECTIONS: int = 50
 
 assert (
-    NUM_DATAPOINTS > NUM_SHOT
+    NUM_QUESTIONS > NUM_SHOT
 ), "There must be a question not used for the multishot demonstration."
 
 # %%
@@ -72,18 +73,19 @@ tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
 accelerator: Accelerator = Accelerator()
 model: PreTrainedModel = accelerator.prepare(model)
 model.eval()
+model.half()
 
 # %%
 # Load the TruthfulQA multichoice dataset.
 dataset: dict = load_dataset("truthful_qa", "multiple_choice")
 
 assert (
-    len(dataset["validation"]["question"]) >= NUM_DATAPOINTS
+    len(dataset["validation"]["question"]) >= NUM_QUESTIONS
 ), "More datapoints sampled than exist in the dataset."
 
 sampled_indices: ndarray = np.random.choice(
     len(dataset["validation"]["question"]),
-    size=NUM_DATAPOINTS,
+    size=NUM_QUESTIONS,
     replace=False,
 )
 
@@ -95,7 +97,13 @@ sampled_indices: list = sampled_indices.tolist()
 decoder: t.Tensor = t.load(DECODER_PATH)
 feature_vectors: list[t.Tensor] = []
 
-for i in range(decoder.size(1)):
+
+assert (
+    decoder.size(1) >= EVAL_N_DIRECTIONS
+), "Tried to eval more directions than there are decoder columns."
+
+
+for i in range(EVAL_N_DIRECTIONS):
     column: t.Tensor = decoder[:, i]
     feature_vectors.append(column)
 
@@ -259,12 +267,13 @@ def mc_evals(
             batch_inputs, batch_first=True
         )
         batch_inputs = accelerator.prepare(batch_inputs)
+        batch_inputs = batch_inputs.half()
 
         # Generate a single-token completion for each batched input.
         outputs = model(batch_inputs)
 
-        # Get the ground truth logit. The ground truth is ultimately stored as a
-        # string literal, so I have to work a bit to get its logit from the
+        # Get the ground truth logit. The ground truth is ultimately stored as
+        # a string literal, so I have to work a bit to get its logit from the
         # model's final logits.
         for batch_indx, question_num in enumerate(batch_indices):
             ground_truth_one_hot: list = dataset["validation"]["mc1_targets"][
