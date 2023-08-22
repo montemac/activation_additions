@@ -37,7 +37,7 @@ MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
 DECODER_PATH: str = "acts_data/learned_decoder.pt"
 IMPACT_SAVE_PATH: str = "acts_data/impacts.csv"
 SEED: int = 0
-BATCH_SIZE: int = 5
+BATCH_SIZE: int = 20
 INJECTION_LAYER: int = 16  # Layer to _add_ feature directions to.
 COEFF: float = 2.0  # Coefficient for the feature addition.
 MAX_NEW_TOKENS: int = 1
@@ -252,7 +252,6 @@ def mc_evals(
             input_ids: t.Tensor = tokenizer.encode(prompt, return_tensors="pt")
             # Remove the batch dim of 1, since we'll rebatch with a new dim
             # shortly.
-            print(input_ids.squeeze().shape)
             batch_inputs.append(input_ids.squeeze())
 
         # Pad, tensorize, and prepare the batch.
@@ -267,7 +266,7 @@ def mc_evals(
         # Get the ground truth logit. The ground truth is ultimately stored as a
         # string literal, so I have to work a bit to get its logit from the
         # model's final logits.
-        for question_num in batch_indices:
+        for batch_indx, question_num in enumerate(batch_indices):
             ground_truth_one_hot: list = dataset["validation"]["mc1_targets"][
                 question_num
             ]["labels"]
@@ -276,7 +275,7 @@ def mc_evals(
                 str(ground_truth_ans)
             )
             ground_truth_logit: float = outputs.logits[
-                0, -1, ground_truth_id[0]
+                batch_indx, -1, ground_truth_id[0]
             ]
             ground_truth_logits[question_num] = ground_truth_logit.item()
 
