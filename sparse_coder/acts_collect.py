@@ -26,7 +26,7 @@ from transformers import (
 
 
 assert (
-    transformers.__version__ == "4.31.0"
+    transformers.__version__ >= "4.31.0"
 ), "Llama-2 70B requires at least transformers v4.31.0"
 
 # %%

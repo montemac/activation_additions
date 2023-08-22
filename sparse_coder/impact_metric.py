@@ -27,7 +27,7 @@ from transformers import (
 
 
 assert (
-    transformers.__version__ == "4.31.0"
+    transformers.__version__ >= "4.31.0"
 ), "Llama-2 70B requires at least transformers v4.31.0"
 
 # %%
@@ -119,8 +119,10 @@ def hook_factory(feature_vec: t.Tensor, coeff: float):
         # leave as a tuple.
         residual = _[0]
 
-        # Patch for horrible parallelization bug.
-        deviced_feature_vec = feature_vec.to(residual.device)
+        # Patch for parallelization and precision bugs.
+        deviced_feature_vec = feature_vec.to(residual.device).to(
+            residual.dtype
+        )
 
         # Broadcast the feature vector across the batch, stream dims.
         expanded_feature_vec = deviced_feature_vec.expand(
@@ -267,7 +269,6 @@ def mc_evals(
             batch_inputs, batch_first=True
         )
         batch_inputs = accelerator.prepare(batch_inputs)
-        batch_inputs = batch_inputs.half()
 
         # Generate a single-token completion for each batched input.
         outputs = model(batch_inputs)
