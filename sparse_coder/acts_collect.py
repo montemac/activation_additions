@@ -6,8 +6,8 @@ An implementation of the Truthful-QA multiple-choice task. I'm interested in
 collecting residual activations during TruthfulQA to train a variational
 autoencoder on, for the purpose of finding task-relevant activation directions
 in the model's residual space. The script will collect those activation tensors
-and save them to disk during the eval. Requires a HuggingFace access token for
-the `Llama-2` models.
+and their prompts and save them to disk during the eval. Requires a HuggingFace
+access token for the `Llama-2` models.
 """
 
 
@@ -31,8 +31,9 @@ assert (
 
 # %%
 # NOTE: Don't commit your HF access token!
-HF_ACCESS_TOKEN: str = ""
+HF_ACCESS_TOKEN: str = "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"
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
+PROMPT_IDS_SAVE_PATH: str = "acts_data/activations_prompt_ids.pt"
 ACTS_SAVE_PATH: str = "acts_data/activations_dataset.pt"
 SEED: int = 0
 MAX_NEW_TOKENS: int = 1
@@ -98,6 +99,7 @@ def unhot(labels: list) -> int:
 # The model answers questions on the `multiple-choice 1` task.
 activations: list = []
 answers_with_rubric: dict = {}
+prompt_ids: list = []
 
 for question_num in sampled_indices:
     multishot: str = ""
@@ -165,6 +167,7 @@ for question_num in sampled_indices:
     input_ids: t.Tensor = tokenizer.encode(
         multishot + question, return_tensors="pt"
     )
+    prompt_ids.append(input_ids)
     input_ids = accelerator.prepare(input_ids)
     # Generate a completion.
     outputs = model(input_ids)
@@ -208,7 +211,7 @@ print(f"{MODEL_DIR} accuracy:{model_accuracy*100}%.")
 
 
 # %%
-# Save the model's activations.
+# Save the model's prompt_ids and activations.
 def pad_activations(tensor, length) -> t.Tensor:
     """Pad activation tensors to a certain stream-dim length."""
     padding_size: int = length - tensor.size(1)
@@ -233,4 +236,9 @@ concat_activations: t.Tensor = t.cat(  # pylint: disable=no-member
     dim=0,
 )
 
+# Prep to save the prompt_ids.
+prompt_ids_array: ndarray = np.array(prompt_ids, dtype=object)
+
+# Save the activations and prompt_ids.
+np.save(PROMPT_IDS_SAVE_PATH, prompt_ids_array)
 t.save(concat_activations, ACTS_SAVE_PATH)
