@@ -8,8 +8,8 @@ from torch.utils.data import DataLoader, Dataset
 
 
 # %%
-# Training hyperparameters. We want to weight L1 extremely heavily. These values
-# reflect OOM of the components at initialization.
+# Training hyperparameters. We want to weight L1 extremely heavily. These
+# values reflect OOM of the components at initialization.
 LAMBDA_L1: float = 1.0
 LAMBDA_KL: float = 1e-13
 LAMBDA_MSE: float = 1e-5
@@ -18,6 +18,7 @@ MODEL_EMBEDDING_DIM: int = 4096
 PROJECTION_DIM: int = 8192
 
 ACTS_PATH: str = "acts_data/activations_dataset.pt"
+ENCODER_SAVE_PATH: str = "acts_data/learned_encoder.pt"
 DECODER_SAVE_PATH: str = "acts_data/learned_decoder.pt"
 
 # %%
@@ -104,15 +105,16 @@ class Autoencoder(pl.LightningModule):
         )
 
         # I want to learn a _sparse representation_ of the original learned
-        # features present in the training activations. L1 regularization in the
-        # higher-dimensional space does this.
+        # features present in the training activations. L1 regularization in
+        # the higher-dimensional space does this.
         l1_loss = t.nn.functional.l1_loss(
             sampled_state,
             t.zeros_like(sampled_state),  # pylint: disable=no-member
         )
 
-        # I also need to inventivize learning features that match the originals.
-        # I project back to the original space, then evaluate MSE for this.
+        # I also need to inventivize learning features that match the
+        # originals. I project back to the original space, then evaluate MSE
+        # for this.
         mse_loss = t.nn.functional.mse_loss(output_state, state)
 
         # The overall loss function just combines the three above terms.
@@ -145,6 +147,11 @@ trainer.fit(model, dataloader)
 
 # %%
 # Save the trained decoder matrix.
+t.save(
+    model.encoder[0].weight.data,
+    ENCODER_SAVE_PATH,
+)
+
 t.save(
     model.decoder[0].weight.data,
     DECODER_SAVE_PATH,
