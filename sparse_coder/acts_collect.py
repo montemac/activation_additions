@@ -145,7 +145,8 @@ for question_num in sampled_indices:
     for option_num in range(
         len(dataset["validation"]["mc1_targets"][question_num]["choices"])
     ):
-        # option_num is similarly 0-indexed, but I want 1-indexed options here too.
+        # option_num is similarly 0-indexed, but I want 1-indexed options here
+        # too.
         question += (
             "("
             + str(option_num + 1)
@@ -169,8 +170,8 @@ for question_num in sampled_indices:
     outputs = model(input_ids)
 
     # Get the model's answer string from its logits. We want the _answer
-    # stream's_ logits, so we pass `outputs.logits[:,-1,:]`. `dim=-1` here means
-    # greedy sampling _over the token dimension_.
+    # stream's_ logits, so we pass `outputs.logits[:,-1,:]`. `dim=-1` here
+    # means greedy sampling _over the token dimension_.
     answer_id: t.LongTensor = t.argmax(  # pylint: disable=no-member
         outputs.logits[:, -1, :], dim=-1
     )

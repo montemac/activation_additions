@@ -82,7 +82,7 @@ projector = Decoder()
 activations: list = []
 for s in sample_indices:
     tokens: BatchEncoding = tokenizer(dataset["validation"]["question"][s])
-    input_ids = t.tensor(tokens["input_ids"])
+    input_ids = t.tensor(tokens["input_ids"])  # pylint: disable=no-member
     # TODO: Cache model activations data.
     outputs = projector(input_ids)
     activations.append(outputs)
