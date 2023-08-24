@@ -78,7 +78,7 @@ acts_dataset: t.Tensor = t.load(ACTS_DATA_PATH)
 
 def unpad_activations(
     activations_block: t.Tensor, unpadded_prompts: np.ndarray
-) -> t.Tensor:
+) -> [t.Tensor]:
     """
     Unpads activations to the lengths specified by the original prompts.
 
@@ -88,33 +88,31 @@ def unpad_activations(
     """
     unpadded_activations: list = []
 
-    # Iterating over the tensor now.
-    for i in range(len(activations_block)):
-        print(unpadded_prompts.shape(0))
-        # Since the unpadded_prompt still represents the original tokenized
-        # length, we slice the activations to its length.
-        unpadded_activations.append(
-            activations_block[i, : len(unpadded_prompts[i]), :]
-        )
+    for k, unpadded_prompt in enumerate(unpadded_prompts):
+        original_length: int = unpadded_prompt.size(1)
+        unpadded_activations.append(activations_block[k, :original_length, :])
 
-    return t.stack(unpadded_activations)  # pylint: disable=no-member
+    return unpadded_activations
 
 
-def project_activations(
-    activations_block: t.Tensor, projector: Decoder
-) -> t.Tensor:
+def project_activations(acts_list: [t.Tensor], projector: Decoder) -> t.Tensor:
     """Projects the activations block over to the sparse latent space."""
     projected_activations: list = []
 
-    # Iterate over the tensor batch dim.
-    for activations in activations_block:
-        # Detach the gradients from the model pass.
-        projected_activations.append(projector(activations).detach())
+    for question in acts_list:
+        proj_question: list = []
+        for activation in question:
+            # Detach the gradients from the model pass.
+            proj_question.append(projector(activation).detach())
 
-    return t.stack(projected_activations)  # pylint: disable=no-member
+        question_block = t.stack(proj_question)  # pylint: disable=no-member
+
+        projected_activations.append(question_block)
+
+    return projected_activations
 
 
-def rearrange_for_vis(activations_block: t.Tensor) -> [t.Tensor]:
+def rearrange_for_vis(acts_list: [t.Tensor]) -> [t.Tensor]:
     """`circuitsvis` wants inputs [(stream x layers x embedding_dim)]."""
 
     # Rearrange the activations from (batch x stream x embedding_dim) to
@@ -122,7 +120,7 @@ def rearrange_for_vis(activations_block: t.Tensor) -> [t.Tensor]:
     # list of tensors, and layer is always of size 1.
     rearranged_activations: list = []
 
-    for activations in activations_block:
+    for activations in acts_list:
         rearranged_activations.append(
             t.unsqueeze(activations, 1)  # pylint: disable=no-member
         )
@@ -131,14 +129,19 @@ def rearrange_for_vis(activations_block: t.Tensor) -> [t.Tensor]:
 
 
 unpadded = unpad_activations(acts_dataset, prompts_ids)
-print(unpadded.shape)
+
+projected = project_activations(unpadded, model)
+
+rearranged = rearrange_for_vis(projected)
+print(len(rearranged))
+print(rearranged[0].shape)
 
 # %%
 # Visualize the activations.
-text_neuron_activations(
-    prompts_literals,
-    projected_activations,
-    "Layer",
-    "Feature",
-    ["16"],
-)
+# text_neuron_activations(
+#     prompts_literals,
+#     projected_activations,
+#     "Layer",
+#     "Feature",
+#     ["16"],
+# )
