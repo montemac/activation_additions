@@ -1,15 +1,17 @@
 # %%
-"""The activations heatmap of a learned decoder."""
+"""
+An activations heatmap for a learned decoder, using `circuitsvis.`
+
+Perhaps this should use the trained encoder instead of the decoder. Requires a
+HF access token to get `Llama-2`'s tokenizer.
+"""
 
 
 import numpy as np
 import torch as t
 import transformers
 from circuitsvis.activations import text_neuron_activations
-from transformers import (
-    AutoTokenizer,
-    PreTrainedTokenizer,
-)
+from transformers import AutoTokenizer, PreTrainedTokenizer
 
 
 assert (
@@ -23,6 +25,7 @@ TOKENIZER_DIR: str = "meta-llama/Llama-2-7b-hf"
 PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.pt.npy"
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 DECODER_PATH: str = "acts_data/learned_decoder.pt"
+TRAINING_LAYER: str = "16"  # The layer the decoder was trained at.
 SEED: int = 0
 
 # %%
@@ -31,14 +34,14 @@ t.manual_seed(SEED)
 np.random.seed(SEED)
 
 # %%
-# The original tokenizer.
+# The original `Llama-2` tokenizer.
 tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
     TOKENIZER_DIR,
     use_auth_token=HF_ACCESS_TOKEN,
 )
 
 # %%
-# Rebuild the decoder as a linear layer.
+# Rebuild the learned decoder as a linear layer module.
 imported_weights: t.Tensor = t.load(DECODER_PATH)
 
 decoder = t.nn.Linear(4096, 8192)
@@ -48,7 +51,7 @@ decoder.weight.data = t.transpose(  # pylint: disable=no-member
 
 
 class Decoder:
-    """Reconstructs the decoder as a linear layer."""
+    """Reconstructs the decoder as a callable linear layer."""
 
     def __init__(self):
         self.decoder = t.nn.Sequential(decoder)
@@ -58,13 +61,14 @@ class Decoder:
         return self.decoder(inputs)
 
 
+# Instantiate the decoder model.
 model = Decoder()
 
 # %%
-# Load and prep the tokens.
+# Load and prepare the original prompt tokens.
 prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
 
-# Convert the prompt_ids into lists of strings.
+# Convert token_ids into lists of literal tokens.
 prompts_literals: list = []
 
 for p in prompts_ids:
@@ -72,8 +76,7 @@ for p in prompts_ids:
     prompts_literals.append(prompt_literal)
 
 # %%
-# Load and prep the cached activations.
-acts_dataset: t.Tensor = t.load(ACTS_DATA_PATH)
+# Load and prepare the cached model activations (from the TRAINING_LAYER).
 
 
 def unpad_activations(
@@ -90,6 +93,8 @@ def unpad_activations(
 
     for k, unpadded_prompt in enumerate(unpadded_prompts):
         original_length: int = unpadded_prompt.size(1)
+        # From here on out, activations are unpadded, and so must be packaged
+        # as a _list of tensors_ instead of as just a tensor block.
         unpadded_activations.append(activations_block[k, :original_length, :])
 
     return unpadded_activations
@@ -102,7 +107,7 @@ def project_activations(acts_list: [t.Tensor], projector: Decoder) -> t.Tensor:
     for question in acts_list:
         proj_question: list = []
         for activation in question:
-            # Detach the gradients from the model pass.
+            # Detach the gradients from the decoder model pass.
             proj_question.append(projector(activation).detach())
 
         question_block = t.stack(proj_question)  # pylint: disable=no-member
@@ -114,13 +119,11 @@ def project_activations(acts_list: [t.Tensor], projector: Decoder) -> t.Tensor:
 
 def rearrange_for_vis(acts_list: [t.Tensor]) -> [t.Tensor]:
     """`circuitsvis` wants inputs [(stream x layers x embedding_dim)]."""
-
-    # Rearrange the activations from (batch x stream x embedding_dim) to
-    # [(stream x layer x embedding_dim)]. Note that batch comes apart into a
-    # list of tensors, and layer is always of size 1.
     rearranged_activations: list = []
 
     for activations in acts_list:
+        # We need to unsqueeze the middle dimension of the activations, to get
+        # the singleton layer dimension.
         rearranged_activations.append(
             t.unsqueeze(activations, 1)  # pylint: disable=no-member
         )
@@ -128,20 +131,18 @@ def rearrange_for_vis(acts_list: [t.Tensor]) -> [t.Tensor]:
     return rearranged_activations
 
 
-unpadded = unpad_activations(acts_dataset, prompts_ids)
+acts_dataset: t.Tensor = t.load(ACTS_DATA_PATH)
 
-projected = project_activations(unpadded, model)
-
-rearranged = rearrange_for_vis(projected)
-print(len(rearranged))
-print(rearranged[0].shape)
+unpadded_acts = unpad_activations(acts_dataset, prompts_ids)
+projected_acts = project_activations(unpadded_acts, model)
+rearranged_acts = rearrange_for_vis(projected_acts)
 
 # %%
 # Visualize the activations.
-# text_neuron_activations(
-#     prompts_literals,
-#     projected_activations,
-#     "Layer",
-#     "Feature",
-#     ["16"],
-# )
+text_neuron_activations(
+    prompts_literals,
+    rearranged_acts,
+    "Layer",
+    "Feature",
+    ["16"],
+)
