@@ -27,6 +27,7 @@ ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 DECODER_PATH: str = "acts_data/learned_decoder.pt"
 TRAINING_LAYER: str = "16"  # The layer the decoder was trained at.
 SEED: int = 0
+DISPLAY_QUESTIONS: int = 1  # How many questions to visualize.
 
 # %%
 # Reproducibility.
@@ -133,16 +134,21 @@ def rearrange_for_vis(acts_list: [t.Tensor]) -> [t.Tensor]:
 
 acts_dataset: t.Tensor = t.load(ACTS_DATA_PATH)
 
-unpadded_acts = unpad_activations(acts_dataset, prompts_ids)
-projected_acts = project_activations(unpadded_acts, model)
-rearranged_acts = rearrange_for_vis(projected_acts)
+unpadded_acts: t.Tensor = unpad_activations(acts_dataset, prompts_ids)
+projected_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
+rearranged_acts: list[t.Tensor] = rearrange_for_vis(projected_acts)
 
 # %%
 # Visualize the activations.
+
+assert DISPLAY_QUESTIONS <= len(
+    prompts_literals
+), "DISPLAY_QUESTIONS must be less than the number of questions."
+
 text_neuron_activations(
-    prompts_literals,
-    rearranged_acts,
+    prompts_literals[:DISPLAY_QUESTIONS],
+    rearranged_acts[:DISPLAY_QUESTIONS],
     "Layer",
     "Feature",
-    ["16"],
+    [TRAINING_LAYER],
 )
