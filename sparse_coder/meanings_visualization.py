@@ -2,8 +2,7 @@
 """
 An activations heatmap for a learned decoder, using `circuitsvis.`
 
-Perhaps this should use the trained encoder instead of the decoder. Requires a
-HF access token to get `Llama-2`'s tokenizer.
+Requires a HF access token to get `Llama-2`'s tokenizer.
 """
 
 

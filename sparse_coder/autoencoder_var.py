@@ -1,5 +1,10 @@
 # %%
-"""Dict learning on an activations dataset, with a variational autoencoder."""
+"""
+Dict learning on an activations dataset, with a variational autoencoder.
+
+The script will save the trained _decoder_ to disk; that decoder matrix is your
+learned dictionary map.
+"""
 
 
 import torch as t
@@ -18,7 +23,6 @@ MODEL_EMBEDDING_DIM: int = 4096
 PROJECTION_DIM: int = 8192
 
 ACTS_PATH: str = "acts_data/activations_dataset.pt"
-ENCODER_SAVE_PATH: str = "acts_data/learned_encoder.pt"
 DECODER_SAVE_PATH: str = "acts_data/learned_decoder.pt"
 
 # %%
@@ -147,11 +151,6 @@ trainer.fit(model, dataloader)
 
 # %%
 # Save the trained decoder matrix.
-t.save(
-    model.encoder[0].weight.data,
-    ENCODER_SAVE_PATH,
-)
-
 t.save(
     model.decoder[0].weight.data,
     DECODER_SAVE_PATH,
