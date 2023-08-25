@@ -73,10 +73,9 @@ for p in prompts_ids:
     prompt_literal: list = tokenizer.convert_ids_to_tokens(p.squeeze())
     prompts_literals.append(prompt_literal)
 
+
 # %%
 # Load and prepare the cached model activations (from the TRAINING_LAYER).
-
-
 def unpad_activations(
     activations_block: t.Tensor, unpadded_prompts: np.ndarray
 ) -> list[t.Tensor]:

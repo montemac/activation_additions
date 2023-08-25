@@ -8,6 +8,7 @@ into the model, and that's the ultimate point of all this.
 """
 
 
+import numpy as np
 import torch as t
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader, Dataset
@@ -24,6 +25,7 @@ MODEL_EMBEDDING_DIM: int = 4096
 PROJECTION_DIM: int = 16384
 
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
+PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.pt.npy"
 DECODER_SAVE_PATH: str = "acts_data/learned_decoder.pt"
 
 # %%
@@ -32,13 +34,36 @@ t.set_float32_matmul_precision("high")
 
 
 # %%
+# Unpad the activations data.
+def unpad_activations(
+    activations_block: t.Tensor, unpadded_prompts: np.ndarray
+) -> list[t.Tensor]:
+    """
+    Unpads activations to the lengths specified by the original prompts.
+
+    Note that the activation block must come in with dimensions (batch x stream
+    x embedding_dim), and the unpadded prompts as an array of lists of
+    elements.
+    """
+    unpadded_activations: list = []
+
+    for k, unpadded_prompt in enumerate(unpadded_prompts):
+        original_length: int = unpadded_prompt.size(1)
+        # From here on out, activations are unpadded, and so must be packaged
+        # as a _list of tensors_ instead of as just a tensor block.
+        unpadded_activations.append(activations_block[k, :original_length, :])
+
+    return unpadded_activations
+
+
+# %%
 # Define a `torch` dataset.
 class ActivationsDataset(Dataset):
     """Dataset of hidden states from a pretrained model."""
 
-    def __init__(self, path):
+    def __init__(self, tensor_data: list[t.Tensor]):
         """Constructor; inherits from `torch.utils.data.Dataset` class."""
-        self.data = t.load(path)
+        self.data = tensor_data
 
     def __len__(self):
         """Return the dataset length."""
@@ -50,9 +75,14 @@ class ActivationsDataset(Dataset):
 
 
 # %%
-# Put the dataset into a dataloader.
+# Load and prepare the activations dataset.
+padded_data = t.load(ACTS_DATA_PATH)
+prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
+
+unpadded_data = unpad_activations(padded_data, prompts_ids)
+
 dataset: ActivationsDataset = ActivationsDataset(
-    ACTS_DATA_PATH,
+    unpadded_data,
 )
 
 dataloader: DataLoader = DataLoader(
