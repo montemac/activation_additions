@@ -34,26 +34,26 @@ t.set_float32_matmul_precision("high")
 
 
 # %%
-# Unpad the activations data.
-def unpad_activations(
+# Create a padding mask.
+def padding_mask(
     activations_block: t.Tensor, unpadded_prompts: np.ndarray
-) -> list[t.Tensor]:
-    """
-    Unpads activations to the lengths specified by the original prompts.
+) -> t.Tensor:
+    """Create a padding mask for the activations block."""
+    masks: list = []
 
-    Note that the activation block must come in with dimensions (batch x stream
-    x embedding_dim), and the unpadded prompts as an array of lists of
-    elements.
-    """
-    unpadded_activations: list = []
+    for unpadded_prompt in unpadded_prompts:
+        original_stream_length: int = unpadded_prompt.size(1)
+        # The mask will drop the embedding dimension.
+        mask: t.Tensor = t.zeros(
+            (activations_block.size(1),),
+            dtype=t.bool,
+        )
+        mask[:original_stream_length] = True
+        masks.append(mask)
 
-    for k, unpadded_prompt in enumerate(unpadded_prompts):
-        original_length: int = unpadded_prompt.size(1)
-        # From here on out, activations are unpadded, and so must be packaged
-        # as a _list of tensors_ instead of as just a tensor block.
-        unpadded_activations.append(activations_block[k, :original_length, :])
-
-    return unpadded_activations
+    # `masks` is of shape (batch, stream_dim).
+    masks: t.Tensor = t.stack(masks, dim=0)
+    return masks
 
 
 # %%
@@ -61,9 +61,10 @@ def unpad_activations(
 class ActivationsDataset(Dataset):
     """Dataset of hidden states from a pretrained model."""
 
-    def __init__(self, tensor_data: list[t.Tensor]):
+    def __init__(self, tensor_data: t.Tensor, mask: t.Tensor):
         """Constructor; inherits from `torch.utils.data.Dataset` class."""
         self.data = tensor_data
+        self.mask = mask
 
     def __len__(self):
         """Return the dataset length."""
@@ -71,18 +72,18 @@ class ActivationsDataset(Dataset):
 
     def __getitem__(self, indx):
         """Return the item at the passed index."""
-        return self.data[indx]
+        return self.data[indx], self.mask[indx]
 
 
 # %%
 # Load and prepare the activations dataset.
-padded_data = t.load(ACTS_DATA_PATH)
+padded_acts_block = t.load(ACTS_DATA_PATH)
 prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
-
-unpadded_data = unpad_activations(padded_data, prompts_ids)
+pad_mask: t.Tensor = padding_mask(padded_acts_block, prompts_ids)
 
 dataset: ActivationsDataset = ActivationsDataset(
-    unpadded_data,
+    padded_acts_block,
+    pad_mask,
 )
 
 dataloader: DataLoader = DataLoader(
@@ -131,8 +132,11 @@ class Autoencoder(pl.LightningModule):
 
     def training_step(self, batch):  # pylint: disable=arguments-differ
         """Train the autoencoder."""
-        state = batch
-        mean, logvar, sampled_state, output_state = self.forward(state)
+        data, mask = batch
+        mask = mask.unsqueeze(-1).expand_as(data)
+        masked_data = data * mask
+
+        mean, logvar, sampled_state, output_state = self.forward(masked_data)
 
         # For the statistical component of the forward pass.
         kl_loss = -0.5 * t.sum(1 + logvar - mean.pow(2) - logvar.exp())
@@ -148,7 +152,7 @@ class Autoencoder(pl.LightningModule):
         # I also need to inventivize learning features that match the
         # originals. I project back to the original space, then evaluate MSE
         # for this.
-        mse_loss = t.nn.functional.mse_loss(output_state, state)
+        mse_loss = t.nn.functional.mse_loss(output_state, masked_data)
 
         # The overall loss function just combines the three above terms.
         loss = (
