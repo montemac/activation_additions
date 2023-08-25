@@ -24,6 +24,8 @@ TOKENIZER_DIR: str = "meta-llama/Llama-2-7b-hf"
 PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.pt.npy"
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 DECODER_PATH: str = "acts_data/learned_decoder.pt"
+HTML_SAVE_PATH: str = "acts_data/activations_heatmap.html"
+PROJECTION_DIM: int = 16384
 TRAINING_LAYER: str = "16"  # The layer the decoder was trained at.
 SEED: int = 0
 DISPLAY_QUESTIONS: int = 1  # How many questions to visualize.
@@ -44,7 +46,7 @@ tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
 # Rebuild the learned decoder as a linear layer module.
 imported_weights: t.Tensor = t.load(DECODER_PATH)
 
-decoder = t.nn.Linear(4096, 8192)
+decoder = t.nn.Linear(4096, PROJECTION_DIM)
 decoder.weight.data = t.transpose(imported_weights, 1, 0)
 
 
@@ -136,15 +138,23 @@ rearranged_acts: list[t.Tensor] = rearrange_for_vis(projected_acts)
 
 # %%
 # Visualize the activations.
-
 assert DISPLAY_QUESTIONS <= len(
     prompts_literals
 ), "DISPLAY_QUESTIONS must be less than the number of questions."
 
-text_neuron_activations(
+html_interactable = text_neuron_activations(
     prompts_literals[:DISPLAY_QUESTIONS],
     rearranged_acts[:DISPLAY_QUESTIONS],
     "Layer",
     "Feature",
     [TRAINING_LAYER],
 )
+
+# %%
+# Save the visualization as an HTML file.
+with open(HTML_SAVE_PATH, "w", encoding="utf-8") as file:
+    file.write(html_interactable.show_code())
+
+# %%
+# Show the visualization.
+html_interactable

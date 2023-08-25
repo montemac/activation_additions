@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader, Dataset
 # %%
 # Training hyperparameters. We want to weight L1 extremely heavily. These
 # values reflect OOM of the components at initialization.
-LAMBDA_L1: float = 1.0
+LAMBDA_L1: float = 1e1
 LAMBDA_KL: float = 1e-13
 LAMBDA_MSE: float = 1e-5
 
