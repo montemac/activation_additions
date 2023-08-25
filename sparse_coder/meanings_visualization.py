@@ -45,9 +45,7 @@ tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
 imported_weights: t.Tensor = t.load(DECODER_PATH)
 
 decoder = t.nn.Linear(4096, 8192)
-decoder.weight.data = t.transpose(  # pylint: disable=no-member
-    imported_weights, 1, 0
-)
+decoder.weight.data = t.transpose(imported_weights, 1, 0)
 
 
 class Decoder:
@@ -62,7 +60,7 @@ class Decoder:
 
 
 # Instantiate the decoder model.
-model = Decoder()
+model: Decoder = Decoder()
 
 # %%
 # Load and prepare the original prompt tokens.
@@ -81,7 +79,7 @@ for p in prompts_ids:
 
 def unpad_activations(
     activations_block: t.Tensor, unpadded_prompts: np.ndarray
-) -> [t.Tensor]:
+) -> list[t.Tensor]:
     """
     Unpads activations to the lengths specified by the original prompts.
 
@@ -100,7 +98,9 @@ def unpad_activations(
     return unpadded_activations
 
 
-def project_activations(acts_list: [t.Tensor], projector: Decoder) -> t.Tensor:
+def project_activations(
+    acts_list: list[t.Tensor], projector: Decoder
+) -> t.Tensor:
     """Projects the activations block over to the sparse latent space."""
     projected_activations: list = []
 
@@ -110,23 +110,21 @@ def project_activations(acts_list: [t.Tensor], projector: Decoder) -> t.Tensor:
             # Detach the gradients from the decoder model pass.
             proj_question.append(projector(activation).detach())
 
-        question_block = t.stack(proj_question)  # pylint: disable=no-member
+        question_block = t.stack(proj_question)
 
         projected_activations.append(question_block)
 
     return projected_activations
 
 
-def rearrange_for_vis(acts_list: [t.Tensor]) -> [t.Tensor]:
+def rearrange_for_vis(acts_list: list[t.Tensor]) -> list[t.Tensor]:
     """`circuitsvis` wants inputs [(stream x layers x embedding_dim)]."""
     rearranged_activations: list = []
 
     for activations in acts_list:
         # We need to unsqueeze the middle dimension of the activations, to get
         # the singleton layer dimension.
-        rearranged_activations.append(
-            t.unsqueeze(activations, 1)  # pylint: disable=no-member
-        )
+        rearranged_activations.append(t.unsqueeze(activations, 1))
 
     return rearranged_activations
 

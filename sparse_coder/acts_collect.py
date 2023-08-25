@@ -31,7 +31,7 @@ assert (
 
 # %%
 # NOTE: Don't commit your HF access token!
-HF_ACCESS_TOKEN: str = "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"
+HF_ACCESS_TOKEN: str = ""
 MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
 PROMPT_IDS_SAVE_PATH: str = "acts_data/activations_prompt_ids.pt"
 ACTS_SAVE_PATH: str = "acts_data/activations_dataset.pt"
@@ -175,9 +175,7 @@ for question_num in sampled_indices:
     # Get the model's answer string from its logits. We want the _answer
     # stream's_ logits, so we pass `outputs.logits[:,-1,:]`. `dim=-1` here
     # means greedy sampling _over the token dimension_.
-    answer_id: t.LongTensor = t.argmax(  # pylint: disable=no-member
-        outputs.logits[:, -1, :], dim=-1
-    )
+    answer_id: t.LongTensor = t.argmax(outputs.logits[:, -1, :], dim=-1)
     model_answer: str = tokenizer.decode(answer_id)
     # Cut the completion down to just its answer integer.
     model_answer = model_answer.split("\n")[-1]
@@ -215,12 +213,10 @@ print(f"{MODEL_DIR} accuracy:{model_accuracy*100}%.")
 def pad_activations(tensor, length) -> t.Tensor:
     """Pad activation tensors to a certain stream-dim length."""
     padding_size: int = length - tensor.size(1)
-    padding: t.Tensor = t.zeros(  # pylint: disable=no-member
-        tensor.size(0), padding_size, tensor.size(2)
-    )
+    padding: t.Tensor = t.zeros(tensor.size(0), padding_size, tensor.size(2))
     padding: t.Tensor = accelerator.prepare(padding)
     # Concat and return.
-    return t.cat([tensor, padding], dim=1)  # pylint: disable=no-member
+    return t.cat([tensor, padding], dim=1)
 
 
 # Find the widest model activation in the stream-dimension (dim=1).
@@ -231,7 +227,7 @@ padded_activations: list[t.Tensor] = [
 ]
 
 # Concat and store the model activations.
-concat_activations: t.Tensor = t.cat(  # pylint: disable=no-member
+concat_activations: t.Tensor = t.cat(
     padded_activations,
     dim=0,
 )

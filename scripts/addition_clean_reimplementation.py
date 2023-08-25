@@ -1,12 +1,14 @@
 # %%
 """
-Script reimplementing activation additions in torch, for bigger language models.
+Reimplements activation additions in torch, for bigger language models.
 
-Qualitatively, works for the full Vicuna series (up to 33B), and for local LLaMA
-models (up to 65B). Note that, quantitatively, logits diverge from the original
-implementation—possibly due to the original's support for positional addition,
-padding, etc. See scripts/implementations_comparison.py
+Qualitatively, works for the full Vicuna series (up to 33B), and for local
+LLaMA models (up to 65B). Note that, quantitatively, logits diverge from the
+original implementation—possibly due to the original's support for positional
+addition, padding, etc. See scripts/implementations_comparison.py
 """
+
+
 from contextlib import contextmanager
 from typing import Tuple, Callable, Optional
 
@@ -107,7 +109,8 @@ def get_blocks(mod):
 @contextmanager
 def residual_stream(mod: LlamaForCausalLM, layers: Optional[list[int]] = None):
     """Actually build hooks for a model."""
-    # TODO Plausibly could be replaced by "output_hidden_states=True" in model call.
+    # TODO Plausibly could be replaced by "output_hidden_states=True" in model
+    # call.
     modded_streams = [None] * len(get_blocks(mod))
 
     # Factory function that builds the initial hooks.

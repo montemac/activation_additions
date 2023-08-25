@@ -2,8 +2,9 @@
 """
 Dict learning on an activations dataset, with a variational autoencoder.
 
-The script will save the trained _decoder_ to disk; that decoder matrix is your
-learned dictionary map.
+The script will save the trained _decoder_ matrix to disk; that decoder matrix
+is your learned dictionary map. The decoder matrix is better for adding back
+into the model, and that's the ultimate point of all this.
 """
 
 
@@ -20,9 +21,9 @@ LAMBDA_KL: float = 1e-13
 LAMBDA_MSE: float = 1e-5
 
 MODEL_EMBEDDING_DIM: int = 4096
-PROJECTION_DIM: int = 8192
+PROJECTION_DIM: int = 16384
 
-ACTS_PATH: str = "acts_data/activations_dataset.pt"
+ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 DECODER_SAVE_PATH: str = "acts_data/learned_decoder.pt"
 
 # %%
@@ -51,7 +52,7 @@ class ActivationsDataset(Dataset):
 # %%
 # Put the dataset into a dataloader.
 dataset: ActivationsDataset = ActivationsDataset(
-    ACTS_PATH,
+    ACTS_DATA_PATH,
 )
 
 dataloader: DataLoader = DataLoader(
@@ -87,11 +88,11 @@ class Autoencoder(pl.LightningModule):
     def forward(self, state):  # pylint: disable=arguments-differ
         """The forward pass of a variational autoencoder for activations."""
         encoded_state = self.encoder(state)
-        mean, logvar = encoded_state.split(8192, dim=-1)
+        mean, logvar = encoded_state.split(PROJECTION_DIM, dim=-1)
 
         # Sample from the encoder normal distribution.
-        std = t.exp(0.5 * logvar)  # pylint: disable=no-member
-        epsilon = t.randn_like(std)  # pylint: disable=no-member
+        std = t.exp(0.5 * logvar)
+        epsilon = t.randn_like(std)
         sampled_state = mean + (epsilon * std)
 
         # Decode the sampled state.
@@ -104,16 +105,14 @@ class Autoencoder(pl.LightningModule):
         mean, logvar, sampled_state, output_state = self.forward(state)
 
         # For the statistical component of the forward pass.
-        kl_loss = -0.5 * t.sum(  # pylint: disable=no-member
-            1 + logvar - mean.pow(2) - logvar.exp()
-        )
+        kl_loss = -0.5 * t.sum(1 + logvar - mean.pow(2) - logvar.exp())
 
         # I want to learn a _sparse representation_ of the original learned
         # features present in the training activations. L1 regularization in
         # the higher-dimensional space does this.
         l1_loss = t.nn.functional.l1_loss(
             sampled_state,
-            t.zeros_like(sampled_state),  # pylint: disable=no-member
+            t.zeros_like(sampled_state),
         )
 
         # I also need to inventivize learning features that match the
