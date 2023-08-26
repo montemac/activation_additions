@@ -15,8 +15,8 @@ from torch.utils.data import DataLoader, Dataset
 
 
 # %%
-# Training hyperparameters. We want to weight L1 extremely heavily. These
-# values reflect OOM of the components at initialization.
+# Training hyperparameters. We want to weight L1 quite heavily, MSE moderately,
+# and KL divergence the least.
 BETA_KL: float = 1e-13
 LAMBDA_L1: float = 1e1
 LAMBDA_MSE: float = 1e-4
@@ -99,6 +99,7 @@ dataloader: DataLoader = DataLoader(
 
 # %%
 # Define a variational autoencoder with `lightning`.
+# TODO: Programmatically check validation loss to stop training.
 class Autoencoder(pl.LightningModule):
     """A variational autoencoder architecture."""
 
@@ -168,7 +169,7 @@ class Autoencoder(pl.LightningModule):
             + (BETA_KL * kl_loss)
         )
 
-        self.log("loss", loss)
+        self.log("training loss", loss)
         self.log("L1 component", LAMBDA_L1 * l1_loss)
         self.log("KL component", BETA_KL * kl_loss)
         self.log("MSE component", LAMBDA_MSE * mse_loss)

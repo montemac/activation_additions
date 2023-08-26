@@ -157,4 +157,4 @@ with open(HTML_SAVE_PATH, "w", encoding="utf-8") as file:
 
 # %%
 # Show the visualization.
-html_interactable
+html_interactable  # pylint: disable=pointless-statement
