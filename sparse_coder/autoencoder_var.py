@@ -21,6 +21,7 @@ BETA_KL: float = 1e-13
 LAMBDA_L1: float = 1e1
 LAMBDA_MSE: float = 1e-4
 LEARNING_RATE: float = 1e-6
+EPOCHS: int = 150
 
 MODEL_EMBEDDING_DIM: int = 4096
 PROJECTION_DIM: int = 16384
@@ -28,10 +29,11 @@ PROJECTION_DIM: int = 16384
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.pt.npy"
 DECODER_SAVE_PATH: str = "acts_data/learned_decoder.pt"
+LOG_EVERY_N_STEPS: int = 25
 
 # %%
 # Use available tensor cores.
-t.set_float32_matmul_precision("high")
+t.set_float32_matmul_precision("medium")
 
 
 # %%
@@ -182,7 +184,9 @@ class Autoencoder(pl.LightningModule):
 # Train the autoencoder.
 model: Autoencoder = Autoencoder()
 trainer: pl.Trainer = pl.Trainer(
-    accelerator="auto", max_epochs=150, log_every_n_steps=25
+    accelerator="auto",
+    max_epochs=EPOCHS,
+    log_every_n_steps=LOG_EVERY_N_STEPS,
 )
 
 trainer.fit(model, dataloader)
