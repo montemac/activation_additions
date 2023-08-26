@@ -19,8 +19,8 @@ from torch.utils.data import DataLoader, Dataset
 # values reflect OOM of the components at initialization.
 BETA_KL: float = 1e-13
 LAMBDA_L1: float = 1e1
-LAMBDA_MSE: float = 1e-5
-LEARNING_RATE: float = 1e-5
+LAMBDA_MSE: float = 1e-4
+LEARNING_RATE: float = 1e-6
 
 MODEL_EMBEDDING_DIM: int = 4096
 PROJECTION_DIM: int = 16384
@@ -134,13 +134,14 @@ class Autoencoder(pl.LightningModule):
     def training_step(self, batch):  # pylint: disable=arguments-differ
         """Train the autoencoder."""
         data, mask = batch
-        mask = mask.unsqueeze(-1).expand_as(data)
+        data_mask = mask.unsqueeze(-1).expand_as(data)
         # Element-wise multiplication of the activations and the zero mask.
-        masked_data = data * mask
+        masked_data = data * data_mask
 
-        mean, logvar, sampled_state, output_state = self.forward(masked_data)
+        mean, logvar, sample, output_state = self.forward(masked_data)
         # We remask sampled state, to ensure L1 loss isn't considering padding.
-        masked_sampled_state = sampled_state * mask
+        sample_mask = mask.unsqueeze(-1).expand_as(sample)
+        masked_sampled_state = sample * sample_mask
 
         # For the statistical component of the forward pass.
         kl_loss = -0.5 * t.sum(1 + logvar - mean.pow(2) - logvar.exp())
