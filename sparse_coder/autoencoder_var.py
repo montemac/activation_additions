@@ -17,9 +17,10 @@ from torch.utils.data import DataLoader, Dataset
 # %%
 # Training hyperparameters. We want to weight L1 extremely heavily. These
 # values reflect OOM of the components at initialization.
+BETA_KL: float = 1e-13
 LAMBDA_L1: float = 1e1
-LAMBDA_KL: float = 1e-13
 LAMBDA_MSE: float = 1e-5
+LEARNING_RATE: float = 1e-5
 
 MODEL_EMBEDDING_DIM: int = 4096
 PROJECTION_DIM: int = 16384
@@ -158,19 +159,19 @@ class Autoencoder(pl.LightningModule):
         loss = (
             (LAMBDA_MSE * mse_loss)
             + (LAMBDA_L1 * l1_loss)
-            + (LAMBDA_KL * kl_loss)
+            + (BETA_KL * kl_loss)
         )
 
         self.log("loss", loss)
         self.log("L1 component", LAMBDA_L1 * l1_loss)
-        self.log("KL component", LAMBDA_KL * kl_loss)
+        self.log("KL component", BETA_KL * kl_loss)
         self.log("MSE component", LAMBDA_MSE * mse_loss)
 
         return loss
 
     def configure_optimizers(self):
         """Configure the optimizer (`Adam`)."""
-        return t.optim.Adam(self.parameters(), lr=1e-5)
+        return t.optim.Adam(self.parameters(), lr=LEARNING_RATE)
 
 
 # %%
