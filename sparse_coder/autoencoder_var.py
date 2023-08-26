@@ -120,24 +120,27 @@ class Autoencoder(pl.LightningModule):
     def forward(self, state):  # pylint: disable=arguments-differ
         """The forward pass of a variational autoencoder for activations."""
         encoded_state = self.encoder(state)
-        mean, logvar = encoded_state.split(PROJECTION_DIM, dim=-1)
+        mean, log_var = encoded_state.split(PROJECTION_DIM, dim=-1)
 
         # Sample from the encoder normal distribution.
-        std = t.exp(0.5 * logvar)
+        std = t.exp(0.5 * log_var)
         epsilon = t.randn_like(std)
         sampled_state = mean + (epsilon * std)
 
         # Decode the sampled state.
         output_state = self.decoder(sampled_state)
-        return mean, logvar, sampled_state, output_state
+        return mean, log_var, sampled_state, output_state
 
     def training_step(self, batch):  # pylint: disable=arguments-differ
         """Train the autoencoder."""
         data, mask = batch
         mask = mask.unsqueeze(-1).expand_as(data)
+        # Element-wise multiplication of the activations and the zero mask.
         masked_data = data * mask
 
         mean, logvar, sampled_state, output_state = self.forward(masked_data)
+        # We remask sampled state, to ensure L1 loss isn't considering padding.
+        masked_sampled_state = sampled_state * mask
 
         # For the statistical component of the forward pass.
         kl_loss = -0.5 * t.sum(1 + logvar - mean.pow(2) - logvar.exp())
@@ -146,8 +149,8 @@ class Autoencoder(pl.LightningModule):
         # features present in the training activations. L1 regularization in
         # the higher-dimensional space does this.
         l1_loss = t.nn.functional.l1_loss(
-            sampled_state,
-            t.zeros_like(sampled_state),
+            masked_sampled_state,
+            t.zeros_like(masked_sampled_state),
         )
 
         # I also need to inventivize learning features that match the
