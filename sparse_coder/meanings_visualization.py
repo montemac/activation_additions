@@ -28,7 +28,7 @@ HTML_SAVE_PATH: str = "acts_data/activations_heatmap.html"
 PROJECTION_DIM: int = 16384
 TRAINING_LAYER: str = "16"  # The layer the decoder was trained at.
 SEED: int = 0
-DISPLAY_QUESTIONS: int = 1  # How many questions to visualize.
+DISPLAY_QUESTIONS: int = 2  # How many questions to visualize.
 
 # %%
 # Reproducibility.
@@ -138,6 +138,7 @@ rearranged_acts: list[t.Tensor] = rearrange_for_vis(projected_acts)
 
 # %%
 # Visualize the activations.
+# TODO: Switch over to the top tokens visualization.
 assert DISPLAY_QUESTIONS <= len(
     prompts_literals
 ), "DISPLAY_QUESTIONS must be less than the number of questions."
