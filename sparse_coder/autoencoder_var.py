@@ -127,7 +127,7 @@ class Autoencoder(pl.LightningModule):
 
         # Sample from the encoder normal distribution.
         std_dev = t.exp(0.5 * log_var)
-        # Epsilon silos all of the stochastic component.
+        # Epsilon siloes all of the stochastic component.
         epsilon = t.randn_like(std_dev)
         sampled_state = mean + (epsilon * std_dev)
 
