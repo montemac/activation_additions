@@ -1,6 +1,6 @@
 # %%
 """
-Dict learning on an activations dataset, with a variational autoencoder.
+Dict learning on an activations dataset, with a basic autoencoder.
 
 The script will save the trained _decoder_ matrix to disk; that decoder matrix
 is your learned dictionary map. The decoder matrix is better for adding back
@@ -11,24 +11,25 @@ into the model, and that's the ultimate point of all this.
 import numpy as np
 import torch as t
 import pytorch_lightning as pl
+from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 
 
 # %%
-# Training hyperparameters. We want to weight L1 quite heavily, MSE moderately,
-# and KL divergence the least.
-BETA_KL: float = 1e-13
+# Training hyperparameters. We want to weight L1 quite heavily vs. MSE.
 LAMBDA_L1: float = 1e1
 LAMBDA_MSE: float = 1e-4
 LEARNING_RATE: float = 1e-6
 EPOCHS: int = 150
+TOLERANCE: float = 1e-5
+SEED: int = 0
 
 MODEL_EMBEDDING_DIM: int = 4096
 PROJECTION_DIM: int = 16384
 
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.pt.npy"
-DECODER_SAVE_PATH: str = "acts_data/learned_decoder.pt"
+ENCODER_SAVE_PATH: str = "acts_data/learned_encoder.pt"
 LOG_EVERY_N_STEPS: int = 25
 
 # %%
@@ -79,7 +80,7 @@ class ActivationsDataset(Dataset):
 
 
 # %%
-# Load and prepare the activations dataset.
+# Load, preprocess, and split the activations dataset.
 padded_acts_block = t.load(ACTS_DATA_PATH)
 prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
 pad_mask: t.Tensor = padding_mask(padded_acts_block, prompts_ids)
@@ -89,113 +90,134 @@ dataset: ActivationsDataset = ActivationsDataset(
     pad_mask,
 )
 
-dataloader: DataLoader = DataLoader(
+training_indices, val_indices = train_test_split(
+    np.arange(len(dataset)),
+    test_size=0.2,
+    random_state=SEED,
+)
+
+training_sampler = t.utils.data.SubsetRandomSampler(training_indices)
+validation_sampler = t.utils.data.SubsetRandomSampler(val_indices)
+
+training_loader: DataLoader = DataLoader(
     dataset,
     batch_size=32,
+    sampler=training_sampler,
+    shuffle=True,
+    num_workers=16,
+)
+
+validation_loader: DataLoader = DataLoader(
+    dataset,
+    batch_size=32,
+    sampler=validation_sampler,
     shuffle=True,
     num_workers=16,
 )
 
 
 # %%
-# Define a variational autoencoder with `lightning`.
-# TODO: Programmatically check validation loss to stop training.
+# Define a tied autoencoder (with the default `torch` biases), with
+# `lightning`.
 class Autoencoder(pl.LightningModule):
-    """A variational autoencoder architecture."""
+    """An autoencoder architecture."""
 
     def __init__(self):
         super().__init__()
-        # The first linear layer learns a matrix map to a higher-dimensional
-        # space. That projection matrix is what I'm intersted in here. The
-        # second linear map tees up the variational components of the
-        # architecture.
         self.encoder = t.nn.Sequential(
             t.nn.Linear(MODEL_EMBEDDING_DIM, PROJECTION_DIM),
             t.nn.ReLU(),
-            t.nn.Linear(PROJECTION_DIM, PROJECTION_DIM * 2),
         )
-        # The decoder's linear map just returns us to the original activation
-        # space, so we can evaluate our reconstruction loss.
-        self.decoder = t.nn.Sequential(
-            t.nn.Linear(PROJECTION_DIM, MODEL_EMBEDDING_DIM),
-        )
+
+        # Orthogonal initialization.
+        t.nn.init.orthogonal_(self.encoder[0].weight.data)
 
     def forward(self, state):  # pylint: disable=arguments-differ
-        """The forward pass of a variational autoencoder for activations."""
+        """The forward pass of an autoencoder for activations."""
         encoded_state = self.encoder(state)
-        mean, log_var = encoded_state.split(PROJECTION_DIM, dim=-1)
-
-        # Sample from the encoder normal distribution.
-        std_dev = t.exp(0.5 * log_var)
-        # Epsilon siloes all of the stochastic component.
-        epsilon = t.randn_like(std_dev)
-        sampled_state = mean + (epsilon * std_dev)
 
         # Decode the sampled state.
-        output_state = self.decoder(sampled_state)
-        return mean, log_var, sampled_state, output_state
+        decoder_weights = self.encoder[0].weight.data
+        output_state = t.nn.functional.linear(encoded_state, decoder_weights)
+
+        return encoded_state, output_state
 
     def training_step(self, batch):  # pylint: disable=arguments-differ
         """Train the autoencoder."""
         data, mask = batch
         data_mask = mask.unsqueeze(-1).expand_as(data)
-        # Element-wise multiplication of the activations and the zero mask.
         masked_data = data * data_mask
 
-        mean, logvar, sample, output_state = self.forward(masked_data)
-        # We remask sampled state, to ensure L1 loss isn't considering padding.
-        sample_mask = mask.unsqueeze(-1).expand_as(sample)
-        masked_sampled_state = sample * sample_mask
+        encoded_state, output_state = self.forward(masked_data)
 
-        # For the statistical component of the forward pass.
-        kl_loss = -0.5 * t.sum(1 + logvar - mean.pow(2) - logvar.exp())
-
-        # I want to learn a _sparse representation_ of the original learned
-        # features present in the training activations. L1 regularization in
-        # the higher-dimensional space does this.
-        l1_loss = t.nn.functional.l1_loss(
-            masked_sampled_state,
-            t.zeros_like(masked_sampled_state),
-        )
-
-        # I also need to inventivize learning features that match the
-        # originals. I project back to the original space, then evaluate MSE
-        # for this.
+        # The mask excludes the padding tokens from consideration.
         mse_loss = t.nn.functional.mse_loss(output_state, masked_data)
-
-        # The overall loss function just combines the three above terms.
-        loss = (
-            (LAMBDA_MSE * mse_loss)
-            + (LAMBDA_L1 * l1_loss)
-            + (BETA_KL * kl_loss)
+        l1_loss = t.nn.functional.l1_loss(
+            encoded_state,
+            t.zeros_like(encoded_state),
         )
 
-        self.log("training loss", loss)
-        self.log("L1 component", LAMBDA_L1 * l1_loss)
-        self.log("KL component", BETA_KL * kl_loss)
-        self.log("MSE component", LAMBDA_MSE * mse_loss)
+        training_loss = (LAMBDA_MSE * mse_loss) + (LAMBDA_L1 * l1_loss)
+        l0_sparsity = (t.abs(encoded_state) < TOLERANCE).float().mean()
 
-        return loss
+        self.log("training loss", training_loss)
+        self.log("L1 component", LAMBDA_L1 * l1_loss)
+        self.log("MSE component", LAMBDA_MSE * mse_loss)
+        self.log("L0 sparsity", l0_sparsity)
+        return training_loss
+
+    def validation_step(self, batch):  # pylint: disable=arguments-differ
+        """Validate the autoencoder."""
+        data, mask = batch
+        data_mask = mask.unsqueeze(-1).expand_as(data)
+        masked_data = data * data_mask
+
+        encoded_state, output_state = self.forward(masked_data)
+
+        mse_loss = t.nn.functional.mse_loss(output_state, masked_data)
+        l1_loss = t.nn.functional.l1_loss(
+            encoded_state,
+            t.zeros_like(encoded_state),
+        )
+        validation_loss = (LAMBDA_MSE * mse_loss) + (LAMBDA_L1 * l1_loss)
+
+        self.log("validation loss", validation_loss)
+        return validation_loss
 
     def configure_optimizers(self):
-        """Configure the optimizer (`Adam`)."""
+        """Configure the `Adam` optimizer."""
         return t.optim.Adam(self.parameters(), lr=LEARNING_RATE)
 
+
+# %%
+# Validation loss early stopping.
+early_stopping = pl.callbacks.EarlyStopping(
+    monitor="validation_loss",
+    min_delta=0.0,
+    patience=3,
+    verbose=False,
+    mode="min",
+)
 
 # %%
 # Train the autoencoder.
 model: Autoencoder = Autoencoder()
 trainer: pl.Trainer = pl.Trainer(
     accelerator="auto",
+    callbacks=[early_stopping],
     max_epochs=EPOCHS,
     log_every_n_steps=LOG_EVERY_N_STEPS,
 )
 
-trainer.fit(model, dataloader)
+trainer.fit(
+    model,
+    train_dataloaders=training_loader,
+    val_dataloaders=validation_loader,
+)
 
 # %%
-# Save the trained decoder matrix.
+# Save the trained encoder matrix.
 t.save(
-    model.decoder[0].weight.data,
-    DECODER_SAVE_PATH,
+    model.encoder[0].weight.data,
+    ENCODER_SAVE_PATH,
 )
