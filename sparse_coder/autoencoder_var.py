@@ -2,9 +2,8 @@
 """
 Dict learning on an activations dataset, with a basic autoencoder.
 
-The script will save the trained _decoder_ matrix to disk; that decoder matrix
-is your learned dictionary map. The decoder matrix is better for adding back
-into the model, and that's the ultimate point of all this.
+The script will save the trained encoder matrix to disk; that encoder matrix
+is your learned dictionary.
 """
 
 
@@ -103,7 +102,6 @@ training_loader: DataLoader = DataLoader(
     dataset,
     batch_size=32,
     sampler=training_sampler,
-    shuffle=True,
     num_workers=16,
 )
 
@@ -111,7 +109,6 @@ validation_loader: DataLoader = DataLoader(
     dataset,
     batch_size=32,
     sampler=validation_sampler,
-    shuffle=True,
     num_workers=16,
 )
 
