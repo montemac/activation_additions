@@ -36,7 +36,7 @@ t.manual_seed(SEED)
 np.random.seed(SEED)
 
 # %%
-# The original `Llama-2` tokenizer.
+# We need the original tokenizer here.
 tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
     TOKENIZER_DIR,
     use_auth_token=HF_ACCESS_TOKEN,
@@ -135,6 +135,7 @@ rearranged_acts: list[np.ndarray] = prepare_for_vis(projected_acts)
 
 # %%
 # Generate the top-k tokens visualization.
+# TODO: This just does not render, but will output HTML source code.
 html_vis = topk_tokens(
     prompts_literals[:QUESTION_NUM],
     rearranged_acts[:QUESTION_NUM],

@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, Dataset
 
 # %%
 # Training hyperparameters. We want to weight L1 quite heavily vs. MSE.
-LAMBDA_L1: float = 2.0
+LAMBDA_L1: float = 1.2e2
 LEARNING_RATE: float = 1e-3
 EPOCHS: int = 150
 SEED: int = 0
@@ -154,7 +154,7 @@ class Autoencoder(pl.LightningModule):
 
         training_loss = mse_loss + (LAMBDA_L1 * l1_loss)
         l0_sparsity = (encoded_state != 0).float().sum(dim=-1).mean()
-        print(f"L0 sparsity: {l0_sparsity}")
+        print(f"L_0: {l0_sparsity}")
 
         self.log("training loss", training_loss, sync_dist=True)
         self.log("L1 component", LAMBDA_L1 * l1_loss, sync_dist=True)
