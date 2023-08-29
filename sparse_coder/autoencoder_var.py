@@ -199,7 +199,7 @@ early_stopping = pl.callbacks.EarlyStopping(
 )
 
 # %%
-# Train the autoencoder.
+# Train the autoencoder. Note that `lightning` does its own parallelization.
 model: Autoencoder = Autoencoder()
 trainer: pl.Trainer = pl.Trainer(
     accelerator="auto",
