@@ -16,20 +16,18 @@ from torch.utils.data import DataLoader, Dataset
 
 # %%
 # Training hyperparameters. We want to weight L1 quite heavily vs. MSE.
-LAMBDA_L1: float = 1e1
-LAMBDA_MSE: float = 1e-4
-LEARNING_RATE: float = 1e-6
+LAMBDA_L1: float = 2.0
+LEARNING_RATE: float = 1e-3
 EPOCHS: int = 150
-TOLERANCE: float = 1e-5
 SEED: int = 0
 
-MODEL_EMBEDDING_DIM: int = 4096
-PROJECTION_DIM: int = 16384
+MODEL_EMBEDDING_DIM: int = 512
+PROJECTION_DIM: int = MODEL_EMBEDDING_DIM * 4
 
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.pt.npy"
 ENCODER_SAVE_PATH: str = "acts_data/learned_encoder.pt"
-LOG_EVERY_N_STEPS: int = 25
+LOG_EVERY_N_STEPS: int = 20
 
 # %%
 # Use available tensor cores.
@@ -134,7 +132,7 @@ class Autoencoder(pl.LightningModule):
         encoded_state = self.encoder(state)
 
         # Decode the sampled state.
-        decoder_weights = self.encoder[0].weight.data
+        decoder_weights = self.encoder[0].weight.data.T
         output_state = t.nn.functional.linear(encoded_state, decoder_weights)
 
         return encoded_state, output_state
@@ -154,16 +152,20 @@ class Autoencoder(pl.LightningModule):
             t.zeros_like(encoded_state),
         )
 
-        training_loss = (LAMBDA_MSE * mse_loss) + (LAMBDA_L1 * l1_loss)
-        l0_sparsity = (t.abs(encoded_state) < TOLERANCE).float().mean()
+        training_loss = mse_loss + (LAMBDA_L1 * l1_loss)
+        l0_sparsity = (encoded_state != 0).float().sum(dim=-1).mean()
+        print(f"L0 sparsity: {l0_sparsity}")
 
-        self.log("training loss", training_loss)
-        self.log("L1 component", LAMBDA_L1 * l1_loss)
-        self.log("MSE component", LAMBDA_MSE * mse_loss)
-        self.log("L0 sparsity", l0_sparsity)
+        self.log("training loss", training_loss, sync_dist=True)
+        self.log("L1 component", LAMBDA_L1 * l1_loss, sync_dist=True)
+        self.log("MSE component", mse_loss, sync_dist=True)
+        self.log("L0 sparsity", l0_sparsity, sync_dist=True)
         return training_loss
 
-    def validation_step(self, batch):  # pylint: disable=arguments-differ
+    # Unused import resolves `lightning` bug.
+    def validation_step(
+        self, batch, batch_idx
+    ):  # pylint: disable=unused-argument,arguments-differ
         """Validate the autoencoder."""
         data, mask = batch
         data_mask = mask.unsqueeze(-1).expand_as(data)
@@ -176,9 +178,9 @@ class Autoencoder(pl.LightningModule):
             encoded_state,
             t.zeros_like(encoded_state),
         )
-        validation_loss = (LAMBDA_MSE * mse_loss) + (LAMBDA_L1 * l1_loss)
+        validation_loss = mse_loss + (LAMBDA_L1 * l1_loss)
 
-        self.log("validation loss", validation_loss)
+        self.log("validation loss", validation_loss, sync_dist=True)
         return validation_loss
 
     def configure_optimizers(self):
@@ -189,7 +191,7 @@ class Autoencoder(pl.LightningModule):
 # %%
 # Validation loss early stopping.
 early_stopping = pl.callbacks.EarlyStopping(
-    monitor="validation_loss",
+    monitor="validation loss",
     min_delta=0.0,
     patience=3,
     verbose=False,

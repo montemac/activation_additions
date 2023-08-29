@@ -32,7 +32,7 @@ assert (
 # %%
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
-MODEL_DIR: str = "meta-llama/Llama-2-7b-hf"
+MODEL_DIR: str = "EleutherAI/pythia-70m-deduped"
 PROMPT_IDS_SAVE_PATH: str = "acts_data/activations_prompt_ids.pt"
 ACTS_SAVE_PATH: str = "acts_data/activations_dataset.pt"
 SEED: int = 0
@@ -40,7 +40,7 @@ MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
 NUM_SHOT: int = 6
 NUM_DATAPOINTS: int = 817  # Number of questions evaluated.
-LAYER_SAMPLED: int = 16  # Layer to collect activations from.
+LAYER_SAMPLED: int = 5  # Layer to collect activations from.
 
 assert (
     NUM_DATAPOINTS > NUM_SHOT
@@ -58,7 +58,6 @@ accelerator: Accelerator = Accelerator()
 # `device_map="auto` helps initialize big models.
 model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
     MODEL_DIR,
-    device_map="auto",
     use_auth_token=HF_ACCESS_TOKEN,
     output_hidden_states=True,
 )
@@ -68,7 +67,6 @@ tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
     use_auth_token=HF_ACCESS_TOKEN,
 )
 # The `prepare` wrapper takes over parallelization from here on.
-model: PreTrainedModel = accelerator.prepare(model)
 model.eval()
 
 # %%
