@@ -1,15 +1,17 @@
 # %%
 """
-An activations heatmap for a learned decoder, using `circuitsvis.`
+The top affected tokens/dimension of a learned decoder.
 
 Requires a HF access token to get `Llama-2`'s tokenizer.
 """
 
 
+from collections import defaultdict
+
 import numpy as np
+import prettytable
 import torch as t
 import transformers
-from circuitsvis.topk_tokens import topk_tokens
 from transformers import AutoTokenizer, PreTrainedTokenizer
 
 
@@ -21,11 +23,11 @@ assert (
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
 TOKENIZER_DIR: str = "gpt2"
+TOP_K: int = 4
 PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.pt.npy"
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 ENCODER_PATH: str = "acts_data/learned_encoder.pt"
 HTML_SAVE_PATH: str = "acts_data/activations_heatmap.html"
-QUESTION_NUM: int = 1
 RESIDUAL_DIM: int = 768
 PROJECTION_DIM: int = RESIDUAL_DIM * 4
 SEED: int = 0
@@ -66,11 +68,11 @@ model: Encoder = Encoder()
 # Load and prepare the original prompt tokens.
 prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
 # Convert token_ids into lists of literal tokens.
-prompts_literals: list = []
+prompts_strings: list = []
 
 for p in prompts_ids:
-    prompt_literal: list = tokenizer.convert_ids_to_tokens(p.squeeze())
-    prompts_literals.append(prompt_literal)
+    prompt_str: list = tokenizer.convert_ids_to_tokens(p.squeeze())
+    prompts_strings.append(prompt_str)
 
 
 # %%
@@ -98,7 +100,7 @@ def unpad_activations(
 
 def project_activations(
     acts_list: list[t.Tensor], projector: Encoder
-) -> t.Tensor:
+) -> list[t.Tensor]:
     """Projects the activations block over to the sparse latent space."""
     projected_activations: list = []
 
@@ -115,35 +117,77 @@ def project_activations(
     return projected_activations
 
 
-def prepare_for_vis(acts_list: list[t.Tensor]) -> list[np.ndarray]:
-    """Create inputs with the shape [(layer_num, feature_dim, stream_num)]."""
-    rearranged_activations: list = []
-
-    for act in acts_list:
-        act = act.transpose(0, 1)
-        act = t.unsqueeze(act, 0)
-        act = act.numpy()
-        rearranged_activations.append(act)
-
-    return rearranged_activations
-
-
 acts_dataset: t.Tensor = t.load(ACTS_DATA_PATH)
 unpadded_acts: t.Tensor = unpad_activations(acts_dataset, prompts_ids)
-projected_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
-rearranged_acts: list[np.ndarray] = prepare_for_vis(projected_acts)
+feature_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
+
 
 # %%
-# Generate the top-k tokens visualization.
-# TODO: This just does not render, but will output HTML source code.
-html_vis = topk_tokens(
-    prompts_literals[:QUESTION_NUM],
-    rearranged_acts[:QUESTION_NUM],
-    max_k=1,
-    first_dimension_name="Layer",
-    third_dimension_name="Feature",
-)
+# Calculate per input token (mean) activation, for each feature dimension.
+def calculate_effects(
+    tokens_atlas: list[list[str]], feature_activations: list[t.Tensor]
+) -> defaultdict[int, defaultdict[str, float]]:
+    """Calculate the per input token summed activation for each feature."""
+    # The argless lambda always returns the nested defaultdict.
+    feature_values = defaultdict(lambda: defaultdict(list))
+
+    for prompt_strings, question_acts in zip(
+        tokens_atlas, feature_activations
+    ):
+        for token, activation in zip(prompt_strings, question_acts):
+            for feature_dim, act in enumerate(activation):
+                feature_values[feature_dim][token].append(act.item())
+
+    # Since tokens may recur, we need to average per token per feature.
+    for feature_dim, token_dict in feature_values.items():
+        for token, values in token_dict.items():
+            feature_values[feature_dim][token] = np.mean(values)
+
+    return feature_values
+
+
+# Return just the top-k negative and positive tokens.
+def select_top_k_tokens(
+    effects_dict: defaultdict[int, defaultdict[list[float]]]
+):
+    """Select the top-k tokens for each feature."""
+    top_k_tokens = defaultdict(list)
+
+    for feature_dim, tokens_dict in effects_dict.items():
+        # Sort tokens by their summed activations.
+        sorted_effects = sorted(
+            tokens_dict.items(), key=lambda x: x[1], reverse=True
+        )
+        # Add only the top-k and bottom-k tokens.
+        top_k_tokens[feature_dim] = (
+            sorted_effects[:TOP_K] + sorted_effects[-TOP_K:]
+        )
+
+    return top_k_tokens
+
+
+def populate_table(_table, top_bottom_k):
+    """Put the results in the table appropriately."""
+    for feature_dim, tokens_list in top_bottom_k.items():
+        top_tokens = [t for t, _ in tokens_list[:TOP_K]]
+        bottom_tokens = [t for t, _ in tokens_list[-TOP_K:]]
+        top_values = [str(v) for _, v in tokens_list[:TOP_K]]
+        bottom_values = [str(v) for _, v in tokens_list[-TOP_K:]]
+
+        _table.add_row(
+            [
+                f"Feature {feature_dim}",
+                ", ".join(top_tokens + bottom_tokens),
+                ", ".join(top_values + bottom_values),
+            ]
+        )
+
 
 # %%
-# Render that visualization.
-html_vis  # pylint: disable=pointless-statement
+# Tabulate select top-k affected tokens.
+table = prettytable.PrettyTable()
+table.field_names = ["Feature", "Top and Bottom Tokens", "Values"]
+
+mean_effects = calculate_effects(prompts_strings, feature_acts)
+truncated_effects = select_top_k_tokens(mean_effects)
+populate_table(table, truncated_effects)
