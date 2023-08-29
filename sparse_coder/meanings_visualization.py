@@ -20,13 +20,13 @@ assert (
 # %%
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
-TOKENIZER_DIR: str = "EleutherAI/pythia-70m-deduped"
+TOKENIZER_DIR: str = "gpt2"
 PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.pt.npy"
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 ENCODER_PATH: str = "acts_data/learned_encoder.pt"
 HTML_SAVE_PATH: str = "acts_data/activations_heatmap.html"
-QUESTION_NUM: int = 10
-RESIDUAL_DIM: int = 512
+QUESTION_NUM: int = 1
+RESIDUAL_DIM: int = 768
 PROJECTION_DIM: int = RESIDUAL_DIM * 4
 SEED: int = 0
 
@@ -49,7 +49,7 @@ encoder = t.nn.Linear(RESIDUAL_DIM, PROJECTION_DIM)
 
 
 class Encoder:
-    """Reconstructs the encoder as a callable linear layer."""
+    """Reconstruct the encoder as a callable linear layer."""
 
     def __init__(self):
         self.encoder = t.nn.Sequential(encoder)
@@ -59,13 +59,12 @@ class Encoder:
         return self.encoder(inputs)
 
 
-# Instantiate the decoder model.
+# Initialize the encoder model.
 model: Encoder = Encoder()
 
 # %%
 # Load and prepare the original prompt tokens.
 prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
-
 # Convert token_ids into lists of literal tokens.
 prompts_literals: list = []
 
@@ -75,7 +74,7 @@ for p in prompts_ids:
 
 
 # %%
-# Load and prepare the cached model activations (from the TRAINING_LAYER).
+# Load and prepare the cached model activations.
 def unpad_activations(
     activations_block: t.Tensor, unpadded_prompts: np.ndarray
 ) -> list[t.Tensor]:
@@ -123,33 +122,27 @@ def prepare_for_vis(acts_list: list[t.Tensor]) -> list[np.ndarray]:
     for act in acts_list:
         act = act.transpose(0, 1)
         act = t.unsqueeze(act, 0)
-        act = act.cpu().numpy()
+        act = act.numpy()
         rearranged_activations.append(act)
 
     return rearranged_activations
 
 
 acts_dataset: t.Tensor = t.load(ACTS_DATA_PATH)
-
 unpadded_acts: t.Tensor = unpad_activations(acts_dataset, prompts_ids)
 projected_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
 rearranged_acts: list[np.ndarray] = prepare_for_vis(projected_acts)
 
 # %%
-# Visualize the top affected tokens.
-html_interactable = topk_tokens(
+# Generate the top-k tokens visualization.
+html_vis = topk_tokens(
     prompts_literals[:QUESTION_NUM],
     rearranged_acts[:QUESTION_NUM],
-    max_k=10,
+    max_k=1,
     first_dimension_name="Layer",
-    third_dimension_name="Feature Direction",
+    third_dimension_name="Feature",
 )
 
 # %%
-# Save the visualization as an HTML file.
-with open(HTML_SAVE_PATH, "w", encoding="utf-8") as file:
-    file.write(html_interactable.show_code())
-
-# %%
-# Show the visualization.
-html_interactable  # pylint: disable=pointless-statement
+# Render that visualization.
+html_vis  # pylint: disable=pointless-statement

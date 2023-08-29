@@ -32,7 +32,7 @@ assert (
 # %%
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
-MODEL_DIR: str = "EleutherAI/pythia-70m-deduped"
+MODEL_DIR: str = "gpt2"
 PROMPT_IDS_SAVE_PATH: str = "acts_data/activations_prompt_ids.pt"
 ACTS_SAVE_PATH: str = "acts_data/activations_dataset.pt"
 SEED: int = 0

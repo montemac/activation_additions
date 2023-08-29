@@ -21,7 +21,7 @@ LEARNING_RATE: float = 1e-3
 EPOCHS: int = 150
 SEED: int = 0
 
-MODEL_EMBEDDING_DIM: int = 512
+MODEL_EMBEDDING_DIM: int = 768
 PROJECTION_DIM: int = MODEL_EMBEDDING_DIM * 4
 
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
