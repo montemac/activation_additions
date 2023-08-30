@@ -24,6 +24,7 @@ assert (
 HF_ACCESS_TOKEN: str = ""
 TOKENIZER_DIR: str = "gpt2"
 TOP_K: int = 4
+NUM_FEATURES_PRINTED: int = 10
 PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.npy"
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 ENCODER_PATH: str = "acts_data/learned_encoder.pt"
@@ -139,7 +140,9 @@ def calculate_effects(
         tokens_atlas, feature_activations
     ):
         for token, activation in zip(prompt_strings, question_acts):
-            for feature_dim, act in enumerate(activation):
+            for feature_dim, act in enumerate(
+                activation[:NUM_FEATURES_PRINTED]
+            ):
                 feature_values[feature_dim][token].append(act.item())
 
     # Since tokens may recur, we need to average per token per feature.
@@ -177,7 +180,9 @@ def round_floats(float):
 
 def populate_table(_table, top_bottom_k):
     """Put the results in the table appropriately."""
-    for feature_dim, tokens_list in top_bottom_k.items():
+    for feature_dim, tokens_list in list(top_bottom_k.items())[
+        :NUM_FEATURES_PRINTED
+    ]:
         top_tokens = [str(t) for t, _ in tokens_list[:TOP_K]]
         bottom_tokens = [str(t) for t, _ in tokens_list[-TOP_K:]]
         top_values = [str(round_floats(v)) for _, v in tokens_list[:TOP_K]]
