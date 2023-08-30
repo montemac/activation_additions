@@ -22,13 +22,13 @@ assert (
 # %%
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
-TOKENIZER_DIR: str = "gpt2"
+TOKENIZER_DIR: str = "EleutherAI/pythia-70m"
 TOP_K: int = 4
 PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.pt.npy"
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 ENCODER_PATH: str = "acts_data/learned_encoder.pt"
 HTML_SAVE_PATH: str = "acts_data/activations_heatmap.html"
-RESIDUAL_DIM: int = 768
+RESIDUAL_DIM: int = 512
 PROJECTION_DIM: int = RESIDUAL_DIM * 4
 SEED: int = 0
 

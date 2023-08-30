@@ -32,14 +32,14 @@ assert (
 # %%
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
-MODEL_DIR: str = "gpt2"
-PROMPT_IDS_SAVE_PATH: str = "acts_data/activations_prompt_ids.pt"
+MODEL_DIR: str = "EleutherAI/pythia-70m"
+PROMPT_IDS_SAVE_PATH: str = "acts_data/activations_prompt_ids.npy"
 ACTS_SAVE_PATH: str = "acts_data/activations_dataset.pt"
 SEED: int = 0
 MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
 NUM_SHOT: int = 6
-NUM_DATAPOINTS: int = 817  # Number of questions evaluated.
+NUM_DATAPOINTS: int = 100  # Number of questions evaluated.
 LAYER_SAMPLED: int = 5  # Layer to collect activations from.
 
 assert (
@@ -97,7 +97,7 @@ def unhot(labels: list) -> int:
 # The model answers questions on the `multiple-choice 1` task.
 activations: list = []
 answers_with_rubric: dict = {}
-prompt_ids: list = []
+prompts_ids: list = []
 
 for question_num in sampled_indices:
     multishot: str = ""
@@ -165,7 +165,7 @@ for question_num in sampled_indices:
     input_ids: t.Tensor = tokenizer.encode(
         multishot + question, return_tensors="pt"
     )
-    prompt_ids.append(input_ids)
+    prompts_ids.append(input_ids)
     input_ids = accelerator.prepare(input_ids)
     # Generate a completion.
     outputs = model(input_ids)
@@ -231,8 +231,12 @@ concat_activations: t.Tensor = t.cat(
 )
 
 # Prep to save the prompt_ids.
-prompt_ids_array: ndarray = np.array(prompt_ids, dtype=object)
+prompt_ids_list: list = []
+for question_ids in prompts_ids:
+    prompt_ids_list.append(question_ids.tolist())
+
+prompt_ids_array: ndarray = np.array(prompt_ids_list, dtype=object)
 
 # Save the activations and prompt_ids.
-np.save(PROMPT_IDS_SAVE_PATH, prompt_ids_array)
+np.save(PROMPT_IDS_SAVE_PATH, prompt_ids_array, allow_pickle=True)
 t.save(concat_activations, ACTS_SAVE_PATH)
