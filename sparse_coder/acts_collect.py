@@ -32,14 +32,14 @@ assert (
 # %%
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
-MODEL_DIR: str = "EleutherAI/pythia-70m"
+MODEL_DIR: str = "gpt2"
 PROMPT_IDS_SAVE_PATH: str = "acts_data/activations_prompt_ids.npy"
 ACTS_SAVE_PATH: str = "acts_data/activations_dataset.pt"
 SEED: int = 0
 MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
 NUM_SHOT: int = 6
-NUM_DATAPOINTS: int = 100  # Number of questions evaluated.
+NUM_DATAPOINTS: int = 817  # Number of questions evaluated.
 LAYER_SAMPLED: int = 5  # Layer to collect activations from.
 
 assert (

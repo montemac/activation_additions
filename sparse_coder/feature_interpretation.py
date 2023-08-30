@@ -22,12 +22,12 @@ assert (
 # %%
 # NOTE: Don't commit your HF access token!
 HF_ACCESS_TOKEN: str = ""
-TOKENIZER_DIR: str = "EleutherAI/pythia-70m"
+TOKENIZER_DIR: str = "gpt2"
 TOP_K: int = 4
 PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.npy"
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 ENCODER_PATH: str = "acts_data/learned_encoder.pt"
-RESIDUAL_DIM: int = 512
+RESIDUAL_DIM: int = 768
 PROJECTION_DIM: int = RESIDUAL_DIM * 4
 SEED: int = 0
 
@@ -67,7 +67,10 @@ model: Encoder = Encoder()
 # Load and prepare the original prompt tokens.
 prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
 prompts_ids_list = prompts_ids.tolist()
-unpacked_prompts_ids = [p[0] for p in prompts_ids_list]
+unpacked_prompts_ids = [
+    elem for sublist in prompts_ids_list for elem in sublist
+]
+
 # Convert token_ids into lists of literal tokens.
 prompts_strings: list = []
 
@@ -119,7 +122,7 @@ def project_activations(
 
 
 acts_dataset: t.Tensor = t.load(ACTS_DATA_PATH)
-unpadded_acts: t.Tensor = unpad_activations(acts_dataset, prompts_ids)
+unpadded_acts: t.Tensor = unpad_activations(acts_dataset, prompts_strings)
 feature_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
 
 

@@ -16,12 +16,12 @@ from torch.utils.data import DataLoader, Dataset
 
 # %%
 # Training hyperparameters. We want to weight L1 quite heavily vs. MSE.
-LAMBDA_L1: float = 0.5  # (Pythia: 0.5, GPT-2: 1.2e2)
+LAMBDA_L1: float = 1.2e2  # (Pythia: 0.5, GPT-2: 1.2e2)
 LEARNING_RATE: float = 1e-3
 EPOCHS: int = 150
 SEED: int = 0
 
-MODEL_EMBEDDING_DIM: int = 512
+MODEL_EMBEDDING_DIM: int = 768
 PROJECTION_DIM: int = MODEL_EMBEDDING_DIM * 4
 
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
