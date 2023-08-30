@@ -22,14 +22,14 @@ assert (
 
 # %%
 # Set up constants.
-with open("act_access.yaml", "r") as file:
+with open("act_access.yaml", "r") as f:
     try:
-        access = yaml.safe_load(file)
+        access = yaml.safe_load(f)
     except yaml.YAMLError as e:
         print(e)
-with open("act_config.yaml", "r") as file:
+with open("act_config.yaml", "r") as f:
     try:
-        config = yaml.safe_load(file)
+        config = yaml.safe_load(f)
     except yaml.YAMLError as e:
         print(e)
 HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")

@@ -17,9 +17,9 @@ from torch.utils.data import DataLoader, Dataset
 
 # %%
 # Set up constants.
-with open("act_config.yaml", "r") as file:
+with open("act_config.yaml", "r") as f:
     try:
-        config = yaml.safe_load(file)
+        config = yaml.safe_load(f)
     except yaml.YAMLError as e:
         print(e)
 SEED = config.get("SEED")
@@ -30,8 +30,8 @@ EMBEDDING_DIM = config.get("EMBEDDING_DIM")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = EMBEDDING_DIM * PROJECTION_FACTOR
 
-# We want to weight L1 quite heavily vs. MSE.
-LAMBDA_L1: float = 1.2e2  # (Pythia: 0.5, GPT-2: 1.2e2)
+# We want to weight L1 quite heavily, versus MSE.
+LAMBDA_L1: float = 2e2  # (Pythia: 0.5, GPT-2: 2e2)
 LEARNING_RATE: float = 1e-3
 LOG_EVERY_N_STEPS: int = 20
 EPOCHS: int = 150
@@ -92,8 +92,6 @@ prompts_ids_list = prompts_ids.tolist()
 unpacked_prompts_ids = [
     elem for sublist in prompts_ids_list for elem in sublist
 ]
-print(f"Number of questions: {len(unpacked_prompts_ids)}")
-print(f"Length in tokens of first question: {len(unpacked_prompts_ids[0])}")
 pad_mask: t.Tensor = padding_mask(padded_acts_block, unpacked_prompts_ids)
 
 dataset: ActivationsDataset = ActivationsDataset(
