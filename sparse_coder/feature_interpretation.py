@@ -1,6 +1,6 @@
 # %%
 """
-The top affected tokens/dimension of a learned decoder.
+Print the top affected tokens per dimension of a learned decoder.
 
 Requires a HF access token to get `Llama-2`'s tokenizer.
 """
@@ -24,10 +24,9 @@ assert (
 HF_ACCESS_TOKEN: str = ""
 TOKENIZER_DIR: str = "EleutherAI/pythia-70m"
 TOP_K: int = 4
-PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.pt.npy"
+PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.npy"
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
 ENCODER_PATH: str = "acts_data/learned_encoder.pt"
-HTML_SAVE_PATH: str = "acts_data/activations_heatmap.html"
 RESIDUAL_DIM: int = 512
 PROJECTION_DIM: int = RESIDUAL_DIM * 4
 SEED: int = 0
@@ -67,11 +66,13 @@ model: Encoder = Encoder()
 # %%
 # Load and prepare the original prompt tokens.
 prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
+prompts_ids_list = prompts_ids.tolist()
+unpacked_prompts_ids = [p[0] for p in prompts_ids_list]
 # Convert token_ids into lists of literal tokens.
 prompts_strings: list = []
 
-for p in prompts_ids:
-    prompt_str: list = tokenizer.convert_ids_to_tokens(p.squeeze())
+for p in unpacked_prompts_ids:
+    prompt_str: list = tokenizer.convert_ids_to_tokens(p)
     prompts_strings.append(prompt_str)
 
 
@@ -90,7 +91,7 @@ def unpad_activations(
     unpadded_activations: list = []
 
     for k, unpadded_prompt in enumerate(unpadded_prompts):
-        original_length: int = unpadded_prompt.size(1)
+        original_length: int = len(unpadded_prompt)
         # From here on out, activations are unpadded, and so must be packaged
         # as a _list of tensors_ instead of as just a tensor block.
         unpadded_activations.append(activations_block[k, :original_length, :])
@@ -166,13 +167,18 @@ def select_top_k_tokens(
     return top_k_tokens
 
 
+def round_floats(float):
+    """Round floats to 2 decimal places."""
+    return round(float, 2)
+
+
 def populate_table(_table, top_bottom_k):
     """Put the results in the table appropriately."""
     for feature_dim, tokens_list in top_bottom_k.items():
-        top_tokens = [t for t, _ in tokens_list[:TOP_K]]
-        bottom_tokens = [t for t, _ in tokens_list[-TOP_K:]]
-        top_values = [str(v) for _, v in tokens_list[:TOP_K]]
-        bottom_values = [str(v) for _, v in tokens_list[-TOP_K:]]
+        top_tokens = [str(t) for t, _ in tokens_list[:TOP_K]]
+        bottom_tokens = [str(t) for t, _ in tokens_list[-TOP_K:]]
+        top_values = [str(round_floats(v)) for _, v in tokens_list[:TOP_K]]
+        bottom_values = [str(round_floats(v)) for _, v in tokens_list[-TOP_K:]]
 
         _table.add_row(
             [
@@ -191,3 +197,5 @@ table.field_names = ["Feature", "Top and Bottom Tokens", "Values"]
 mean_effects = calculate_effects(prompts_strings, feature_acts)
 truncated_effects = select_top_k_tokens(mean_effects)
 populate_table(table, truncated_effects)
+
+print(table)

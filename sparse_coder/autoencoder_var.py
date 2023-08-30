@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, Dataset
 
 # %%
 # Training hyperparameters. We want to weight L1 quite heavily vs. MSE.
-LAMBDA_L1: float = 1.2e2
+LAMBDA_L1: float = 0.5  # (Pythia: 0.5, GPT-2: 1.2e2)
 LEARNING_RATE: float = 1e-3
 EPOCHS: int = 150
 SEED: int = 0
@@ -156,10 +156,10 @@ class Autoencoder(pl.LightningModule):
         l0_sparsity = (encoded_state != 0).float().sum(dim=-1).mean()
         print(f"L_0: {l0_sparsity}")
 
-        self.log("training loss", training_loss, sync_dist=True)
-        self.log("L1 component", LAMBDA_L1 * l1_loss, sync_dist=True)
-        self.log("MSE component", mse_loss, sync_dist=True)
-        self.log("L0 sparsity", l0_sparsity, sync_dist=True)
+        self.log("training loss", training_loss)
+        self.log("L1 component", LAMBDA_L1 * l1_loss)
+        self.log("MSE component", mse_loss)
+        self.log("L0 sparsity", l0_sparsity)
         return training_loss
 
     # Unused import resolves `lightning` bug.
@@ -180,7 +180,7 @@ class Autoencoder(pl.LightningModule):
         )
         validation_loss = mse_loss + (LAMBDA_L1 * l1_loss)
 
-        self.log("validation loss", validation_loss, sync_dist=True)
+        self.log("validation loss", validation_loss)
         return validation_loss
 
     def configure_optimizers(self):
@@ -189,7 +189,7 @@ class Autoencoder(pl.LightningModule):
 
 
 # %%
-# Validation loss early stopping.
+# Validation-loss-based early stopping.
 early_stopping = pl.callbacks.EarlyStopping(
     monitor="validation loss",
     min_delta=0.0,
@@ -216,7 +216,4 @@ trainer.fit(
 
 # %%
 # Save the trained encoder matrix.
-t.save(
-    model.encoder[0].weight.data,
-    ENCODER_SAVE_PATH,
-)
+t.save(model.encoder[0].weight.data, ENCODER_SAVE_PATH)
