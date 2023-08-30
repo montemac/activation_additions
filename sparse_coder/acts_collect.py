@@ -99,6 +99,16 @@ sampled_indices: list = sampled_indices.tolist()
 
 
 # %%
+# Shuffle the correct answers.
+def shuffle_answers(choices, labels_one_hot):
+    """Shuffle the answers and the answer labels correspondingly."""
+    paired_choices = list(zip(choices, labels_one_hot))
+    np.random.shuffle(paired_choices)
+    choices, labels_one_hot = zip(*paired_choices)
+    return choices, labels_one_hot
+
+
+# %%
 # Convert one-hot labels to int indices.
 def unhot(labels: list) -> int:
     """Change the one-hot ground truth labels to a 1-indexed int."""
@@ -128,27 +138,34 @@ for question_num in sampled_indices:
     for mult_num in multishot_indices:
         multishot += "Q: " + dataset["validation"]["question"][mult_num] + "\n"
 
-        for choice_num in range(
-            len(dataset["validation"]["mc1_targets"][mult_num]["choices"])
-        ):
+        # Shuffle the answers and labels.
+        unshuffled_choices: list = dataset["validation"]["mc1_targets"][
+            mult_num
+        ]["choices"]
+        unshuffled_labels: list = dataset["validation"]["mc1_targets"][
+            mult_num
+        ]["labels"]
+
+        shuffled_choices, shuffled_labels = shuffle_answers(
+            unshuffled_choices, unshuffled_labels
+        )
+
+        for choice_num in range(len(shuffled_choices)):
             # choice_num is 0-indexed, but I want to display 1-indexed options.
             multishot += (
                 "("
                 + str(choice_num + 1)
                 + ") "
-                + dataset["validation"]["mc1_targets"][mult_num]["choices"][
-                    choice_num
-                ]
+                + shuffled_choices[choice_num]
                 + "\n"
             )
 
-        labels_one_hot: list = dataset["validation"]["mc1_targets"][mult_num][
-            "labels"
-        ]
         # Get a label int from the `labels` list.
-        correct_answer: int = unhot(labels_one_hot)
+        correct_answer: int = unhot(shuffled_labels)
         # Add on the correct answer under each multishot question.
         multishot += "A: (" + str(correct_answer) + ")\n"
+
+    print(multishot)
 
     # Build the current question.
     question: str = (
@@ -187,6 +204,9 @@ for question_num in sampled_indices:
     # means greedy sampling _over the token dimension_.
     answer_id: t.LongTensor = t.argmax(outputs.logits[:, -1, :], dim=-1)
     model_answer: str = tokenizer.decode(answer_id)
+
+    print(model_answer)
+
     # Cut the completion down to just its answer integer.
     model_answer = model_answer.split("\n")[-1]
     model_answer = model_answer.replace("A: (", "")
@@ -195,6 +215,9 @@ for question_num in sampled_indices:
     labels_one_hot: list = dataset["validation"]["mc1_targets"][question_num][
         "labels"
     ]
+
+    print(labels_one_hot)
+
     ground_truth: int = unhot(labels_one_hot)
 
     # Save the model's answer besides their ground truths.
@@ -206,11 +229,11 @@ for question_num in sampled_indices:
 # Grade the model's answers.
 model_accuracy: float = 0.0
 for (
-    question_num
+    question_idx
 ) in answers_with_rubric:  # pylint: disable=consider-using-dict-items
     if (
-        answers_with_rubric[question_num][0]
-        == answers_with_rubric[question_num][1]
+        answers_with_rubric[question_idx][0]
+        == answers_with_rubric[question_idx][1]
     ):
         model_accuracy += 1.0
 
