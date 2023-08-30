@@ -220,9 +220,9 @@ table = prettytable.PrettyTable()
 table.field_names = [
     "Feature Dimension",
     f"Top Tokens",
-    f"Feature Activation",
+    f"Top Token Activations",
     f"Bottom Tokens",
-    f"Feature Activation",
+    f"Bottom Token Activations",
 ]
 
 mean_effects = calculate_effects(prompts_strings, feature_acts)
