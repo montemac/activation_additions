@@ -89,9 +89,7 @@ unpacked_prompts_ids = [
 prompts_strings: list = []
 
 for p in unpacked_prompts_ids:
-    prompt_str: list = tokenizer.convert_ids_to_tokens(
-        p, skip_special_tokens=True
-    )
+    prompt_str: list = tokenizer.convert_ids_to_tokens(p)
     prompts_strings.append(prompt_str)
 
 
@@ -196,14 +194,18 @@ def populate_table(_table, top_bottom_k):
     for feature_dim, tokens_list in list(top_bottom_k.items())[
         :NUM_DIMS_PRINTED
     ]:
-        top_tokens = [str(t) for t, _ in tokens_list[:TOP_K]]
-        bottom_tokens = [str(t) for t, _ in tokens_list[-TOP_K:]]
+        # Replace the tokenizer's special space char with a space literal.
+        top_tokens = [str(t).replace("Ġ", " ") for t, _ in tokens_list[:TOP_K]]
+        bottom_tokens = [
+            str(t).replace("Ġ", " ") for t, _ in tokens_list[-TOP_K:]
+        ]
+
         top_values = [str(round_floats(v)) for _, v in tokens_list[:TOP_K]]
         bottom_values = [str(round_floats(v)) for _, v in tokens_list[-TOP_K:]]
 
         _table.add_row(
             [
-                f"Feature #{feature_dim}",
+                f"Feature {feature_dim}",
                 ", ".join(top_tokens),
                 ", ".join(top_values),
                 ", ".join(bottom_tokens),
@@ -217,10 +219,10 @@ def populate_table(_table, top_bottom_k):
 table = prettytable.PrettyTable()
 table.field_names = [
     "Feature",
-    f"Top-{TOP_K} TOKENS",
-    f"Top-{TOP_K} Values",
+    f"Top-{TOP_K} Tokens",
+    f"Top Values",
     f"Bottom-{TOP_K} Tokens",
-    f"Bottom-{TOP_K} Values",
+    f"Bottom Values",
 ]
 
 mean_effects = calculate_effects(prompts_strings, feature_acts)
