@@ -37,13 +37,11 @@ with open("act_access.yaml", "r") as file:
         access = yaml.safe_load(file)
     except yaml.YAMLError as e:
         print(e)
-
 with open("act_config.yaml", "r") as file:
     try:
         config = yaml.safe_load(file)
     except yaml.YAMLError as e:
         print(e)
-
 HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")
 MODEL_DIR = config.get("MODEL_DIR")
 PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")

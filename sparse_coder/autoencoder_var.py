@@ -22,7 +22,6 @@ with open("act_config.yaml", "r") as file:
         config = yaml.safe_load(file)
     except yaml.YAMLError as e:
         print(e)
-
 SEED = config.get("SEED")
 ACTS_DATA_PATH = config.get("ACTS_DATA_PATH")
 PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")

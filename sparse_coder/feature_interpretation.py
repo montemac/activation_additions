@@ -27,13 +27,11 @@ with open("act_access.yaml", "r") as file:
         access = yaml.safe_load(file)
     except yaml.YAMLError as e:
         print(e)
-
 with open("act_config.yaml", "r") as file:
     try:
         config = yaml.safe_load(file)
     except yaml.YAMLError as e:
         print(e)
-
 HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")
 TOKENIZER_DIR = config.get("MODEL_DIR")
 PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
@@ -91,7 +89,9 @@ unpacked_prompts_ids = [
 prompts_strings: list = []
 
 for p in unpacked_prompts_ids:
-    prompt_str: list = tokenizer.convert_ids_to_tokens(p)
+    prompt_str: list = tokenizer.convert_ids_to_tokens(
+        p, skip_special_tokens=True
+    )
     prompts_strings.append(prompt_str)
 
 
@@ -203,9 +203,11 @@ def populate_table(_table, top_bottom_k):
 
         _table.add_row(
             [
-                f"Feature {feature_dim}",
-                ", ".join(top_tokens + bottom_tokens),
-                ", ".join(top_values + bottom_values),
+                f"Feature #{feature_dim}",
+                ", ".join(top_tokens),
+                ", ".join(top_values),
+                ", ".join(bottom_tokens),
+                ", ".join(bottom_values),
             ]
         )
 
@@ -213,7 +215,13 @@ def populate_table(_table, top_bottom_k):
 # %%
 # Tabulate select top-k affected tokens.
 table = prettytable.PrettyTable()
-table.field_names = ["Feature", "Top and Bottom Tokens", "Values"]
+table.field_names = [
+    "Feature",
+    f"Top-{TOP_K} TOKENS",
+    f"Top-{TOP_K} Values",
+    f"Bottom-{TOP_K} Tokens",
+    f"Bottom-{TOP_K} Values",
+]
 
 mean_effects = calculate_effects(prompts_strings, feature_acts)
 truncated_effects = select_top_k_tokens(mean_effects)
