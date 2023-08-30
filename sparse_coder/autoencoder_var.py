@@ -44,7 +44,7 @@ t.set_float32_matmul_precision("medium")
 # %%
 # Create a padding mask.
 def padding_mask(
-    activations_block: t.Tensor, unpadded_prompts: np.ndarray
+    activations_block: t.Tensor, unpadded_prompts: list[list[str]]
 ) -> t.Tensor:
     """Create a padding mask for the activations block."""
     masks: list = []
@@ -86,8 +86,15 @@ class ActivationsDataset(Dataset):
 # %%
 # Load, preprocess, and split the activations dataset.
 padded_acts_block = t.load(ACTS_DATA_PATH)
+
 prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
-pad_mask: t.Tensor = padding_mask(padded_acts_block, prompts_ids)
+prompts_ids_list = prompts_ids.tolist()
+unpacked_prompts_ids = [
+    elem for sublist in prompts_ids_list for elem in sublist
+]
+print(f"Number of questions: {len(unpacked_prompts_ids)}")
+print(f"Length in tokens of first question: {len(unpacked_prompts_ids[0])}")
+pad_mask: t.Tensor = padding_mask(padded_acts_block, unpacked_prompts_ids)
 
 dataset: ActivationsDataset = ActivationsDataset(
     padded_acts_block,
