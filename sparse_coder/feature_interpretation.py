@@ -12,6 +12,7 @@ import numpy as np
 import prettytable
 import torch as t
 import transformers
+import yaml
 from transformers import AutoTokenizer, PreTrainedTokenizer
 
 
@@ -20,17 +21,31 @@ assert (
 ), "Llama-2 70B requires at least transformers 4.31.0"
 
 # %%
-# NOTE: Don't commit your HF access token!
-HF_ACCESS_TOKEN: str = ""
-TOKENIZER_DIR: str = "gpt2"
-TOP_K: int = 4
-NUM_FEATURES_PRINTED: int = 10
-PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.npy"
-ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
-ENCODER_PATH: str = "acts_data/learned_encoder.pt"
-RESIDUAL_DIM: int = 768
-PROJECTION_DIM: int = RESIDUAL_DIM * 4
-SEED: int = 0
+# Set up constants.
+with open("act_access.yaml", "r") as file:
+    try:
+        access = yaml.safe_load(file)
+    except yaml.YAMLError as e:
+        print(e)
+
+with open("act_config.yaml", "r") as file:
+    try:
+        config = yaml.safe_load(file)
+    except yaml.YAMLError as e:
+        print(e)
+
+HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")
+TOKENIZER_DIR = config.get("MODEL_DIR")
+PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
+ACTS_DATA_PATH = config.get("ACTS_DATA_PATH")
+ENCODER_PATH = config.get("ENCODER_PATH")
+SEED = config.get("SEED")
+EMBEDDING_DIM = config.get("EMBEDDING_DIM")
+PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
+PROJECTION_DIM = EMBEDDING_DIM * PROJECTION_FACTOR
+
+TOP_K: int = 5
+NUM_DIMS_PRINTED: int = 10
 
 # %%
 # Reproducibility.
@@ -47,7 +62,7 @@ tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
 # %%
 # Rebuild the learned encoder as a linear layer module.
 imported_weights: t.Tensor = t.load(ENCODER_PATH)
-encoder = t.nn.Linear(RESIDUAL_DIM, PROJECTION_DIM)
+encoder = t.nn.Linear(EMBEDDING_DIM, PROJECTION_DIM)
 
 
 class Encoder:
@@ -140,9 +155,7 @@ def calculate_effects(
         tokens_atlas, feature_activations
     ):
         for token, activation in zip(prompt_strings, question_acts):
-            for feature_dim, act in enumerate(
-                activation[:NUM_FEATURES_PRINTED]
-            ):
+            for feature_dim, act in enumerate(activation[:NUM_DIMS_PRINTED]):
                 feature_values[feature_dim][token].append(act.item())
 
     # Since tokens may recur, we need to average per token per feature.
@@ -181,7 +194,7 @@ def round_floats(float):
 def populate_table(_table, top_bottom_k):
     """Put the results in the table appropriately."""
     for feature_dim, tokens_list in list(top_bottom_k.items())[
-        :NUM_FEATURES_PRINTED
+        :NUM_DIMS_PRINTED
     ]:
         top_tokens = [str(t) for t, _ in tokens_list[:TOP_K]]
         bottom_tokens = [str(t) for t, _ in tokens_list[-TOP_K:]]

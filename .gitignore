@@ -151,3 +151,4 @@ wandb_restored_files
 *.pt
 *.ckpt
 *.pt.npy
+act_access.yaml

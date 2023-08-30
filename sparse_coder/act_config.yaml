@@ -1,0 +1,15 @@
+# Model
+MODEL_DIR: "gpt2"
+ACTS_LAYER: 5
+EMBEDDING_DIM: 768
+
+# Encoder Size
+PROJECTION_FACTOR: 4
+
+# Save Paths
+PROMPT_IDS_PATH: "acts_data/activations_prompt_ids.npy"
+ACTS_DATA_PATH: "acts_data/activations_dataset.pt"
+ENCODER_PATH: "acts_data/learned_encoder.pt"
+
+# Reproducibility
+SEED: 0

@@ -10,24 +10,32 @@ is your learned dictionary.
 import numpy as np
 import torch as t
 import pytorch_lightning as pl
+import yaml
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 
 
 # %%
-# Training hyperparameters. We want to weight L1 quite heavily vs. MSE.
+# Set up constants.
+with open("act_config.yaml", "r") as file:
+    try:
+        config = yaml.safe_load(file)
+    except yaml.YAMLError as e:
+        print(e)
+
+SEED = config.get("SEED")
+ACTS_DATA_PATH = config.get("ACTS_DATA_PATH")
+PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
+ENCODER_PATH = config.get("ENCODER_PATH")
+EMBEDDING_DIM = config.get("EMBEDDING_DIM")
+PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
+PROJECTION_DIM = EMBEDDING_DIM * PROJECTION_FACTOR
+
+# We want to weight L1 quite heavily vs. MSE.
 LAMBDA_L1: float = 1.2e2  # (Pythia: 0.5, GPT-2: 1.2e2)
 LEARNING_RATE: float = 1e-3
-EPOCHS: int = 150
-SEED: int = 0
-
-MODEL_EMBEDDING_DIM: int = 768
-PROJECTION_DIM: int = MODEL_EMBEDDING_DIM * 4
-
-ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
-PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.npy"
-ENCODER_SAVE_PATH: str = "acts_data/learned_encoder.pt"
 LOG_EVERY_N_STEPS: int = 20
+EPOCHS: int = 150
 
 # %%
 # Use available tensor cores.
@@ -120,7 +128,7 @@ class Autoencoder(pl.LightningModule):
     def __init__(self):
         super().__init__()
         self.encoder = t.nn.Sequential(
-            t.nn.Linear(MODEL_EMBEDDING_DIM, PROJECTION_DIM),
+            t.nn.Linear(EMBEDDING_DIM, PROJECTION_DIM),
             t.nn.ReLU(),
         )
 
@@ -216,4 +224,4 @@ trainer.fit(
 
 # %%
 # Save the trained encoder matrix.
-t.save(model.encoder[0].weight.data, ENCODER_SAVE_PATH)
+t.save(model.encoder[0].weight.data, ENCODER_PATH)

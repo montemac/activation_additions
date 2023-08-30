@@ -14,6 +14,7 @@ access token for the `Llama-2` models.
 import numpy as np
 import torch as t
 import transformers
+import yaml
 from accelerate import Accelerator
 from datasets import load_dataset
 from numpy import ndarray
@@ -30,12 +31,25 @@ assert (
 ), "Llama-2 70B requires at least transformers v4.31.0"
 
 # %%
-# NOTE: Don't commit your HF access token!
-HF_ACCESS_TOKEN: str = ""
-MODEL_DIR: str = "gpt2"
-PROMPT_IDS_SAVE_PATH: str = "acts_data/activations_prompt_ids.npy"
-ACTS_SAVE_PATH: str = "acts_data/activations_dataset.pt"
-SEED: int = 0
+# Set up constants.
+with open("act_access.yaml", "r") as file:
+    try:
+        access = yaml.safe_load(file)
+    except yaml.YAMLError as e:
+        print(e)
+
+with open("act_config.yaml", "r") as file:
+    try:
+        config = yaml.safe_load(file)
+    except yaml.YAMLError as e:
+        print(e)
+
+HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")
+MODEL_DIR = config.get("MODEL_DIR")
+PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
+ACTS_SAVE_PATH = config.get("ACTS_DATA_PATH")
+SEED = config.get("SEED")
+
 MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
 NUM_SHOT: int = 6
@@ -238,5 +252,5 @@ for question_ids in prompts_ids:
 prompt_ids_array: ndarray = np.array(prompt_ids_list, dtype=object)
 
 # Save the activations and prompt_ids.
-np.save(PROMPT_IDS_SAVE_PATH, prompt_ids_array, allow_pickle=True)
+np.save(PROMPT_IDS_PATH, prompt_ids_array, allow_pickle=True)
 t.save(concat_activations, ACTS_SAVE_PATH)
