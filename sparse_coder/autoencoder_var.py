@@ -25,7 +25,7 @@ MODEL_EMBEDDING_DIM: int = 512
 PROJECTION_DIM: int = MODEL_EMBEDDING_DIM * 4
 
 ACTS_DATA_PATH: str = "acts_data/activations_dataset.pt"
-PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.pt.npy"
+PROMPT_IDS_PATH: str = "acts_data/activations_prompt_ids.npy"
 ENCODER_SAVE_PATH: str = "acts_data/learned_encoder.pt"
 LOG_EVERY_N_STEPS: int = 20
 
@@ -43,7 +43,7 @@ def padding_mask(
     masks: list = []
 
     for unpadded_prompt in unpadded_prompts:
-        original_stream_length: int = unpadded_prompt.size(1)
+        original_stream_length: int = len(unpadded_prompt)
         # The mask will drop the embedding dimension.
         mask: t.Tensor = t.zeros(
             (activations_block.size(1),),
