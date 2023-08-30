@@ -42,8 +42,8 @@ EMBEDDING_DIM = config.get("EMBEDDING_DIM")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = EMBEDDING_DIM * PROJECTION_FACTOR
 
-TOP_K: int = 5
-NUM_DIMS_PRINTED: int = 10
+TOP_K: int = 8
+NUM_DIMS_PRINTED: int = 20
 
 # %%
 # Reproducibility.
@@ -185,8 +185,8 @@ def select_top_k_tokens(
 
 
 def round_floats(float):
-    """Round floats to 2 decimal places."""
-    return round(float, 2)
+    """Round floats to 1 decimal place."""
+    return round(float, 1)
 
 
 def populate_table(_table, top_bottom_k):
@@ -218,11 +218,11 @@ def populate_table(_table, top_bottom_k):
 # Tabulate select top-k affected tokens.
 table = prettytable.PrettyTable()
 table.field_names = [
-    "Feature",
-    f"Top-{TOP_K} Tokens",
-    f"Top Values",
-    f"Bottom-{TOP_K} Tokens",
-    f"Bottom Values",
+    "Feature Dimension",
+    f"Top Tokens",
+    f"Feature Activation",
+    f"Bottom Tokens",
+    f"Feature Activation",
 ]
 
 mean_effects = calculate_effects(prompts_strings, feature_acts)

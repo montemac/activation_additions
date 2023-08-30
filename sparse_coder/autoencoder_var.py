@@ -166,7 +166,7 @@ class Autoencoder(pl.LightningModule):
 
         training_loss = mse_loss + (LAMBDA_L1 * l1_loss)
         l0_sparsity = (encoded_state != 0).float().sum(dim=-1).mean()
-        print(f"L_0: {l0_sparsity}")
+        print(f"L_0: {round(l0_sparsity, 2)}")
 
         self.log("training loss", training_loss)
         self.log("L1 component", LAMBDA_L1 * l1_loss)
