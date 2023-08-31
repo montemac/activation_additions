@@ -150,5 +150,5 @@ scripts/KL_bug.py
 wandb_restored_files
 *.pt
 *.ckpt
-*.pt.npy
+*..npy
 act_access.yaml
