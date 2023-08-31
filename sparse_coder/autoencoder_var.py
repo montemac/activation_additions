@@ -28,13 +28,13 @@ PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
 ENCODER_PATH = config.get("ENCODER_PATH")
 EMBEDDING_DIM = config.get("EMBEDDING_DIM")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
-PROJECTION_DIM = EMBEDDING_DIM * PROJECTION_FACTOR
+PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
 # We want to weight L1 quite heavily, versus MSE. Drive towards an L_0 of
 # 20-100.
 LAMBDA_L1: float = 4.0  # (Pythia: 4.0, GPT-2: 2e2)
 LEARNING_RATE: float = 1e-3
-LOG_EVERY_N_STEPS: int = 20
+LOG_EVERY_N_STEPS: int = 5
 EPOCHS: int = 150
 
 # %%
