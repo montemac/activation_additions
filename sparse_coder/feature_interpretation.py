@@ -44,6 +44,7 @@ PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
 TOP_K: int = 5
 NUM_DIMS_PRINTED: int = 50
+SIG_FIGS: int = 0
 
 # %%
 # Reproducibility.
@@ -185,8 +186,8 @@ def select_top_k_tokens(
 
 
 def round_floats(float):
-    """Round floats to 1 decimal place."""
-    return round(float, 1)
+    """Round floats to number decimal places."""
+    return round(float, SIG_FIGS)
 
 
 def populate_table(_table, top_bottom_k):
@@ -220,9 +221,9 @@ table = prettytable.PrettyTable()
 table.field_names = [
     "Dimension",
     f"Top Tokens",
-    f"Top Token Activations",
+    f"Top-Token Activations",
     f"Bottom Tokens",
-    f"Bottom Token Activations",
+    f"Bottom-Token Activations",
 ]
 
 mean_effects = calculate_effects(prompts_strings, feature_acts)
