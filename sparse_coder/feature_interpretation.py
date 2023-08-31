@@ -42,8 +42,8 @@ EMBEDDING_DIM = config.get("EMBEDDING_DIM")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
-TOP_K: int = 8
-NUM_DIMS_PRINTED: int = 20
+TOP_K: int = 5
+NUM_DIMS_PRINTED: int = 50
 
 # %%
 # Reproducibility.
@@ -205,7 +205,7 @@ def populate_table(_table, top_bottom_k):
 
         _table.add_row(
             [
-                f"Feature {feature_dim}",
+                f"{feature_dim}",
                 ", ".join(top_tokens),
                 ", ".join(top_values),
                 ", ".join(bottom_tokens),
@@ -218,7 +218,7 @@ def populate_table(_table, top_bottom_k):
 # Tabulate select top-k affected tokens.
 table = prettytable.PrettyTable()
 table.field_names = [
-    "Feature Dimension",
+    "Dimension",
     f"Top Tokens",
     f"Top Token Activations",
     f"Bottom Tokens",
