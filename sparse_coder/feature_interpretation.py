@@ -44,7 +44,7 @@ PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
 TOP_K: int = 5
 NUM_DIMS_PRINTED: int = 50
-SIG_FIGS: int = 0
+SIG_FIGS = None
 
 # %%
 # Reproducibility.
