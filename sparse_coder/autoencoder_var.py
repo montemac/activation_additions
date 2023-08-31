@@ -9,7 +9,7 @@ is your learned dictionary.
 
 import numpy as np
 import torch as t
-import lightning.pytorch as pl
+import lightning.pytorch as L
 import yaml
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
@@ -126,7 +126,7 @@ validation_loader: DataLoader = DataLoader(
 
 # %%
 # Define a tied autoencoder, with `lightning`.
-class Autoencoder(pl.LightningModule):
+class Autoencoder(L.LightningModule):
     """An autoencoder architecture."""
 
     def __init__(self, lr=LEARNING_RATE):
@@ -203,7 +203,7 @@ class Autoencoder(pl.LightningModule):
 
 # %%
 # Validation-loss-based early stopping.
-early_stopping = pl.callbacks.EarlyStopping(
+early_stopping = L.callbacks.EarlyStopping(
     monitor="validation loss",
     min_delta=1e-5,
     patience=3,
@@ -214,27 +214,25 @@ early_stopping = pl.callbacks.EarlyStopping(
 # %%
 # Train the autoencoder. Note that `lightning` does its own parallelization.
 model: Autoencoder = Autoencoder()
-trainer: pl.Trainer = pl.Trainer(
+trainer: L.Trainer = L.Trainer(
     accelerator="auto",
     callbacks=[early_stopping],
     max_epochs=EPOCHS,
     log_every_n_steps=LOG_EVERY_N_STEPS,
 )
-tuner = pl.tuner.Tuner(trainer)
+tuner = L.tuner.Tuner(trainer)
 
 lr_finder = tuner.lr_find(
-    model, train_dataloaders=training_loader, val_dataloaders=validation_loader
+    model,
+    train_dataloaders=training_loader,
+    val_dataloaders=validation_loader,
 )
-fig = lr_finder.plot(suggest=True)
-fig.show()
-new_lr = lr_finder.suggestion()
-model.hparams.lr = new_lr
-print(f"New learning rate: {new_lr}")
 
 trainer.fit(
     model,
     train_dataloaders=training_loader,
     val_dataloaders=validation_loader,
+    new_lr=lr_finder.suggestion(),
 )
 
 # %%
