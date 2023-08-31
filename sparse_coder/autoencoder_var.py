@@ -32,7 +32,7 @@ PROJECTION_DIM = EMBEDDING_DIM * PROJECTION_FACTOR
 
 # We want to weight L1 quite heavily, versus MSE. Drive towards an L_0 of
 # 20-100.
-LAMBDA_L1: float = 0.5  # (Pythia: 0.5, GPT-2: 2e2)
+LAMBDA_L1: float = 4.0  # (Pythia: 4.0, GPT-2: 2e2)
 LEARNING_RATE: float = 1e-3
 LOG_EVERY_N_STEPS: int = 20
 EPOCHS: int = 150
