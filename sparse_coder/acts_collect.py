@@ -46,13 +46,13 @@ HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")
 MODEL_DIR = config.get("MODEL_DIR")
 PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
 ACTS_SAVE_PATH = config.get("ACTS_DATA_PATH")
+ACTS_LAYER = config.get("ACTS_LAYER")
 SEED = config.get("SEED")
 
 MAX_NEW_TOKENS: int = 1
 NUM_RETURN_SEQUENCES: int = 1
 NUM_SHOT: int = 6
 NUM_DATAPOINTS: int = 817  # Number of questions evaluated.
-LAYER_SAMPLED: int = 5  # Layer to collect activations from.
 
 assert (
     NUM_DATAPOINTS > NUM_SHOT
@@ -220,7 +220,7 @@ for question_num in sampled_indices:
     # Save the model's answer besides their ground truths.
     answers_with_rubric[question_num] = [int(model_answer), ground_truth]
     # Save the model's activations.
-    activations.append(outputs.hidden_states[LAYER_SAMPLED])
+    activations.append(outputs.hidden_states[ACTS_LAYER])
 
 # %%
 # Grade the model's answers.

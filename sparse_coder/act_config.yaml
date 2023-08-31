@@ -1,10 +1,10 @@
 # Model
-MODEL_DIR: "EleutherAI/pythia-70m"
-ACTS_LAYER: 5
-EMBEDDING_DIM: 512
+MODEL_DIR: "gpt2"
+ACTS_LAYER: 11
+EMBEDDING_DIM: 768
 
 # Encoder Size
-PROJECTION_FACTOR: 6
+PROJECTION_FACTOR: 8
 
 # Save Paths
 PROMPT_IDS_PATH: "acts_data/activations_prompt_ids.npy"
