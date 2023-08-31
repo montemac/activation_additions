@@ -30,8 +30,9 @@ EMBEDDING_DIM = config.get("EMBEDDING_DIM")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = EMBEDDING_DIM * PROJECTION_FACTOR
 
-# We want to weight L1 quite heavily, versus MSE.
-LAMBDA_L1: float = 2e2  # (Pythia: 0.5, GPT-2: 2e2)
+# We want to weight L1 quite heavily, versus MSE. Drive towards an L_0 of
+# 20-100.
+LAMBDA_L1: float = 0.5  # (Pythia: 0.5, GPT-2: 2e2)
 LEARNING_RATE: float = 1e-3
 LOG_EVERY_N_STEPS: int = 20
 EPOCHS: int = 150
@@ -165,7 +166,7 @@ class Autoencoder(pl.LightningModule):
         )
 
         training_loss = mse_loss + (LAMBDA_L1 * l1_loss)
-        l0_sparsity = (encoded_state != 0).float().sum(dim=-1).mean()
+        l0_sparsity = (encoded_state != 0).float().sum(dim=-1).mean().item()
         print(f"L_0: {round(l0_sparsity, 2)}")
 
         self.log("training loss", training_loss)
