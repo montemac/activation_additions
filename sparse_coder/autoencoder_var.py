@@ -9,7 +9,7 @@ is your learned dictionary.
 
 import numpy as np
 import torch as t
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import yaml
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
@@ -125,15 +125,15 @@ validation_loader: DataLoader = DataLoader(
 
 
 # %%
-# Define a tied autoencoder (with the default `torch` biases), with
-# `lightning`.
+# Define a tied autoencoder, with `lightning`.
 class Autoencoder(pl.LightningModule):
     """An autoencoder architecture."""
 
-    def __init__(self):
+    def __init__(self, lr=LEARNING_RATE):
         super().__init__()
+        self.save_hyperparameters()
         self.encoder = t.nn.Sequential(
-            t.nn.Linear(EMBEDDING_DIM, PROJECTION_DIM),
+            t.nn.Linear(EMBEDDING_DIM, PROJECTION_DIM, bias=True),
             t.nn.ReLU(),
         )
 
@@ -198,14 +198,14 @@ class Autoencoder(pl.LightningModule):
 
     def configure_optimizers(self):
         """Configure the `Adam` optimizer."""
-        return t.optim.Adam(self.parameters(), lr=LEARNING_RATE)
+        return t.optim.Adam(self.parameters(), lr=self.hparams.lr)
 
 
 # %%
 # Validation-loss-based early stopping.
 early_stopping = pl.callbacks.EarlyStopping(
     monitor="validation loss",
-    min_delta=0.0,
+    min_delta=1e-5,
     patience=3,
     verbose=False,
     mode="min",
@@ -220,6 +220,16 @@ trainer: pl.Trainer = pl.Trainer(
     max_epochs=EPOCHS,
     log_every_n_steps=LOG_EVERY_N_STEPS,
 )
+tuner = pl.tuner.Tuner(trainer)
+
+lr_finder = tuner.lr_find(
+    model, train_dataloaders=training_loader, val_dataloaders=validation_loader
+)
+fig = lr_finder.plot(suggest=True)
+fig.show()
+new_lr = lr_finder.suggestion()
+model.hparams.lr = new_lr
+print(f"New learning rate: {new_lr}")
 
 trainer.fit(
     model,
