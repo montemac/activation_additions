@@ -110,7 +110,7 @@ def shuffle_answers(choices, labels_one_hot):
 
 # %%
 # Convert one-hot labels to int indices.
-def unhot(labels: list) -> int:
+def unhot(labels) -> int:
     """Change the one-hot ground truth labels to a 1-indexed int."""
     return np.argmax(labels) + 1
 
@@ -165,24 +165,30 @@ for question_num in sampled_indices:
         # Add on the correct answer under each multishot question.
         multishot += "A: (" + str(correct_answer) + ")\n"
 
-    print(multishot)
-
-    # Build the current question.
+    # Build the current question with shuffled choices.
     question: str = (
         "Q: " + dataset["validation"]["question"][question_num] + "\n"
     )
-    for option_num in range(
-        len(dataset["validation"]["mc1_targets"][question_num]["choices"])
-    ):
+
+    unshuffled_choices_current: list = dataset["validation"]["mc1_targets"][
+        question_num
+    ]["choices"]
+    unshuffled_labels_current: list = dataset["validation"]["mc1_targets"][
+        question_num
+    ]["labels"]
+
+    shuffled_choices_current, shuffled_labels_current = shuffle_answers(
+        unshuffled_choices_current, unshuffled_labels_current
+    )
+
+    for option_num in range(len(shuffled_choices_current)):
         # option_num is similarly 0-indexed, but I want 1-indexed options here
         # too.
         question += (
             "("
             + str(option_num + 1)
             + ") "
-            + dataset["validation"]["mc1_targets"][question_num]["choices"][
-                option_num
-            ]
+            + shuffled_choices_current[option_num]
             + "\n"
         )
     # I only want the model to actually answer the question, with a single
@@ -205,21 +211,12 @@ for question_num in sampled_indices:
     answer_id: t.LongTensor = t.argmax(outputs.logits[:, -1, :], dim=-1)
     model_answer: str = tokenizer.decode(answer_id)
 
-    print(model_answer)
-
     # Cut the completion down to just its answer integer.
     model_answer = model_answer.split("\n")[-1]
     model_answer = model_answer.replace("A: (", "")
 
     # Get the ground truth answer.
-    labels_one_hot: list = dataset["validation"]["mc1_targets"][question_num][
-        "labels"
-    ]
-
-    print(labels_one_hot)
-
-    ground_truth: int = unhot(labels_one_hot)
-
+    ground_truth: int = unhot(shuffled_labels_current)
     # Save the model's answer besides their ground truths.
     answers_with_rubric[question_num] = [int(model_answer), ground_truth]
     # Save the model's activations.
