@@ -4,7 +4,7 @@ ACTS_LAYER: 6
 EMBEDDING_DIM: 512
 
 # Encoder Size
-PROJECTION_FACTOR: 1
+PROJECTION_FACTOR: 0.01
 
 # Save Paths
 PROMPT_IDS_PATH: "acts_data/activations_prompt_ids.npy"
