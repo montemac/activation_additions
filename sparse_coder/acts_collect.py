@@ -32,12 +32,12 @@ assert (
 
 # %%
 # Set up constants.
-with open("act_access.yaml", "r") as f:
+with open("act_access.yaml", "r", encoding="utf-8") as f:
     try:
         access = yaml.safe_load(f)
     except yaml.YAMLError as e:
         print(e)
-with open("act_config.yaml", "r") as f:
+with open("act_config.yaml", "r", encoding="utf-8") as f:
     try:
         config = yaml.safe_load(f)
     except yaml.YAMLError as e:
@@ -150,14 +150,10 @@ for question_num in sampled_indices:
             unshuffled_choices, unshuffled_labels
         )
 
-        for choice_num in range(len(shuffled_choices)):
+        for choice_num, shuffled_choice in enumerate(shuffled_choices):
             # choice_num is 0-indexed, but I want to display 1-indexed options.
             multishot += (
-                "("
-                + str(choice_num + 1)
-                + ") "
-                + shuffled_choices[choice_num]
-                + "\n"
+                "(" + str(choice_num + 1) + ") " + shuffled_choice + "\n"
             )
 
         # Get a label int from the `labels` list.
@@ -181,16 +177,10 @@ for question_num in sampled_indices:
         unshuffled_choices_current, unshuffled_labels_current
     )
 
-    for option_num in range(len(shuffled_choices_current)):
+    for option_num, shuffled_option in enumerate(shuffled_choices_current):
         # option_num is similarly 0-indexed, but I want 1-indexed options here
         # too.
-        question += (
-            "("
-            + str(option_num + 1)
-            + ") "
-            + shuffled_choices_current[option_num]
-            + "\n"
-        )
+        question += "(" + str(option_num + 1) + ") " + shuffled_option + "\n"
     # I only want the model to actually answer the question, with a single
     # token, so I tee it up here with the opening parentheses to a
     # multiple-choice answer integer.
