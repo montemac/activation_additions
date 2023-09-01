@@ -41,7 +41,7 @@ EMBEDDING_DIM = config.get("EMBEDDING_DIM")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
-DISPLAY_QUESTIONS: int = 3
+DISPLAY_QUESTIONS: int = 10
 
 # %%
 # Reproducibility.
@@ -167,5 +167,6 @@ html_interactable = text_neuron_activations(
 )
 
 # %%
-# Show the visualization.
+# Show the visualization. Note that these render better with one sample per
+# page.
 html_interactable  # pylint: disable=pointless-statement
