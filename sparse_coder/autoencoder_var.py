@@ -9,7 +9,7 @@ is your learned dictionary.
 
 import numpy as np
 import torch as t
-import lightning.pytorch as L
+import lightning as L
 import yaml
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
@@ -32,8 +32,8 @@ PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
 # We want to weight L1 quite heavily, versus MSE. Drive towards an L_0 of
 # 20-100 at convergence.
-LAMBDA_L1: float = 4.0
-LEARNING_RATE: float = 1e-4
+LAMBDA_L1: float = 1.0
+LEARNING_RATE: float = 1e-2
 LOG_EVERY_N_STEPS: int = 5
 EPOCHS: int = 150
 
@@ -168,8 +168,8 @@ class Autoencoder(L.LightningModule):
         training_loss = mse_loss + (LAMBDA_L1 * l1_loss)
         l0_sparsity = (encoded_state != 0).float().sum(dim=-1).mean().item()
         print(f"L_0: {round(l0_sparsity, 2)}")
-
         self.log("training loss", training_loss)
+        print(f"train loss: {round(training_loss.item(), 2)}")
         self.log("L1 component", LAMBDA_L1 * l1_loss)
         self.log("MSE component", mse_loss)
         self.log("L0 sparsity", l0_sparsity)
@@ -203,7 +203,7 @@ class Autoencoder(L.LightningModule):
 
 # %%
 # Validation-loss-based early stopping.
-early_stopping = L.callbacks.EarlyStopping(
+early_stop = L.pytorch.callbacks.EarlyStopping(
     monitor="validation loss",
     min_delta=1e-5,
     patience=3,
@@ -216,23 +216,15 @@ early_stopping = L.callbacks.EarlyStopping(
 model: Autoencoder = Autoencoder()
 trainer: L.Trainer = L.Trainer(
     accelerator="auto",
-    callbacks=[early_stopping],
+    callbacks=early_stop,
     max_epochs=EPOCHS,
     log_every_n_steps=LOG_EVERY_N_STEPS,
-)
-tuner = L.tuner.Tuner(trainer)
-
-lr_finder = tuner.lr_find(
-    model,
-    train_dataloaders=training_loader,
-    val_dataloaders=validation_loader,
 )
 
 trainer.fit(
     model,
     train_dataloaders=training_loader,
     val_dataloaders=validation_loader,
-    new_lr=lr_finder.suggestion(),
 )
 
 # %%
