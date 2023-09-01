@@ -32,7 +32,7 @@ PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
 # We want to weight L1 quite heavily, versus MSE. Drive towards an L_0 of
 # 20-100 at convergence.
-LAMBDA_L1: float = 1.0
+LAMBDA_L1: float = 1e-2
 LEARNING_RATE: float = 1e-2
 LOG_EVERY_N_STEPS: int = 5
 EPOCHS: int = 150
