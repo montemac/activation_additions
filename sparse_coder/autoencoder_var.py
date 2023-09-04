@@ -25,6 +25,7 @@ with open("act_config.yaml", "r") as f:
 SEED = config.get("SEED")
 ACTS_DATA_PATH = config.get("ACTS_DATA_PATH")
 PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
+BIASES_PATH = config.get("BIASES_PATH")
 ENCODER_PATH = config.get("ENCODER_PATH")
 EMBEDDING_DIM = config.get("EMBEDDING_DIM")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
@@ -228,5 +229,6 @@ trainer.fit(
 )
 
 # %%
-# Save the trained encoder matrix.
+# Save the trained encoder weights and biases.
 t.save(model.encoder[0].weight.data, ENCODER_PATH)
+t.save(model.encoder[0].bias.data, BIASES_PATH)

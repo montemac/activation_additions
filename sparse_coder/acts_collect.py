@@ -252,9 +252,6 @@ concat_activations: t.Tensor = t.cat(
     dim=0,
 )
 
-# ReLU the activations block.
-concat_activations = t.relu(concat_activations)
-
 # Prep to save the prompt_ids.
 prompt_ids_list: list = []
 for question_ids in prompts_ids:

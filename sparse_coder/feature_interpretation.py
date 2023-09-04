@@ -37,6 +37,7 @@ TOKENIZER_DIR = config.get("MODEL_DIR")
 PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
 ACTS_DATA_PATH = config.get("ACTS_DATA_PATH")
 ENCODER_PATH = config.get("ENCODER_PATH")
+BIASES_PATH = config.get("BIASES_PATH")
 SEED = config.get("SEED")
 EMBEDDING_DIM = config.get("EMBEDDING_DIM")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
@@ -59,16 +60,21 @@ tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
 )
 
 # %%
-# Rebuild the learned encoder as a linear layer module.
+# Rebuild the learned encoder.
 imported_weights: t.Tensor = t.load(ENCODER_PATH)
-encoder = t.nn.Linear(EMBEDDING_DIM, PROJECTION_DIM)
+imported_biases: t.Tensor = t.load(BIASES_PATH)
 
 
 class Encoder:
     """Reconstruct the encoder as a callable linear layer."""
 
     def __init__(self):
-        self.encoder = t.nn.Sequential(encoder)
+        """Initialize the encoder."""
+        self.encoder_layer = t.nn.Linear(EMBEDDING_DIM, PROJECTION_DIM)
+        self.encoder_layer.weight.data = imported_weights
+        self.encoder_layer.bias.data = imported_biases
+
+        self.encoder = t.nn.Sequential(self.encoder_layer, t.nn.ReLU())
 
     def __call__(self, inputs):
         """Project to the sparse latent space."""
