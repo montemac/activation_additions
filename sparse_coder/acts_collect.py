@@ -246,11 +246,14 @@ padded_activations: list[t.Tensor] = [
     pad_activations(tensor, max_size) for tensor in activations
 ]
 
-# Concat and store the model activations.
+# Concat the model activations.
 concat_activations: t.Tensor = t.cat(
     padded_activations,
     dim=0,
 )
+
+# ReLU the activations block.
+concat_activations = t.relu(concat_activations)
 
 # Prep to save the prompt_ids.
 prompt_ids_list: list = []
