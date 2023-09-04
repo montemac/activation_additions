@@ -43,7 +43,7 @@ EMBEDDING_DIM = config.get("EMBEDDING_DIM")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
-TOP_K: int = 10
+TOP_K: int = 20
 NUM_DIMS_PRINTED: int = 50
 SIG_FIGS = None
 
@@ -171,7 +171,7 @@ def calculate_effects(
     return feature_values
 
 
-# Return just the top-k negative and positive tokens.
+# Return just the top-k tokens.
 def select_top_k_tokens(
     effects_dict: defaultdict[int, defaultdict[list[float]]]
 ):
@@ -183,10 +183,8 @@ def select_top_k_tokens(
         sorted_effects = sorted(
             tokens_dict.items(), key=lambda x: x[1], reverse=True
         )
-        # Add only the top-k and bottom-k tokens.
-        top_k_tokens[feature_dim] = (
-            sorted_effects[:TOP_K] + sorted_effects[-TOP_K:]
-        )
+        # Add the top-k tokens.
+        top_k_tokens[feature_dim] = sorted_effects[:TOP_K]
 
     return top_k_tokens
 
@@ -196,27 +194,20 @@ def round_floats(float):
     return round(float, SIG_FIGS)
 
 
-def populate_table(_table, top_bottom_k):
+def populate_table(_table, top_k_tokes):
     """Put the results in the table appropriately."""
-    for feature_dim, tokens_list in list(top_bottom_k.items())[
+    for feature_dim, tokens_list in list(top_k_tokes.items())[
         :NUM_DIMS_PRINTED
     ]:
         # Replace the tokenizer's special space char with a space literal.
         top_tokens = [str(t).replace("Ġ", " ") for t, _ in tokens_list[:TOP_K]]
-        bottom_tokens = [
-            str(t).replace("Ġ", " ") for t, _ in tokens_list[-TOP_K:]
-        ]
-
         top_values = [str(round_floats(v)) for _, v in tokens_list[:TOP_K]]
-        bottom_values = [str(round_floats(v)) for _, v in tokens_list[-TOP_K:]]
 
         _table.add_row(
             [
                 f"{feature_dim}",
                 ", ".join(top_tokens),
                 ", ".join(top_values),
-                ", ".join(bottom_tokens),
-                ", ".join(bottom_values),
             ]
         )
 
@@ -228,8 +219,6 @@ table.field_names = [
     "Dimension",
     f"Top Tokens",
     f"Top-Token Activations",
-    f"Bottom Tokens",
-    f"Bottom-Token Activations",
 ]
 
 mean_effects = calculate_effects(prompts_strings, feature_acts)
