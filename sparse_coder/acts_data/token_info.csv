@@ -1,0 +1,158 @@
+Dimension,Top Tokens,Top-Token Activations
+2, aut,1
+7,"illi,  Be, nec, rom, St,  hyste","1, 1, 1, 1, 1, 1"
+9," Rol,  Schw,  Mill, umin,  millions, aqu","2, 2, 2, 1, 1, 1"
+16," Person,  stayed,  Time,  rig,  sub, Return","2, 1, 1, 1, 1, 1"
+18, GE,1
+19," able,  refers, anc,  contribute,  attempting,  contributes","2, 1, 1, 1, 1, 1"
+20," M,  Na,  Marie,  suspected,  Dem,  Johann","1, 1, 1, 1, 1, 1"
+21, unl,1
+22,"illi, rom,  cl","1, 1, 1"
+32,"ek,  physicist,  Alexander, ynman,  sailor, cos","1, 1, 1, 1, 1, 1"
+33," stayed, who","1, 1"
+40," Kas, erv, iz,  rep, athe,  Cer","1, 1, 1, 1, 1, 1"
+44," blends,  unl,  With,  Mr, Fe, mer","2, 1, 1, 1, 1, 1"
+45," Way, isexual,  Sun,  hospital,  helium,  spine","2, 2, 2, 2, 2, 2"
+50," novels,  factors,  factor,  book, ames,  elements","1, 1, 1, 1, 1, 1"
+53,"ille,  Ob","1, 1"
+55, Kon,1
+57," Cov,  highly,  COVID,  Mill, Snow,  Iron","1, 1, 1, 1, 1, 1"
+60," lots,  series,  thousands,  Battle,  existence,  inches","1, 1, 1, 1, 1, 1"
+61,"Cast, izen, illary,  Franz,  Rol, olds","2, 1, 1, 1, 1, 1"
+72," several,  seven","1, 1"
+73," Le,  Getting,  mention,  Executive,  umbrella,  tie","2, 2, 2, 2, 2, 2"
+74,"ological, ical","1, 1"
+76," billions,  Priv,  Tw, Ins,  Little,  McC","1, 1, 1, 1, 1, 1"
+82, Bol,1
+83,ten,1
+89," Priv,  Tar, ais","1, 1, 1"
+93," unusually,  openly,  perfectly,  legally, uther, ds","2, 1, 1, 1, 1, 1"
+96," Johann,  birthday,  Mor,  Ger,  Abdul,  ind","1, 1, 1, 1, 1, 1"
+101," lower,  compelling,  absolute,  plastic,  highest, human","1, 1, 1, 1, 1, 1"
+103," Friedrich,  Hay,  unl,  col,  Falk,  Michel","1, 1, 1, 1, 1, 1"
+104,abl,1
+107," invoke,  bites,  told,  leaving,  inform,  kisses","1, 1, 1, 1, 1, 1"
+110, Gu,1
+115, pupp,1
+130," approximately,  emit,  temporary, cle,  mat,  wave","1, 1, 1, 1, 1, 1"
+134,"20,  pm,  afternoon","1, 1, 1"
+136," Hew,  Shim,  Chuck,  silver,  torture,  multid","2, 2, 2, 2, 2, 2"
+137,"ens, ologists,  rabbits,  farming,  helicopters,  hens","2, 1, 1, 1, 1, 1"
+141," Kas, enda","1, 1"
+144,"Tw,  Che,  Bl,  Tw, pir","1, 1, 1, 1, 1"
+145," below,  too","1, 1"
+147,B,1
+151," asc, anged,  chopped,  severely,  decreased,  undergo","1, 1, 1, 1, 1, 1"
+155," Has,  Did, sf,  Independence,  Should","1, 1, 1, 1, 1"
+157,"ipers, ais","1, 1"
+158, Priv,1
+168,"6, 7, 5, 3","1, 1, 1, 1"
+170, lots,1
+171, Kas,1
+178," sl,  masters,  undergraduate,  efforts,  grades, ides","1, 1, 1, 1, 1, 1"
+180, prohibiting,1
+183," refers,  able,  contribute,  accepted,  required,  closer","3, 2, 2, 2, 1, 1"
+184, Ther,1
+186,sf,1
+187,abl,1
+188," situation,  disorders,  studies,  novels,  disorder,  illness","1, 1, 1, 1, 1, 1"
+190,"icides, une, 4,  Venus, 6, 2","3, 3, 2, 2, 2, 2"
+193," highly,  multid,  silver,  Hew, Salt","1, 1, 1, 1, 1"
+195," 23,  11,  12,  8,  15,  4","1, 1, 1, 1, 1, 1"
+196," Ger,  Wal","1, 1"
+199,"Good,  pleasant,  frivolous,  addictive,  Jacksonville, itable","1, 1, 1, 1, 1, 1"
+200," La,  Hay,  Gal,  Chart","1, 1, 1, 1"
+201," Was,  Is","1, 1"
+206," ex, ft,  Mat,  scientifically,  Miranda,  single","1, 1, 1, 1, 1, 1"
+207," lacks,  perfectly, kes","1, 1, 1"
+214," Pl,  happiness,  smell, une,  able, uto","1, 1, 1, 1, 1, 1"
+219," except,  fought,  conquered,  still,  vs,  Because","1, 1, 1, 1, 1, 1"
+222,"ler,  Dow, mer, iger,  Chel,  absolute","1, 1, 1, 1, 1, 1"
+223," unl,  Ul, oqu,  Wool, ied,  Ferr","1, 1, 1, 1, 1, 1"
+225,"ft, aqu, ensory","1, 1, 1"
+232,urop,1
+233, prohibits,1
+236," Pil,  8,  Gal","1, 1, 1"
+243,"Q,  Himal,  international,  regular, ure,  Pri","5, 4, 4, 4, 4, 4"
+253," Kas,  em","1, 1"
+254,abl,1
+262,sf,1
+263," miles,  roads,  pm,  went, 00,  worked","1, 1, 1, 1, 1, 1"
+269,"nec,  saf, anc, ract, pt, abl","2, 2, 2, 1, 1, 1"
+270, Cr,1
+274, Be,1
+275," Theorem,  purpose,  circle,  required,  verge,  end","2, 1, 1, 1, 1, 1"
+285," educational,  qual,  sc,  exagger,  personal,  mathematical","1, 1, 1, 1, 1, 1"
+286," refers,  able, une,  Pil,  Monroe,  United","3, 2, 2, 2, 2, 2"
+298," feet, not","1, 1"
+301," che,  qual,  Where,  Che,  beats,  What","1, 1, 1, 1, 1, 1"
+305," Priv,  Mat","1, 1"
+308,"Return,  founder,  Person,  existence,  end","1, 1, 1, 1, 1"
+319,"1920,  Bert,  weeks,  1940,  month,  scholars","2, 2, 2, 2, 2, 2"
+320,"illi, business,  Rol,  Ger,  Cer,  Schw","1, 1, 1, 1, 1, 1"
+321,abl,1
+323," soft,  Gen,  Greg,  28,  fing,  vs","1, 1, 1, 1, 1, 1"
+327, vary,1
+328," bean,  pl,  Gre,  pe,  peanut,  Mal","2, 2, 2, 2, 2, 2"
+330, ps,1
+331,"ef,  Cron, El,  Mil, ten, uther","2, 2, 2, 2, 2, 2"
+334," lacks, abl","1, 1"
+335,")., '., ., ""., %.","1, 1, 1, 1, 1"
+336," Sit,  221,  25","1, 1, 1"
+339,ough,1
+341," modern,  spectacular,  potential,  campus, Greek,  ideal","1, 1, 1, 1, 1, 1"
+343," Complete,  parchment,  gear,  Last,  programs,  birthday","3, 2, 2, 2, 2, 2"
+350," slavery, ment,  19,  Bert,  Study,  massacre","1, 1, 1, 1, 1, 1"
+351," Kas,  ind","1, 1"
+352, Ves,1
+355," databases,  AM,  pregnancy,  frivolous,  indoors,  green","1, 1, 1, 1, 1, 1"
+359,"!"",  helium,  Sundays,  educational,  II,  warmth","2, 2, 2, 2, 2, 2"
+364," d, American,  tr,  meet, erv,  Jane","1, 1, 1, 1, 1, 1"
+365,St,1
+372,"&,  Pil,  ex,  re,  stands, E","1, 1, 1, 1, 1, 1"
+373, Living,1
+376," Are,  began,  Were,  Is, une,  originated","2, 1, 1, 1, 1, 1"
+377, millions,1
+380, Is,1
+382," Theorem, Ins,  founder, Return,  existence,  list","1, 1, 1, 1, 1, 1"
+389," lacks,  poly,  chlor,  un,  aspart, uther","1, 1, 1, 1, 1, 1"
+390,"une, ay,  Venus,  Chile,  Mars,  Jupiter","1, 1, 1, 1, 1, 1"
+394,"but, oqu","1, 1"
+397,"regulated,  selling, reasonable,  trivial,  accumulated,  buying","1, 1, 1, 1, 1, 1"
+398," Kas,  Cov, Dr","1, 1, 1"
+399, reset,1
+400," downs,  conservative,  Chief,  thousands,  level, âĢĻ","2, 2, 1, 1, 1, 1"
+401," total,  flav","1, 1"
+402," 85,  7,  Notre,  unl,  mag,  McC","1, 1, 1, 1, 1, 1"
+404," irrit,  8,  vibrant,  chili, icking, illi","2, 1, 1, 1, 1, 1"
+407," permanent,  Species,  premature,  privileged,  rabbit, angered","1, 1, 1, 1, 1, 1"
+410," imp,  intro, uda, pt,  bo,  conspir","2, 2, 2, 2, 2, 2"
+412, psych,1
+420, absolute,1
+423,St,1
+424,St,1
+431," presented,  match,  restart,  penetrate,  necessarily, facing","2, 2, 1, 1, 1, 1"
+435, lacks,1
+436,"St, abl,  premature","1, 1, 1"
+437," elements,  series,  militia,  waves,  cult,  barrier","1, 1, 1, 1, 1, 1"
+438,abl,1
+443,"ICO, co","1, 1"
+447," gy,  acc,  extr, pt,  Pl, abl","1, 1, 1, 1, 1, 1"
+449," factors,  Rec,  mental,  factor,  Sm, of","2, 1, 1, 1, 1, 1"
+451,aqu,1
+456,St,1
+462, slightly,1
+470, weeks,1
+473," Sit, abl,  Bar,  Private,  permanent","1, 1, 1, 1, 1"
+477," rep,  billions,  Prov,  suff,  Comp,  Hind","1, 1, 1, 1, 1, 1"
+479,"rico, Return,  By,  Theorem,  shape,  millions","2, 1, 1, 1, 1, 1"
+483, Schw,1
+488, lam,1
+490, highly,1
+494,St,1
+495," below,  atomic,  square,  8,  beats,  seafood","3, 2, 2, 2, 2, 2"
+498,St,1
+504,"ois,  lacks,  conquered,  contracted,  Mon,  civil","1, 1, 1, 1, 1, 1"
+505," Lav,  Sal,  Lanc, cell, St, enda","1, 1, 1, 1, 1, 1"
+506," bo,  suff, rans,  asc,  mol,  locom","1, 1, 1, 1, 1, 1"
+509, Kas,1
