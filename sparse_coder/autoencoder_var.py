@@ -169,11 +169,11 @@ class Autoencoder(L.LightningModule):
         training_loss = mse_loss + (LAMBDA_L1 * l1_loss)
         l0_sparsity = (encoded_state != 0).float().sum(dim=-1).mean().item()
         print(f"L_0: {round(l0_sparsity, 2)}")
-        self.log("training loss", training_loss)
+        self.log("training loss", training_loss, sync_dist=True)
         print(f"train loss: {round(training_loss.item(), 2)}")
-        self.log("L1 component", LAMBDA_L1 * l1_loss)
-        self.log("MSE component", mse_loss)
-        self.log("L0 sparsity", l0_sparsity)
+        self.log("L1 component", LAMBDA_L1 * l1_loss, sync_dist=True)
+        self.log("MSE component", mse_loss, sync_dist=True)
+        self.log("L0 sparsity", l0_sparsity, sync_dist=True)
         return training_loss
 
     # Unused import resolves `lightning` bug.
@@ -194,7 +194,7 @@ class Autoencoder(L.LightningModule):
         )
         validation_loss = mse_loss + (LAMBDA_L1 * l1_loss)
 
-        self.log("validation loss", validation_loss)
+        self.log("validation loss", validation_loss, sync_dist=True)
         return validation_loss
 
     def configure_optimizers(self):

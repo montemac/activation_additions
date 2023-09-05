@@ -11,6 +11,7 @@ PROMPT_IDS_PATH: "acts_data/activations_prompt_ids.npy"
 ACTS_DATA_PATH: "acts_data/activations_dataset.pt"
 ENCODER_PATH: "acts_data/learned_encoder.pt"
 BIASES_PATH: "acts_data/learned_biases.pt"
+TOP_K_INFO_PATH: "acts_data/token_info.csv"
 
 # Reproducibility
 SEED: 0
