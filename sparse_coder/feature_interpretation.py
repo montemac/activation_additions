@@ -44,8 +44,8 @@ EMBEDDING_DIM = config.get("EMBEDDING_DIM")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
-TOP_K: int = 20
-NUM_DIMS_PRINTED: int = 50
+TOP_K: int = 6
+NUM_DIMS_PRINTED: int = 512
 SIG_FIGS = None
 
 # %%
@@ -153,7 +153,7 @@ feature_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
 def calculate_effects(
     tokens_atlas: list[list[str]], feature_activations: list[t.Tensor]
 ) -> defaultdict[int, defaultdict[str, float]]:
-    """Calculate the per input token summed activation for each feature."""
+    """Calculate the per input token activation for each feature."""
     # The argless lambda always returns the nested defaultdict.
     feature_values = defaultdict(lambda: defaultdict(list))
 
@@ -164,10 +164,12 @@ def calculate_effects(
             for feature_dim, act in enumerate(activation[:NUM_DIMS_PRINTED]):
                 feature_values[feature_dim][token].append(act.item())
 
-    # Since tokens may recur, we need to average per token per feature.
+    # Since tokens may repeat in the input, we need to average per token per
+    # feature. We don't want to _sum_ these, since that lets the input set the
+    # token weight.
     for feature_dim, token_dict in feature_values.items():
         for token, values in token_dict.items():
-            feature_values[feature_dim][token] = np.sum(values)
+            feature_values[feature_dim][token] = np.mean(values)
 
     return feature_values
 
@@ -180,7 +182,7 @@ def select_top_k_tokens(
     top_k_tokens = defaultdict(list)
 
     for feature_dim, tokens_dict in effects_dict.items():
-        # Sort tokens by their summed activations.
+        # Sort tokens by their dimension activations.
         sorted_effects = sorted(
             tokens_dict.items(), key=lambda x: x[1], reverse=True
         )
