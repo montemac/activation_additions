@@ -1,7 +1,7 @@
 # Model
-MODEL_DIR: "EleutherAI/pythia-70m"
-ACTS_LAYER: 5
-EMBEDDING_DIM: 512
+MODEL_DIR: "meta-llama/Llama-2-70b-chat-hf"
+ACTS_LAYER: 16
+EMBEDDING_DIM: 8192
 
 # Encoder Size
 PROJECTION_FACTOR: 1
