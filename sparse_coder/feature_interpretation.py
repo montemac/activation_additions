@@ -7,6 +7,7 @@ Requires a HF access token to get `Llama-2`'s tokenizer.
 
 
 from collections import defaultdict
+from typing import Union
 
 import numpy as np
 import prettytable
@@ -148,7 +149,7 @@ feature_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
 
 
 # %%
-# Calculate per input token (mean) activation, for each feature dimension.
+# Calculate per-input-token summed activation, for each feature dimension.
 def calculate_effects(
     tokens_atlas: list[list[str]], feature_activations: list[t.Tensor]
 ) -> defaultdict[int, defaultdict[str, float]]:
@@ -166,7 +167,7 @@ def calculate_effects(
     # Since tokens may recur, we need to average per token per feature.
     for feature_dim, token_dict in feature_values.items():
         for token, values in token_dict.items():
-            feature_values[feature_dim][token] = np.mean(values)
+            feature_values[feature_dim][token] = np.sum(values)
 
     return feature_values
 
@@ -189,25 +190,41 @@ def select_top_k_tokens(
     return top_k_tokens
 
 
-def round_floats(float):
+def round_floats(num: Union[float, int]) -> Union[float, int]:
     """Round floats to number decimal places."""
-    return round(float, SIG_FIGS)
+    return round(num, SIG_FIGS)
 
 
 def populate_table(_table, top_k_tokes):
-    """Put the results in the table appropriately."""
+    """Put the results in the table."""
     for feature_dim, tokens_list in list(top_k_tokes.items())[
         :NUM_DIMS_PRINTED
     ]:
         # Replace the tokenizer's special space char with a space literal.
         top_tokens = [str(t).replace("Ġ", " ") for t, _ in tokens_list[:TOP_K]]
-        top_values = [str(round_floats(v)) for _, v in tokens_list[:TOP_K]]
+        top_values = [round_floats(v) for _, v in tokens_list[:TOP_K]]
+
+        # Skip the dimension if its activations are all zeroed out.
+        if top_values[0] == 0:
+            continue
+
+        keeper_tokens = []
+        keeper_values = []
+
+        # Omit tokens _within a dimension_ with no activation.
+        for top_t, top_v in zip(top_tokens, top_values):
+            if top_v != 0:
+                keeper_tokens.append(top_t)
+                keeper_values.append(top_v)
+
+        # Cast survivors to string.
+        keeper_values = [str(v) for v in keeper_values]
 
         _table.add_row(
             [
                 f"{feature_dim}",
-                ", ".join(top_tokens),
-                ", ".join(top_values),
+                ", ".join(keeper_tokens),
+                ", ".join(keeper_values),
             ]
         )
 
@@ -221,8 +238,8 @@ table.field_names = [
     f"Top-Token Activations",
 ]
 
-mean_effects = calculate_effects(prompts_strings, feature_acts)
-truncated_effects = select_top_k_tokens(mean_effects)
+effects = calculate_effects(prompts_strings, feature_acts)
+truncated_effects = select_top_k_tokens(effects)
 populate_table(table, truncated_effects)
 
 print(table)
