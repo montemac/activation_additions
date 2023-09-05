@@ -203,9 +203,7 @@ def populate_table(_table, top_k_tokes):
     """Put the results in the table _and_ save to csv."""
     with open(TOP_K_INFO_PATH, "w", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writercolumns(
-            ["Dimension", "Top Tokens", "Top-Token Activations"]
-        )
+        writer.writerow(["Dimension", "Top Tokens", "Top-Token Activations"])
 
     for feature_dim, tokens_list in list(top_k_tokes.items())[
         :NUM_DIMS_PRINTED
@@ -251,7 +249,7 @@ def populate_table(_table, top_k_tokes):
 
 
 # %%
-# Tabulate select top-k affected tokens.
+# Tabulate and save results.
 table = prettytable.PrettyTable()
 table.field_names = [
     "Dimension",
