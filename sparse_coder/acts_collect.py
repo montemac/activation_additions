@@ -78,7 +78,6 @@ tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
     MODEL_DIR,
     use_auth_token=HF_ACCESS_TOKEN,
 )
-# The `prepare` wrapper takes over parallelization from here on.
 model.eval()
 
 # %%
