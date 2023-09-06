@@ -13,22 +13,33 @@ import lightning as L
 import yaml
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
+from transformers import AutoConfig
 
 
 # %%
 # Set up constants.
+with open("act_access.yaml", "r") as f:
+    try:
+        access = yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        print(e)
 with open("act_config.yaml", "r") as f:
     try:
         config = yaml.safe_load(f)
     except yaml.YAMLError as e:
         print(e)
+HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")
 SEED = config.get("SEED")
 ACTS_DATA_PATH = config.get("ACTS_DATA_PATH")
 PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
 BIASES_PATH = config.get("BIASES_PATH")
 ENCODER_PATH = config.get("ENCODER_PATH")
-EMBEDDING_DIM = config.get("EMBEDDING_DIM")
+MODEL_DIR = config.get("MODEL_DIR")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
+tsfm_config = AutoConfig.from_pretrained(
+    MODEL_DIR, use_auth_token=HF_ACCESS_TOKEN
+)
+EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
 # We want to weight L1 quite heavily, versus MSE. Drive towards an L_0 of

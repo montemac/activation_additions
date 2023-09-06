@@ -15,7 +15,7 @@ import prettytable
 import torch as t
 import transformers
 import yaml
-from transformers import AutoTokenizer, PreTrainedTokenizer
+from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizer
 
 
 assert (
@@ -42,7 +42,10 @@ ENCODER_PATH = config.get("ENCODER_PATH")
 BIASES_PATH = config.get("BIASES_PATH")
 TOP_K_INFO_PATH = config.get("TOP_K_INFO_PATH")
 SEED = config.get("SEED")
-EMBEDDING_DIM = config.get("EMBEDDING_DIM")
+tsfm_config = AutoConfig.from_pretrained(
+    TOKENIZER_DIR, use_auth_token=HF_ACCESS_TOKEN
+)
+EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
@@ -118,10 +121,16 @@ def unpad_activations(
     unpadded_activations: list = []
 
     for k, unpadded_prompt in enumerate(unpadded_prompts):
-        original_length: int = len(unpadded_prompt)
-        # From here on out, activations are unpadded, and so must be packaged
-        # as a _list of tensors_ instead of as just a tensor block.
-        unpadded_activations.append(activations_block[k, :original_length, :])
+        try:
+            original_length: int = len(unpadded_prompt)
+            # From here on out, activations are unpadded, and so must be packaged
+            # as a _list of tensors_ instead of as just a tensor block.
+            unpadded_activations.append(
+                activations_block[k, :original_length, :]
+            )
+        except IndexError:
+            print(f"IndexError at {k}")
+            break
 
     return unpadded_activations
 

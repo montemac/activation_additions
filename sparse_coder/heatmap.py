@@ -11,7 +11,7 @@ import torch as t
 import transformers
 import yaml
 from circuitsvis.activations import text_neuron_activations
-from transformers import AutoTokenizer, PreTrainedTokenizer
+from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizer
 
 
 assert (
@@ -38,7 +38,10 @@ ENCODER_PATH = config.get("ENCODER_PATH")
 BIASES_PATH = config.get("BIASES_PATH")
 SEED = config.get("SEED")
 ACTS_LAYER = config.get("ACTS_LAYER")
-EMBEDDING_DIM = config.get("EMBEDDING_DIM")
+tsfm_config = AutoConfig.from_pretrained(
+    TOKENIZER_DIR, use_auth_token=HF_ACCESS_TOKEN
+)
+EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 
