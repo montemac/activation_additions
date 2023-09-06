@@ -25,7 +25,7 @@ assert (
 # %%
 # Set up constants.
 TOP_K: int = 6
-NUM_DIMS_PRINTED: int = 512
+NUM_DIMS_PRINTED: int = 8192
 SIG_FIGS: Union[None, int] = None
 
 with open("act_access.yaml", "r", encoding="utf-8") as f:

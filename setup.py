@@ -16,6 +16,7 @@ setup(
         "lightning",
         "scikit-learn",
         "PyYAML",
+        "curcuitsvis",
         "transformer_lens",
         "torch==1.13.1",
         "numpy>=1.22.1",
