@@ -20,12 +20,12 @@ assert (
 
 # %%
 # Set up constants.
-with open("act_access.yaml", "r") as f:
+with open("act_access.yaml", "r", encoding="utf-8") as f:
     try:
         access = yaml.safe_load(f)
     except yaml.YAMLError as e:
         print(e)
-with open("act_config.yaml", "r") as f:
+with open("act_config.yaml", "r", encoding="utf-8") as f:
     try:
         config = yaml.safe_load(f)
     except yaml.YAMLError as e:
