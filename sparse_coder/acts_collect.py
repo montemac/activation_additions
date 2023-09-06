@@ -32,6 +32,15 @@ assert (
 
 # %%
 # Set up constants.
+MAX_NEW_TOKENS: int = 1
+NUM_RETURN_SEQUENCES: int = 1
+NUM_SHOT: int = 6
+NUM_DATAPOINTS: int = 817  # Number of questions evaluated.
+
+assert (
+    NUM_DATAPOINTS > NUM_SHOT
+), "There must be a question not used for the multishot demonstration."
+
 try:
     with open("act_access.yaml", "r", encoding="utf-8") as f:
         access = yaml.safe_load(f)
@@ -42,7 +51,6 @@ except FileNotFoundError:
     access = {}
 except yaml.YAMLError as e:
     print(e)
-
 with open("act_config.yaml", "r", encoding="utf-8") as f:
     try:
         config = yaml.safe_load(f)
@@ -54,15 +62,6 @@ PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
 ACTS_SAVE_PATH = config.get("ACTS_DATA_PATH")
 ACTS_LAYER = config.get("ACTS_LAYER")
 SEED = config.get("SEED")
-
-MAX_NEW_TOKENS: int = 1
-NUM_RETURN_SEQUENCES: int = 1
-NUM_SHOT: int = 6
-NUM_DATAPOINTS: int = 817  # Number of questions evaluated.
-
-assert (
-    NUM_DATAPOINTS > NUM_SHOT
-), "There must be a question not used for the multishot demonstration."
 
 # %%
 # Reproducibility.

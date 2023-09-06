@@ -20,6 +20,8 @@ assert (
 
 # %%
 # Set up constants.
+DISPLAY_QUESTIONS: int = 10
+
 with open("act_access.yaml", "r", encoding="utf-8") as f:
     try:
         access = yaml.safe_load(f)
@@ -44,8 +46,6 @@ tsfm_config = AutoConfig.from_pretrained(
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
-
-DISPLAY_QUESTIONS: int = 10
 
 # %%
 # Reproducibility.

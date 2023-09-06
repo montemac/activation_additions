@@ -20,7 +20,13 @@ assert t.__version__ >= "2.0.1", "`Lightning` requires newer `torch` versions."
 
 
 # %%
-# Set up constants.
+# Set up constants. We want to weight L1 quite heavily, versus MSE. Drive
+# towards an L_0 of 20-100 at convergence.
+LAMBDA_L1: float = 1e-2
+LEARNING_RATE: float = 1e-2
+LOG_EVERY_N_STEPS: int = 5
+EPOCHS: int = 150
+
 with open("act_access.yaml", "r", encoding="utf-8") as f:
     try:
         access = yaml.safe_load(f)
@@ -44,13 +50,6 @@ tsfm_config = AutoConfig.from_pretrained(
 )
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
-
-# We want to weight L1 quite heavily, versus MSE. Drive towards an L_0 of
-# 20-100 at convergence.
-LAMBDA_L1: float = 1e-2
-LEARNING_RATE: float = 1e-2
-LOG_EVERY_N_STEPS: int = 5
-EPOCHS: int = 150
 
 # %%
 # Use available tensor cores.

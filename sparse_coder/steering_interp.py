@@ -21,6 +21,16 @@ from transformers import (
 
 # %%
 # Set up constants.
+ADD_DIM: int = 237
+COEFF: int = 100  # Strong coeffs are needed.
+CHAT_PROMPT: str = "I want to kill you because "
+MAX_NEW_TOKENS: int = 50
+NUM_CONTINUATIONS: int = 5
+DO_SAMPLE: bool = True
+TEMPERATURE: float = 1.0
+TOP_P: float = 0.9
+REP_PENALTY: float = 2.0
+
 with open("act_access.yaml", "r", encoding="utf-8") as f:
     try:
         access = yaml.safe_load(f)
@@ -38,16 +48,6 @@ BIASES_PATH = config.get("BIASES_PATH")
 SEED = config.get("SEED")
 ACTS_LAYER = config.get("ACTS_LAYER")
 ACT_NUM: int = ACTS_LAYER
-
-ADD_DIM: int = 237
-COEFF: int = 100  # Strong coeffs are needed.
-CHAT_PROMPT: str = "I want to kill you because "
-MAX_NEW_TOKENS: int = 50
-NUM_CONTINUATIONS: int = 5
-DO_SAMPLE: bool = True
-TEMPERATURE: float = 1.0
-TOP_P: float = 0.9
-REP_PENALTY: float = 2.0
 
 sampling_kwargs: dict = {
     "temperature": TEMPERATURE,

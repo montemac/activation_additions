@@ -24,6 +24,10 @@ assert (
 
 # %%
 # Set up constants.
+TOP_K: int = 6
+NUM_DIMS_PRINTED: int = 512
+SIG_FIGS: Union[None, int] = None
+
 with open("act_access.yaml", "r", encoding="utf-8") as f:
     try:
         access = yaml.safe_load(f)
@@ -48,10 +52,6 @@ tsfm_config = AutoConfig.from_pretrained(
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
-
-TOP_K: int = 6
-NUM_DIMS_PRINTED: int = 512
-SIG_FIGS = None
 
 # %%
 # Reproducibility.
