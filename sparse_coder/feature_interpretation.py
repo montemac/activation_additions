@@ -130,6 +130,8 @@ def unpad_activations(
             )
         except IndexError:
             print(f"IndexError at {k}")
+            # This should only occur when the data collection was interrupted.
+            # In that case, we just break when the data runs short.
             break
 
     return unpadded_activations
