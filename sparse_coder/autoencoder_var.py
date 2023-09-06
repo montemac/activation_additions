@@ -16,6 +16,9 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import AutoConfig
 
 
+assert t.__version__ >= "2.0.1", "`Lightning` requires newer `torch` versions."
+
+
 # %%
 # Set up constants.
 with open("act_access.yaml", "r", encoding="utf-8") as f:
