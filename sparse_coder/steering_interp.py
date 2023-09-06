@@ -8,6 +8,7 @@ from typing import Callable, Optional, Tuple
 import accelerate
 import numpy as np
 import torch as t
+import transformers
 import yaml
 from torch import nn
 from transformers import (
@@ -70,6 +71,7 @@ model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
 tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
 model.eval()
 model: PreTrainedModel = accelerator.prepare(model)
+print(model)
 
 # %%
 # Declare hooking types.
@@ -79,6 +81,7 @@ Hooks = list[Hook]
 
 
 # %%
+# Tokenization functionality.
 def tokenize(text: str) -> dict[str, t.Tensor]:
     """Tokenize prompts onto the appropriate devices."""
     tokens = tokenizer(text, return_tensors="pt")
@@ -117,8 +120,10 @@ def pre_hooks(hooks: Hooks):
 
 def get_blocks(mod):
     """Get the blocks of a model."""
-    if isinstance(mod, PreTrainedModel):
+    if isinstance(mod, transformers.LlamaForCausalLM):
         return mod.model.layers
+    elif isinstance(mod, transformers.GPTNeoXForCausalLM):
+        return mod.gpt_neox.layers
     raise ValueError(f"Unsupported model type: {type(mod)}.")
 
 
@@ -160,24 +165,23 @@ encoder_weights = t.load(ENCODER_PATH)
 # Remember that the biases have the shape (PROJECTION_DIM,).
 encoder_biases = t.load(BIASES_PATH)
 
-
-
-steering_vec =
+raw_steering_vec = encoder_weights[:, ACT_NUM]
+biased_steering_vec = raw_steering_vec + encoder_biases[ACT_NUM]
+relued_steering_vec = t.relu(biased_steering_vec)
+steering_vec = relued_steering_vec.unsqueeze(0).unsqueeze(0)
 
 
 # %%
 # Run the model with the steering vector * COEFF.
-def _steering_hook(_, inpt):
+def _steering_hook(_, inpt: tuple):
     (resid_pre,) = inpt
-    # Only add to the first forward-pass, not to later tokens.
     if resid_pre.shape[1] == 1:
-        # Caching in `model.generate` for new tokens.
         return
     ppos, apos = resid_pre.shape[1], steering_vec.shape[1]
     assert (
         apos <= ppos
     ), f"More modified streams ({apos}) than prompt streams ({ppos})!"
-    resid_pre[:, :apos, :] += COEFF * steering_vec
+    resid_pre[:, :apos, :] += COEFF * steering_vec.to(resid_pre.device)
 
 
 layer = get_blocks(model)[ACT_NUM]
