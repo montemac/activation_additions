@@ -39,9 +39,8 @@ SEED = config.get("SEED")
 ACTS_LAYER = config.get("ACTS_LAYER")
 ACT_NUM: int = ACTS_LAYER
 
-DIMENSION_TO_ADD: int = 400
-COEFF: int = 4
-
+ADD_DIM: int = 237
+COEFF: int = 100  # Strong coeffs are needed.
 CHAT_PROMPT: str = "I want to kill you because "
 MAX_NEW_TOKENS: int = 50
 NUM_CONTINUATIONS: int = 5
@@ -165,8 +164,8 @@ encoder_weights = t.load(ENCODER_PATH)
 # Remember that the biases have the shape (PROJECTION_DIM,).
 encoder_biases = t.load(BIASES_PATH)
 
-raw_steering_vec = encoder_weights[:, ACT_NUM]
-biased_steering_vec = raw_steering_vec + encoder_biases[ACT_NUM]
+raw_steering_vec = encoder_weights[:, ADD_DIM]
+biased_steering_vec = raw_steering_vec + encoder_biases[ADD_DIM]
 relued_steering_vec = t.relu(biased_steering_vec)
 steering_vec = relued_steering_vec.unsqueeze(0).unsqueeze(0)
 
