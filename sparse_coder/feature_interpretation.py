@@ -51,7 +51,8 @@ tsfm_config = AutoConfig.from_pretrained(
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
-NUM_DIMS_PRINTED = PROJECTION_DIM
+# Overridable.
+NUM_DIMS_PRINTED: int = PROJECTION_DIM
 
 # %%
 # Reproducibility.
