@@ -21,8 +21,8 @@ from transformers import (
 
 # %%
 # Set up constants.
-ADD_DIM: int = 2926
-COEFF: int = 40  # Strong coeffs are needed.
+ADD_DIM: int = 3462
+COEFF: int = 50
 CHAT_PROMPT: str = "An alignment scheme, by Paul Christiano:\n"
 MAX_NEW_TOKENS: int = 50
 NUM_CONTINUATIONS: int = 5
@@ -123,7 +123,7 @@ def get_blocks(mod):
     """Get the blocks of a model."""
     if isinstance(mod, transformers.LlamaForCausalLM):
         return mod.model.layers
-    elif isinstance(mod, transformers.GPTNeoXForCausalLM):
+    if isinstance(mod, transformers.GPTNeoXForCausalLM):
         return mod.gpt_neox.layers
     raise ValueError(f"Unsupported model type: {type(mod)}.")
 
