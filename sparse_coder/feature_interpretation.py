@@ -123,8 +123,9 @@ def unpad_activations(
     for k, unpadded_prompt in enumerate(unpadded_prompts):
         try:
             original_length: int = len(unpadded_prompt)
-            # From here on out, activations are unpadded, and so must be packaged
-            # as a _list of tensors_ instead of as just a tensor block.
+            # From here on out, activations are unpadded, and so must be
+            # packaged as a _list of tensors_ instead of as just a tensor
+            # block.
             unpadded_activations.append(
                 activations_block[k, :original_length, :]
             )
@@ -212,8 +213,8 @@ def round_floats(num: Union[float, int]) -> Union[float, int]:
 
 def populate_table(_table, top_k_tokes):
     """Put the results in the table _and_ save to csv."""
-    with open(TOP_K_INFO_PATH, "w", encoding="utf-8") as f:
-        writer = csv.writer(f)
+    with open(TOP_K_INFO_PATH, "w", encoding="utf-8") as file:
+        writer = csv.writer(file)
         writer.writerow(["Dimension", "Top Tokens", "Top-Token Activations"])
 
     for feature_dim, tokens_list in list(top_k_tokes.items())[
@@ -248,8 +249,8 @@ def populate_table(_table, top_k_tokes):
         )
 
         # Save the top-k tokens to a csv.
-        with open(TOP_K_INFO_PATH, "a", encoding="utf-8") as f:
-            writer = csv.writer(f)
+        with open(TOP_K_INFO_PATH, "a", encoding="utf-8") as file:
+            writer = csv.writer(file)
             writer.writerow(
                 [
                     f"{feature_dim}",
@@ -264,8 +265,8 @@ def populate_table(_table, top_k_tokes):
 table = prettytable.PrettyTable()
 table.field_names = [
     "Dimension",
-    f"Top Tokens",
-    f"Top-Token Activations",
+    "Top Tokens",
+    "Top-Token Activations",
 ]
 
 effects = calculate_effects(prompts_strings, feature_acts)
