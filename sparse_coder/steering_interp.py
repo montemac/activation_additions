@@ -21,9 +21,9 @@ from transformers import (
 
 # %%
 # Set up constants.
-ADD_DIM: int = 3462
-COEFF: int = 50
-CHAT_PROMPT: str = "An alignment scheme, by Paul Christiano:\n"
+ADD_DIM: int = 111
+COEFF: int = 1
+CHAT_PROMPT: str = " "
 MAX_NEW_TOKENS: int = 50
 NUM_CONTINUATIONS: int = 5
 DO_SAMPLE: bool = True
@@ -183,7 +183,8 @@ def _steering_hook(_, inpt: tuple):
     assert (
         apos <= ppos
     ), f"More modified streams ({apos}) than prompt streams ({ppos})!"
-    resid_pre[:, :apos, :] += COEFF * steering_vec.to(resid_pre.device)
+    # Experimenting with complete overwriting.
+    resid_pre[:, :apos, :] = COEFF * steering_vec.to(resid_pre.device)
 
 
 layer = get_blocks(model)[ACT_NUM]

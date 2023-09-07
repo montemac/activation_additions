@@ -1,28 +1,165 @@
 Dimension,Top Tokens,Top-Token Activations
-213,ister,1
-544,"ister, arin, enberg, atra","1, 1, 1, 1"
-555,right,1
-829,▁closest,1
-1836,"hosts, host, ull, ▁Bull, ined","1, 1, 1, 1, 1"
-2246,omen,1
-2926,"▁billion, over, ▁million","1, 1, 1"
-3039,acre,1
-3313,work,1
-3462,▁Nobel,1
-3800,night,1
-3929,ithmetic,1
-4263,ual,1
-4466,"Cap, ▁cap, lock","1, 1, 1"
-5510,arts,1
-5521,allow,1
-5651,ume,1
-5699,orders,1
-6383,ree,1
-6638,ogs,1
-6643,"▁Chart, riz","1, 1"
-6993,ithmetic,1
-7080,▁impact,1
-7182,tion,1
-7357,ple,1
-7511,avig,1
-7667,anst,1
+5, Lis,1
+9,onna,1
+10," killer, fra,  credited,  thousands,  civil,  Mr","1, 1, 1, 1, 1, 1"
+18," Trump,  Norwegian,  Norway,  American,  Earth,  outdoors","1, 1, 1, 1, 1, 1"
+24,"illation,  innocence","1, 1"
+25," association,  qual","1, 1"
+29,"ringer,  February, hetic,  Roc, ran,  extend","1, 1, 1, 1, 1, 1"
+31,"business,  Ra","1, 1"
+34,"ringer,  behalf,  career","1, 1, 1"
+35,pen,1
+38," mil, clamation,  Tour,  guardians,  Domin,  Mil","1, 1, 1, 1, 1, 1"
+39,"fra, away","1, 1"
+40,recogn,1
+48,"inner,  dialect, aughter,  cast,  Chel,  inherit","1, 1, 1, 1, 1, 1"
+49," immediately,  wait","1, 1"
+51,ringer,1
+57," Pf, urop, upp, Card","1, 1, 1, 1"
+58, healthy,1
+63," spending, enta,  calorie,  dataset, oxygen,  wine","1, 1, 1, 1, 1, 1"
+66,bla,1
+73," fasc, pm, aupt,  cr,  stimul, urb","1, 1, 1, 1, 1, 1"
+74,arth,1
+75,ringer,1
+76,severe,1
+83, Chel,1
+88," Lis,  1918","1, 1"
+89,"ringer, mares, imps,  paths,  extras","1, 1, 1, 1, 1"
+97," vapor,  Pokemon,  stubborn,  Psych,  recreational,  psych","2, 2, 2, 2, 2, 2"
+99," unequiv,  shows,  pawn,  won,  SAT,  shouldn","1, 1, 1, 1, 1, 1"
+100," rhythm,  hydrogen, median","1, 1, 1"
+101," Man,  aren,  Barack,  Sher,  John,  Ted","1, 1, 1, 1, 1, 1"
+104," Tri,  Fortune,  Av,  unfinished,  Franc,  universal","2, 2, 2, 2, 2, 2"
+111," guard,  prosecutor, uj,  confidential,  defensive,  attorney","1, 1, 1, 1, 1, 1"
+112," Armstrong,  Freud, elson, elman,  Petersburg, heimer","1, 1, 1, 1, 1, 1"
+113,kur,1
+115," Sunday,  critically,  personally, buk,  Yes,  nearly","1, 1, 1, 1, 1, 1"
+116," drink,  Some,  drank,  carry,  Sw,  Most","1, 1, 1, 1, 1, 1"
+117," un, un, lette, enth,  unl, angered","1, 1, 1, 1, 1, 1"
+119,ind,1
+121,li,1
+125,Card,1
+127," dominance,  leadership,  coworkers,  witch,  founder,  inaugural","1, 1, 1, 1, 1, 1"
+131,vis,1
+134,"opot,  triggered, rit,  July","1, 1, 1, 1"
+135,"uj, word, ppa,  tract, digit,  coworkers","1, 1, 1, 1, 1, 1"
+137,ruct,1
+143," vamp,  kind, icks,  bunk","1, 1, 1, 1"
+145,ringer,1
+149,"won,  pick","1, 1"
+153, primordial,1
+156,ela,1
+159," tricks,  1969,  desert,  Egypt, izophren,  ulcers","2, 2, 2, 2, 2, 2"
+170,iels,1
+171,ater,1
+176,ringer,1
+180," guard,  neck,  notification,  penal,  interrog,  Neural","1, 1, 1, 1, 1, 1"
+182,"atorium,  stressed,  operations,  career,  salary,  compatibility","1, 1, 1, 1, 1, 1"
+183,"iels, ifiers, rico, ruct","1, 1, 1, 1"
+186," Franc, ringer, enn, culus,  McC, ucer","1, 1, 1, 1, 1, 1"
+187,oufl,1
+194," Viol, opot, visual, kur, suit,  intellig","2, 1, 1, 1, 1, 1"
+197, blond,1
+198,"away,  regener, atorium","1, 1, 1"
+204,fra,1
+205," pH,  atomic,  pur,  solar,  carbon,  COVID","1, 1, 1, 1, 1, 1"
+211,rit,1
+212,"named,  January","1, 1"
+215,etz,1
+216,"igne,  Kon, Qaeda,  coworkers,  wife,  detox","1, 1, 1, 1, 1, 1"
+217," moon,  Luxem,  Dame","1, 1, 1"
+220,"kur,  primordial, upp,  suffered, ringer, Steve","1, 1, 1, 1, 1, 1"
+223, Sym,1
+226, forget,1
+227," lightly,  severely,  rigorous,  highly,  distinctive,  intact","1, 1, 1, 1, 1, 1"
+232,aligned,1
+233," Method,  str,  ses, igm, arma","1, 1, 1, 1, 1"
+234,und,1
+236,"work, idden,  approach","1, 1, 1"
+238,enn,1
+239,"ifer, ef, gran,  home, opathic,  custody","1, 1, 1, 1, 1, 1"
+243,escent,1
+248,igm,1
+252," guardians,  Ves,  Ultra,  incon,  revert,  Neumann","1, 1, 1, 1, 1, 1"
+257, career,1
+258,vis,1
+262,suit,1
+266,"atham,  hands, rico, hua, pen, hand","1, 1, 1, 1, 1, 1"
+269," Lav,  Hog,  SAT,  Hoover,  Claud,  Tus","1, 1, 1, 1, 1, 1"
+270,"atham, bringing, ilt, 1990,  inaugural, igm","1, 1, 1, 1, 1, 1"
+271, catar,1
+272," panic,  cloud,  fictional,  ground,  liquid,  structured","1, 1, 1, 1, 1, 1"
+275," Payne,  Kore,  Jane,  boys","1, 1, 1, 1"
+282," databases,  Vent,  Algebra,  overnight, ruct,  acknowledge","1, 1, 1, 1, 1, 1"
+283," Bert, jug,  When,  devoted,  abbrev,  transported","1, 1, 1, 1, 1, 1"
+285," Ruth,  Arabian","1, 1"
+287," Mount,  cre,  Mel,  tre,  European,  Tus","1, 1, 1, 1, 1, 1"
+289, breastfeeding,1
+291,"XT,  considered,  Bar,  Vent,  Al,  Car","1, 1, 1, 1, 1, 1"
+295,oufl,1
+296," actions,  allegations,  conspiracy,  prompt,  seeks,  disorders","1, 1, 1, 1, 1, 1"
+298," navig,  located,  sleeping,  reserved","1, 1, 1, 1"
+299, Wit,1
+303,"war, anca,  abbrev,  obligation,  critically,  author","1, 1, 1, 1, 1, 1"
+307,"ator, urop,  Express, itable,  critically, rate","1, 1, 1, 1, 1, 1"
+308, Despite,1
+313,vis,1
+318,"The,  multi,  phenomena, the,  Building,  Your","1, 1, 1, 1, 1, 1"
+321,aligned,1
+326," panic,  poisoning,  unden,  calorie,  suicide,  More","1, 1, 1, 1, 1, 1"
+328," emotions, och","1, 1"
+337," primordial,  excav, digit,  reset, ruct,  multi","1, 1, 1, 1, 1, 1"
+338," calendar,  policies,  equipment,  Postal,  military,  institutions","1, 1, 1, 1, 1, 1"
+339,"ingo, rand,  II,  golf,  Economics,  grape","1, 1, 1, 1, 1, 1"
+342," bump, igm, bringing,  Spot, kes,  Known","1, 1, 1, 1, 1, 1"
+349," att,  chi,  microwave,  bunk,  melt,  pre","1, 1, 1, 1, 1, 1"
+350,"oxid, orc,  Lis, oston,  executive, igm","1, 1, 1, 1, 1, 1"
+358," Ra, ras,  Ages,  Miranda","1, 1, 1, 1"
+359," Tes, Cit,  Viol, elon, culus, OS","1, 1, 1, 1, 1, 1"
+362,"away, uj","1, 1"
+364,"ruct, alleg,  telling,  responding, ringer","1, 1, 1, 1, 1"
+365,"atham,  reset,  confidentiality, amation,  automatic, fra","2, 1, 1, 1, 1, 1"
+371,"Cast,  Three,  Low","1, 1, 1"
+374, primordial,1
+377,enn,1
+380,oxygen,1
+383," oils,  thirty, alleg,  address,  severely,  47","1, 1, 1, 1, 1, 1"
+384, contributes,1
+391," Neumann, ',,  later,  Complete","1, 1, 1, 1"
+393," regener,  Nag,  levels,  decreases,  obligation,  tract","1, 1, 1, 1, 1, 1"
+396, Linear,1
+397, forth,1
+402,"arettes,  Edison","1, 1"
+404," petty, ras","1, 1"
+412," Know, Big,  do,  did,  consider, 't","1, 1, 1, 1, 1, 1"
+414,"uj, ija, atorium, aging, ader, app","1, 1, 1, 1, 1, 1"
+416,"ringer, clusively,  prec, recogn,  conspir, yl","1, 1, 1, 1, 1, 1"
+421, happily,1
+424,"orm, ruct,  aph, erm, pm, ithmetic","1, 1, 1, 1, 1, 1"
+426,it,1
+435,enn,1
+438," Lav, uffs,  flip,  Independence,  Lights,  Franc","1, 1, 1, 1, 1, 1"
+440," forward,  happily, digit","1, 1, 1"
+441," penal,  Tes,  Pf,  Thornton, Salt,  stimul","1, 1, 1, 1, 1, 1"
+448,itable,1
+452,"ims, ruct","1, 1"
+454," fetal,  uterus,  Welsh,  Chamber,  BMI,  Chest","2, 1, 1, 1, 1, 1"
+456," largest,  notice","1, 1"
+459,"kur,  Linear, rico, arg,  kinder, rad","1, 1, 1, 1, 1, 1"
+460," sick,  Know,  spring,  1981,  Ber,  pur","1, 1, 1, 1, 1, 1"
+463, Adam,1
+466,rico,1
+467,"war,  Clock,  Clint,  war,  lightning,  class","1, 1, 1, 1, 1, 1"
+468," Ill,  tou,  fin,  Freud","1, 1, 1, 1"
+470,"enn,  inaugural, duct","1, 1, 1"
+473," carn,  hyste,  tract,  qual, oufl, controll","1, 1, 1, 1, 1, 1"
+478,iels,1
+481,urop,1
+487," primordial,  tract,  Paso,  Rafael,  Algebra, illary","1, 1, 1, 1, 1, 1"
+489," athe, UI","1, 1"
+491, Have,1
+494," vertically,  Jenny,  ladder, elon, ithmetic,  Jennifer","1, 1, 1, 1, 1, 1"
+495,"ational, iger,  Auto, aupt","1, 1, 1, 1"
+501,"ylvania, vere, bringing, ex","1, 1, 1, 1"
+503,rand,1

@@ -1,9 +1,9 @@
 # Model
 MODEL_DIR: "EleutherAI/pythia-70m"
-ACTS_LAYER: 3
+ACTS_LAYER: 1
 
 # Encoder Size
-PROJECTION_FACTOR: 1
+PROJECTION_FACTOR: 6
 
 # Save Paths
 PROMPT_IDS_PATH: "acts_data/activations_prompt_ids.npy"
