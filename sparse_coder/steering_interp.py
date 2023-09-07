@@ -21,9 +21,9 @@ from transformers import (
 
 # %%
 # Set up constants.
-ADD_DIM: int = 237
-COEFF: int = 100  # Strong coeffs are needed.
-CHAT_PROMPT: str = "I want to kill you because "
+ADD_DIM: int = 2926
+COEFF: int = 40  # Strong coeffs are needed.
+CHAT_PROMPT: str = "An alignment scheme, by Paul Christiano:\n"
 MAX_NEW_TOKENS: int = 50
 NUM_CONTINUATIONS: int = 5
 DO_SAMPLE: bool = True
@@ -67,7 +67,9 @@ model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
     device_map="auto",
     use_auth_token=HF_ACCESS_TOKEN,
 )
-tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
+tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
+    MODEL_DIR, use_auth_token=HF_ACCESS_TOKEN
+)
 model.eval()
 model: PreTrainedModel = accelerator.prepare(model)
 print(model)
