@@ -143,7 +143,7 @@ validation_loader: DataLoader = DataLoader(
 class Autoencoder(L.LightningModule):
     """An autoencoder architecture."""
 
-    def __init__(self, lr=LEARNING_RATE):
+    def __init__(self, lr=LEARNING_RATE):  # pylint: disable=unused-argument
         super().__init__()
         self.save_hyperparameters()
         self.encoder = t.nn.Sequential(
