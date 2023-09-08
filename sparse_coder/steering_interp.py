@@ -21,8 +21,8 @@ from transformers import (
 
 # %%
 # Set up constants.
-ADD_DIM: int = 111
-COEFF: int = 1
+ADD_DIM: int = 2965
+COEFF: int = 5
 CHAT_PROMPT: str = " "
 MAX_NEW_TOKENS: int = 50
 NUM_CONTINUATIONS: int = 5
@@ -166,8 +166,7 @@ def get_resid_pre(prompt: str, layer_num: int):
 encoder_weights = t.load(ENCODER_PATH)
 # Remember that the biases have the shape (PROJECTION_DIM,).
 encoder_biases = t.load(BIASES_PATH)
-
-raw_steering_vec = encoder_weights[:, ADD_DIM]
+raw_steering_vec = encoder_weights[ADD_DIM]
 biased_steering_vec = raw_steering_vec + encoder_biases[ADD_DIM]
 relued_steering_vec = t.relu(biased_steering_vec)
 steering_vec = relued_steering_vec.unsqueeze(0).unsqueeze(0)
