@@ -213,9 +213,9 @@ def round_floats(num: Union[float, int]) -> Union[float, int]:
 
 def populate_table(_table, top_k_tokes):
     """Put the results in the table _and_ save to csv."""
-    with open(TOP_K_INFO_PATH, "w", encoding="utf-8") as file:
-        writer = csv.writer(file)
-        writer.writerow(["Dimension", "Top Tokens", "Top-Token Activations"])
+    csv_rows: list[list] = [
+        ["Dimension", "Top Tokens", "Top-Token Activations"]
+    ]
 
     for feature_dim, tokens_list in list(top_k_tokes.items())[
         :NUM_DIMS_PRINTED
@@ -240,24 +240,19 @@ def populate_table(_table, top_k_tokes):
         # Cast survivors to string.
         keeper_values = [str(v) for v in keeper_values]
 
-        _table.add_row(
-            [
-                f"{feature_dim}",
-                ", ".join(keeper_tokens),
-                ", ".join(keeper_values),
-            ]
-        )
+        # Append row to table and csv list.
+        processed_row = [
+            f"{feature_dim}",
+            ", ".join(keeper_tokens),
+            ", ".join(keeper_values),
+        ]
+        _table.add_row(processed_row)
+        csv_rows.append(processed_row)
 
-        # Save the top-k tokens to a csv.
-        with open(TOP_K_INFO_PATH, "a", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            writer.writerow(
-                [
-                    f"{feature_dim}",
-                    ", ".join(keeper_tokens),
-                    ", ".join(keeper_values),
-                ]
-            )
+    # Save to csv.
+    with open(TOP_K_INFO_PATH, "w", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerows(csv_rows)
 
 
 # %%
