@@ -228,11 +228,13 @@ early_stop = L.pytorch.callbacks.EarlyStopping(
 # %%
 # Train the autoencoder. Note that `lightning` does its own parallelization.
 model: Autoencoder = Autoencoder()
+logger = L.pytorch.loggers.CSVLogger("logs", name="autoencoder")
 trainer: L.Trainer = L.Trainer(
     accelerator="auto",
     callbacks=early_stop,
     max_epochs=EPOCHS,
     log_every_n_steps=LOG_EVERY_N_STEPS,
+    logger=logger,
 )
 
 trainer.fit(
