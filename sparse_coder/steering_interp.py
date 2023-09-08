@@ -47,8 +47,7 @@ ENCODER_PATH = config.get("ENCODER_PATH")
 BIASES_PATH = config.get("BIASES_PATH")
 SEED = config.get("SEED")
 ACTS_LAYER = config.get("ACTS_LAYER")
-# Overridable.
-ACT_NUM: int = ACTS_LAYER
+ACT_NUM: int = ACTS_LAYER  # Overridable.
 
 sampling_kwargs: dict = {
     "temperature": TEMPERATURE,

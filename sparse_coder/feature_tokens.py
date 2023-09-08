@@ -25,7 +25,7 @@ assert (
 # %%
 # Set up constants.
 TOP_K: int = 6
-SIG_FIGS: Union[None, int] = None
+SIG_FIGS: Union[None, int] = None  # None means round to int.
 
 with open("act_access.yaml", "r", encoding="utf-8") as f:
     try:
@@ -51,8 +51,7 @@ tsfm_config = AutoConfig.from_pretrained(
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
-# Overridable.
-NUM_DIMS_PRINTED: int = PROJECTION_DIM
+NUM_DIMS_PRINTED: int = PROJECTION_DIM  # Overridable.
 
 # %%
 # Reproducibility.
