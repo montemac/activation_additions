@@ -257,6 +257,7 @@ def populate_table(_table, top_k_tokes):
 
 # %%
 # Tabulate and save results.
+%%prun
 table = prettytable.PrettyTable()
 table.field_names = [
     "Dimension",

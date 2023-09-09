@@ -1,6 +1,6 @@
 # Model
 MODEL_DIR: "EleutherAI/pythia-70m"
-ACTS_LAYER: 0
+ACTS_LAYER: 3
 
 # Encoder Size
 PROJECTION_FACTOR: 10
