@@ -256,17 +256,22 @@ def populate_table(_table, top_k_tokes):
 
 
 # %%
-# Tabulate and save results.
-%%prun
+# Initialize table.
 table = prettytable.PrettyTable()
 table.field_names = [
     "Dimension",
     "Top Tokens",
     "Top-Token Activations",
 ]
-
+# %%
+# Calculate effects.
 effects = calculate_effects(prompts_strings, feature_acts)
-truncated_effects = select_top_k_tokens(effects)
-populate_table(table, truncated_effects)
 
+# %%
+# Select just top-k effects.
+truncated_effects = select_top_k_tokens(effects)
+
+# %%
+# Populate the table and disk csv.
+populate_table(table, truncated_effects)
 print(table)

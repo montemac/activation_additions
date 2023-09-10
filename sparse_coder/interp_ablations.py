@@ -22,10 +22,10 @@ from transformers import (
 # %%
 # Set up constants.
 ADD_DIM: int = 2794
-COEFF: int = 5
 CHAT_PROMPT: str = "The country I am most fond of is"
 MAX_NEW_TOKENS: int = 50
 NUM_CONTINUATIONS: int = 5
+COEFF: int = 1  # For ablations, should always be set to 1.
 DO_SAMPLE: bool = True
 TEMPERATURE: float = 1.0
 TOP_P: float = 0.9
@@ -181,8 +181,8 @@ def _steering_hook(_, inpt: tuple):
     assert (
         apos <= ppos
     ), f"More modified streams ({apos}) than prompt streams ({ppos})!"
-    # Experimenting with complete overwriting.
-    resid_pre[:, :apos, :] += COEFF * steering_vec.to(resid_pre.device)
+    # Now running ablations.
+    resid_pre[:, :apos, :] -= COEFF * steering_vec.to(resid_pre.device)
 
 
 layer = get_blocks(model)[ACT_NUM]
