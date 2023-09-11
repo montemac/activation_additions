@@ -22,8 +22,8 @@ assert t.__version__ >= "2.0.1", "`Lightning` requires newer `torch` versions."
 # %%
 # Set up constants. We want to weight L1 quite heavily, versus MSE. Drive
 # towards an L_0 of 20-100 at convergence.
-LAMBDA_L1: float = 1e-2
-LEARNING_RATE: float = 1e-2
+LAMBDA_L1: float = 1e2
+LEARNING_RATE: float = 1e-3
 LOG_EVERY_N_STEPS: int = 5
 EPOCHS: int = 150
 
@@ -181,7 +181,7 @@ class Autoencoder(L.LightningModule):
 
         training_loss = mse_loss + (LAMBDA_L1 * l1_loss)
         l0_sparsity = (encoded_state != 0).float().sum(dim=-1).mean().item()
-        print(f"L_0: {round(l0_sparsity, 2)}\n")
+        print(f"L^0: {round(l0_sparsity, 2)}\n")
         self.log("training loss", training_loss, sync_dist=True)
         print(f"t_loss: {round(training_loss.item(), 2)}\n")
         self.log("L1 component", LAMBDA_L1 * l1_loss, sync_dist=True)
