@@ -164,18 +164,18 @@ def calculate_effects(
     # The argless lambda always returns the nested defaultdict.
     feature_values = defaultdict(lambda: defaultdict(list))
 
-    all_ids = [id for sublist in token_ids for id in sublist]
-    all_ids_tensor = t.tensor(all_ids)
-    all_activations = t.cat(feature_activations, dim=0)
+    all_ids: list[int] = [id for sublist in token_ids for id in sublist]
+    all_ids_tensor: t.Tensor = t.tensor(all_ids)
+    all_activations: t.Tensor = t.cat(feature_activations, dim=0)
 
-    trimmed_activations = all_activations[:, :NUM_DIMS_PRINTED]
-    unique_ids = list(set(all_ids))
+    trimmed_activations: t.Tensor = all_activations[:, :NUM_DIMS_PRINTED]
+    unique_ids: list[int] = list(set(all_ids))
 
     for prompt_id in unique_ids:
         # Build boolean mask.
-        mask = all_ids_tensor == prompt_id
+        mask: t.Tensor = all_ids_tensor == prompt_id
         # Boolean mask indexing.
-        masked_activations = trimmed_activations[mask]
+        masked_activations: t.Tensor = trimmed_activations[mask]
 
         averaged_activation = t.mean(masked_activations, dim=0)
 
