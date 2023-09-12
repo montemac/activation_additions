@@ -98,13 +98,6 @@ unpacked_prompts_ids = [
     elem for sublist in prompts_ids_list for elem in sublist
 ]
 
-# Convert token_ids into lists of literal tokens.
-prompts_strings: list = []
-
-for p in unpacked_prompts_ids:
-    prompt_str: list = tokenizer.convert_ids_to_tokens(p)
-    prompts_strings.append(prompt_str)
-
 
 # %%
 # Load and prepare the cached model activations.
@@ -158,32 +151,35 @@ def project_activations(
 
 
 acts_dataset: t.Tensor = t.load(ACTS_DATA_PATH)
-unpadded_acts: t.Tensor = unpad_activations(acts_dataset, prompts_strings)
+unpadded_acts: t.Tensor = unpad_activations(acts_dataset, unpacked_prompts_ids)
 feature_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
 
 
 # %%
 # Calculate per-input-token summed activation, for each feature dimension.
 def calculate_effects(
-    tokens_atlas: list[list[str]], feature_activations: list[t.Tensor]
+    token_ids: list[list[int]], feature_activations: list[t.Tensor]
 ) -> defaultdict[int, defaultdict[str, float]]:
     """Calculate the per input token activation for each feature."""
     # The argless lambda always returns the nested defaultdict.
     feature_values = defaultdict(lambda: defaultdict(list))
 
-    for prompt_strings, question_acts in zip(
-        tokens_atlas, feature_activations
-    ):
-        for token, activation in zip(prompt_strings, question_acts):
-            for feature_dim, act in enumerate(activation[:NUM_DIMS_PRINTED]):
-                feature_values[feature_dim][token].append(act.item())
+    all_ids = [id for sublist in token_ids for id in sublist]
+    all_ids_tensor = t.tensor(all_ids)
+    all_activations = t.cat(feature_activations, dim=0)
 
-    # Since tokens may repeat in the input, we need to average per token per
-    # feature. We don't want to _sum_ these, since that lets the input set the
-    # token weight.
-    for feature_dim, token_dict in feature_values.items():
-        for token, values in token_dict.items():
-            feature_values[feature_dim][token] = np.mean(values)
+    trimmed_activations = all_activations[:, :NUM_DIMS_PRINTED]
+    unique_ids = list(set(all_ids))
+
+    for prompt_id in unique_ids:
+        mask = all_ids_tensor == prompt_id
+        masked_activations = trimmed_activations[mask]
+
+        averaged_activation = t.mean(masked_activations, dim=0)
+
+        token_string = tokenizer.convert_ids_to_tokens(prompt_id)
+        for feature_dim, act in enumerate(averaged_activation):
+            feature_values[feature_dim][token_string] = act.item()
 
     return feature_values
 
@@ -265,7 +261,7 @@ table.field_names = [
 ]
 # %%
 # Calculate effects.
-effects = calculate_effects(prompts_strings, feature_acts)
+effects = calculate_effects(unpacked_prompts_ids, feature_acts)
 
 # %%
 # Select just top-k effects.

@@ -1,5 +1,5 @@
 # Model
-MODEL_DIR: "meta-llama/Llama-2-7b-hf"
+MODEL_DIR: "EleutherAI/pythia-70m"
 ACTS_LAYER: 2
 
 # Encoder Size
