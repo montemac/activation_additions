@@ -172,7 +172,9 @@ def calculate_effects(
     unique_ids = list(set(all_ids))
 
     for prompt_id in unique_ids:
+        # Build boolean mask.
         mask = all_ids_tensor == prompt_id
+        # Boolean mask indexing.
         masked_activations = trimmed_activations[mask]
 
         averaged_activation = t.mean(masked_activations, dim=0)
