@@ -179,7 +179,12 @@ def calculate_effects(
 
         averaged_activation = t.mean(masked_activations, dim=0)
 
+        print(f"Prompt id: {prompt_id}")
+
         token_string = tokenizer.convert_ids_to_tokens(prompt_id)
+
+        print(f"Token string: {token_string}")
+
         for feature_dim, act in enumerate(averaged_activation):
             feature_values[feature_dim][token_string] = act.item()
 
