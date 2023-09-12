@@ -17,7 +17,8 @@ from transformers import AutoConfig
 
 
 assert t.__version__ >= "2.0.1", "`Lightning` requires newer `torch` versions."
-
+# If your training runs are hanging, be sure to update `transformers` too. Just
+# update everything the script uses and try again.
 
 # %%
 # Set up constants. We want to weight L1 quite heavily, versus MSE. Drive
@@ -26,6 +27,7 @@ LAMBDA_L1: float = 1e2
 LEARNING_RATE: float = 1e-3
 LOG_EVERY_N_STEPS: int = 5
 EPOCHS: int = 150
+SYNC_DIST: bool = True  # Sync distributed training logging.
 
 with open("act_access.yaml", "r", encoding="utf-8") as f:
     try:
@@ -182,11 +184,11 @@ class Autoencoder(L.LightningModule):
         training_loss = mse_loss + (LAMBDA_L1 * l1_loss)
         l0_sparsity = (encoded_state != 0).float().sum(dim=-1).mean().item()
         print(f"L^0: {round(l0_sparsity, 2)}\n")
-        self.log("training loss", training_loss, sync_dist=True)
+        self.log("training loss", training_loss, sync_dist=SYNC_DIST)
         print(f"t_loss: {round(training_loss.item(), 2)}\n")
-        self.log("L1 component", LAMBDA_L1 * l1_loss, sync_dist=True)
-        self.log("MSE component", mse_loss, sync_dist=True)
-        self.log("L0 sparsity", l0_sparsity, sync_dist=True)
+        self.log("L1 component", LAMBDA_L1 * l1_loss, sync_dist=SYNC_DIST)
+        self.log("MSE component", mse_loss, sync_dist=SYNC_DIST)
+        self.log("L0 sparsity", l0_sparsity, sync_dist=SYNC_DIST)
         return training_loss
 
     # Unused import resolves `lightning` bug.
@@ -207,7 +209,7 @@ class Autoencoder(L.LightningModule):
         )
         validation_loss = mse_loss + (LAMBDA_L1 * l1_loss)
 
-        self.log("validation loss", validation_loss, sync_dist=True)
+        self.log("validation loss", validation_loss, sync_dist=SYNC_DIST)
         return validation_loss
 
     def configure_optimizers(self):
