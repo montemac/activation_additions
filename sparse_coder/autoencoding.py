@@ -21,10 +21,7 @@ assert t.__version__ >= "2.0.1", "`Lightning` requires newer `torch` versions."
 # update everything the script uses and try again.
 
 # %%
-# Set up constants. We want to weight L1 quite heavily, versus MSE. Drive
-# towards an L_0 of 20-100 at convergence.
-LAMBDA_L1: float = 1e2
-LEARNING_RATE: float = 1e-3
+# Set up constants. Drive towards an L_0 of 20-100 at convergence.
 LOG_EVERY_N_STEPS: int = 5
 EPOCHS: int = 150
 SYNC_DIST: bool = True  # Sync distributed training logging.
@@ -46,6 +43,8 @@ PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
 BIASES_PATH = config.get("BIASES_PATH")
 ENCODER_PATH = config.get("ENCODER_PATH")
 MODEL_DIR = config.get("MODEL_DIR")
+LAMBDA_L1 = config.get("LAMBDA_L1")
+LEARNING_RATE = config.get("LEARNING_RATE")
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 tsfm_config = AutoConfig.from_pretrained(
     MODEL_DIR, use_auth_token=HF_ACCESS_TOKEN

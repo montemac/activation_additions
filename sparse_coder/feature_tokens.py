@@ -93,20 +93,16 @@ model: Encoder = Encoder()
 # %%
 # Load and prepare the original prompt tokens.
 prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
-print(f"Prompts_ids shape: {prompts_ids.shape}")
 prompts_ids_list = prompts_ids.tolist()
-print(f"Prompts_ids_list length: {len(prompts_ids_list)}")
-unpacked_prompts_ids = [
-    elem for sublist in prompts_ids_list for elem in sublist
+unpacked_ids: list[list[int]] = [
+    e for q_list in prompts_ids_list for e in q_list
 ]
-print(f"Unpacked_prompts_ids length: {len(unpacked_prompts_ids)}")
-print(f"Unpacked_prompts_ids first element: {unpacked_prompts_ids[0]}")
 
 
 # %%
 # Load and prepare the cached model activations.
 def unpad_activations(
-    activations_block: t.Tensor, unpadded_prompts: np.ndarray
+    activations_block: t.Tensor, unpadded_prompts: list[list[int]]
 ) -> list[t.Tensor]:
     """
     Unpads activations to the lengths specified by the original prompts.
@@ -155,7 +151,8 @@ def project_activations(
 
 
 acts_dataset: t.Tensor = t.load(ACTS_DATA_PATH)
-unpadded_acts: t.Tensor = unpad_activations(acts_dataset, unpacked_prompts_ids)
+unpadded_acts: list[t.Tensor] = unpad_activations(acts_dataset, unpacked_ids)
+
 feature_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
 
 
@@ -196,14 +193,14 @@ def calculate_effects(
 
 # Return just the top-k tokens.
 def select_top_k_tokens(
-    effects_dict: defaultdict[int, defaultdict[list[float]]]
-):
+    effects_dict: defaultdict[int, defaultdict[str, float]]
+) -> defaultdict[int, list[tuple[str, float]]]:
     """Select the top-k tokens for each feature."""
     top_k_tokens = defaultdict(list)
 
     for feature_dim, tokens_dict in effects_dict.items():
         # Sort tokens by their dimension activations.
-        sorted_effects = sorted(
+        sorted_effects: list[tuple[str, float]] = sorted(
             tokens_dict.items(), key=lambda x: x[1], reverse=True
         )
         # Add the top-k tokens.
@@ -217,7 +214,7 @@ def round_floats(num: Union[float, int]) -> Union[float, int]:
     return round(num, SIG_FIGS)
 
 
-def populate_table(_table, top_k_tokes):
+def populate_table(_table, top_k_tokes) -> None:
     """Put the results in the table _and_ save to csv."""
     csv_rows: list[list] = [
         ["Dimension", "Top Tokens", "Top-Token Activations"]
@@ -271,11 +268,15 @@ table.field_names = [
 ]
 # %%
 # Calculate effects.
-effects = calculate_effects(unpacked_prompts_ids, feature_acts)
+effects: defaultdict[int, defaultdict[str, float]] = calculate_effects(
+    unpacked_ids, feature_acts
+)
 
 # %%
 # Select just top-k effects.
-truncated_effects = select_top_k_tokens(effects)
+truncated_effects: defaultdict[
+    int, list[tuple[str, float]]
+] = select_top_k_tokens(effects)
 
 # %%
 # Populate the table and disk csv.
