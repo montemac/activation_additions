@@ -182,13 +182,11 @@ def calculate_effects(
     for i in unordered_unique_ids:
         mask: t.Tensor = ordered_ids_tensor == i
         masked_activations: t.Tensor = all_activations[mask]
-        print(masked_activations.shape)
 
+        # Sum along the number of instances (dim=0).
         mean_activations = t.mean(masked_activations, dim=0)
-        print(mean_activations.shape)
 
         tkn_string = tokenizer.convert_ids_to_tokens(i)
-        print(tkn_string)
 
         for dim, avg_act in enumerate(mean_activations):
             feature_values[dim][tkn_string] = avg_act.item()
