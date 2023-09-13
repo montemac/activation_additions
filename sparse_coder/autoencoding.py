@@ -43,8 +43,9 @@ PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
 BIASES_PATH = config.get("BIASES_PATH")
 ENCODER_PATH = config.get("ENCODER_PATH")
 MODEL_DIR = config.get("MODEL_DIR")
-LAMBDA_L1 = config.get("LAMBDA_L1")
-LEARNING_RATE = config.get("LEARNING_RATE")
+# Float casts fix YAML bug with scientific notation.
+LAMBDA_L1 = float(config.get("LAMBDA_L1"))
+LEARNING_RATE = float(config.get("LEARNING_RATE"))
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 tsfm_config = AutoConfig.from_pretrained(
     MODEL_DIR, use_auth_token=HF_ACCESS_TOKEN
