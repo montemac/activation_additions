@@ -168,29 +168,30 @@ def calculate_effects(
     # The argless lambda always returns the nested defaultdict.
     feature_values = defaultdict(lambda: defaultdict(list))
 
-    all_ids: list[int] = [id for sublist in token_ids for id in sublist]
-    all_ids_tensor: t.Tensor = t.tensor(all_ids)
+    # Extract every token id into a list.
+    ordered_all_ids: list[int] = [
+        id for sublist in token_ids for id in sublist
+    ]
+    unordered_unique_ids: list[int] = list(set(ordered_all_ids))
+    # Tensorize the list of ids.
+    ordered_ids_tensor: t.Tensor = t.tensor(ordered_all_ids)
+
     all_activations: t.Tensor = t.cat(feature_activations, dim=0)
+    # Shape (num_activations, PROJECTION_DIM).
 
-    trimmed_activations: t.Tensor = all_activations[:, :NUM_DIMS_PRINTED]
-    unique_ids: list[int] = list(set(all_ids))
+    for i in unordered_unique_ids:
+        mask: t.Tensor = ordered_ids_tensor == i
+        masked_activations: t.Tensor = all_activations[mask]
+        print(masked_activations.shape)
 
-    for prompt_id in unique_ids:
-        # Build boolean mask.
-        mask: t.Tensor = all_ids_tensor == prompt_id
-        # Boolean mask indexing.
-        masked_activations: t.Tensor = trimmed_activations[mask]
+        mean_activations = t.mean(masked_activations, dim=0)
+        print(mean_activations.shape)
 
-        averaged_activation = t.mean(masked_activations, dim=0)
+        tkn_string = tokenizer.convert_ids_to_tokens(i)
+        print(tkn_string)
 
-        print(f"Prompt id: {prompt_id}")
-
-        token_string = tokenizer.convert_ids_to_tokens(prompt_id)
-
-        print(f"Token string: {token_string}")
-
-        for feature_dim, act in enumerate(averaged_activation):
-            feature_values[feature_dim][token_string] = act.item()
+        for dim, avg_act in enumerate(mean_activations):
+            feature_values[dim][tkn_string] = avg_act.item()
 
     return feature_values
 
