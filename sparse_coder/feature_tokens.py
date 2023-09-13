@@ -93,10 +93,14 @@ model: Encoder = Encoder()
 # %%
 # Load and prepare the original prompt tokens.
 prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
+print(f"Prompts_ids shape: {prompts_ids.shape}")
 prompts_ids_list = prompts_ids.tolist()
+print(f"Prompts_ids_list length: {len(prompts_ids_list)}")
 unpacked_prompts_ids = [
     elem for sublist in prompts_ids_list for elem in sublist
 ]
+print(f"Unpacked_prompts_ids length: {len(unpacked_prompts_ids)}")
+print(f"Unpacked_prompts_ids first element: {unpacked_prompts_ids[0]}")
 
 
 # %%
