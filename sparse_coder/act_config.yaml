@@ -1,6 +1,6 @@
 # Model
-MODEL_DIR: "meta-llama/Llama-2-7b-hf"
-ACTS_LAYER: 13
+MODEL_DIR: "gpt2"
+ACTS_LAYER: 5
 
 # Encoder Size
 PROJECTION_FACTOR: 10
@@ -13,7 +13,7 @@ BIASES_PATH: "acts_data/learned_biases.pt"
 TOP_K_INFO_PATH: "acts_data/token_info.csv"
 
 # Autoencoder Training
-LAMBDA_L1: 1.0
+LAMBDA_L1: 1.0e2
 LEARNING_RATE: 1.0e-3
 
 # Reproducibility
