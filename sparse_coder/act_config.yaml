@@ -1,6 +1,6 @@
 # Model
 MODEL_DIR: "meta-llama/Llama-2-7b-hf"
-ACTS_LAYER: 7
+ACTS_LAYER: 13
 
 # Encoder Size
 PROJECTION_FACTOR: 10

@@ -1,115 +1,72 @@
 Dimension,Top Tokens,Top-Token Activations
-11," knock,  kick,  sing,  getting, New,  pulled","2, 2, 2, 2, 2, 1"
-176,"'re,  be","1, 1"
-224," have,  speaks,  has,  speak","1, 1, 1, 1"
-235," stomach,  Ald,  hub,  stages, obacter,  hospitals","1, 1, 1, 1, 1, 1"
-343,"who,  hasn,  opened,  who, 've","1, 1, 1, 1, 1"
-359," legally, clusively,  directly,  totally,  unambig,  beyond","1, 1, 1, 1, 1, 1"
-399," kind,  did,  does,  United","2, 1, 1, 1"
-434,"Australia,  Swiss,  Swedish,  Norwegian,  Norway, German","2, 2, 2, 2, 2, 2"
-574,"), 5, 7, 4, 9, 6","2, 2, 2, 2, 2, 2"
-600," razor,  rib,  finger,  red,  frog,  sword","2, 2, 2, 2, 2, 2"
-616," healthier,  outlaw,  harmful,  violated,  creative,  banned","2, 2, 2, 2, 2, 2"
-664," humanity,  earth,  fear,  brain,  rights,  poverty","1, 1, 1, 1, 1, 1"
-666," unlikely,  eventually","1, 1"
-713,"?, '?, ""?, .?, )?, ?""","2, 1, 1, 1, 1, 1"
-776," swe, acts,  combust,  witch,  organized,  temperature","2, 2, 2, 2, 2, 2"
-839,ater,1
-868," Gal,  Morm,  Az,  Mal,  Mant,  Yellow","2, 2, 2, 2, 2, 2"
-880,"rious, named,  largest,  biggest,  oldest, acting","1, 1, 1, 1, 1, 1"
-1100," Where,  How,  Does,  how,  Are,  What","1, 1, 1, 1, 1, 1"
-1104," real, pro,  earnest,  analytical, rit,  just","1, 1, 1, 1, 1, 1"
-1155," U,  there,  There,  Nothing,  nothing,  United","1, 1, 1, 1, 1, 1"
-1178," remains,  lasts,  become,  weren,  aren,  grows","2, 2, 2, 2, 2, 2"
-1229," decades,  years,  views,  aspects,  periods,  processes","1, 1, 1, 1, 1, 1"
-1241," You, You,  They,  you,  He,  We","3, 2, 2, 1, 1, 1"
-1350,"acting,  arms,  cigar,  balloons,  blends,  brand","2, 2, 2, 2, 2, 2"
-1396," US, S,  cannot,  never,  originally,  ever","1, 1, 1, 1, 1, 1"
-1399,"Ċ, )., ., %.,  No,  no","2, 2, 2, 1, 1, 1"
-1422," Way,  Massachusetts,  sky,  November,  world, bourg","2, 1, 1, 1, 1, 1"
-1761,"inally,  capable,  analogous, clusively,  illusion,  modeled","1, 1, 1, 1, 1, 1"
-1762," or,  and","1, 1"
-1838,ensory,1
-1934,"the,  the, The,  II,  The, ringer","1, 1, 1, 1, 1, 1"
-2011," Poland,  Portugal,  Yes,  foreigners,  Istanbul,  Ireland","2, 2, 2, 2, 2, 1"
-2036,"restrial,  cardiac, ificial,  Tort,  Archae,  Deep","1, 1, 1, 1, 1, 1"
-2044,"icides,  handles","1, 1"
-2079,"rad, rico, illi, ston, ola, ille","1, 1, 1, 1, 1, 1"
-2128, food,1
-2218," Dec,  Wal,  Port,  Ves,  Comp,  Stri","2, 2, 2, 2, 2, 2"
-2222,"A,  Yes, Q, :, 5,  There","3, 3, 3, 3, 2, 2"
-2237, up,1
-2313," nearly,  Nearly,  almost,  hundred,  too,  capita","2, 2, 2, 2, 2, 2"
-2369," in,  In, In, in,  inside,  outside","2, 1, 1, 1, 1, 1"
-2402,":, &","1, 1"
-2444,"Q, q, Qu,  MS","3, 1, 1, 1"
-2477,culus,1
-2487," 1981,  2001,  2015,  1969,  2016,  19","1, 1, 1, 1, 1, 1"
-2498," Christopher,  Marc,  Ba,  Jean,  330,  19","1, 1, 1, 1, 1, 1"
-2515," cold,  competitive,  wake,  ugly,  deeply,  compassionate","2, 2, 2, 2, 2, 2"
-2525," comment,  interrog,  notice,  written,  analytical,  telling","2, 2, 2, 2, 1, 1"
-2591," cold,  miserable,  soft,  wet,  hard,  humid","1, 1, 1, 1, 1, 1"
-2614,"'ll,  will,  should,  shouldn,  would,  must","2, 2, 1, 1, 1, 1"
-2672," a,  per","1, 1"
-2679,:,1
-2685," 330,  67,  thirty,  58, 5,  prominent","1, 1, 1, 1, 1, 1"
-2735, could,1
-2752," modeled, inally, off, 't","1, 1, 1, 1"
-2756," organizing,  swimming","1, 1"
-2773,"iele, ol, ibr, em, erm, igm","1, 1, 1, 1, 1, 1"
-2783,"ag, ims, gate,  Way,  Parks,  Cod","1, 1, 1, 1, 1, 1"
-2800," than,  imagine,  Despite,  Nearly,  mention, FI","1, 1, 1, 1, 1, 1"
-2803, (,1
-2815," vegetable,  pandemic,  baby,  cigarette,  kidnapping, shot","1, 1, 1, 1, 1, 1"
-2948," more,  less","1, 1"
-2998," No,  Yes,  ban,  Pop,  purchase,  pot","1, 1, 1, 1, 1, 1"
-3007," colonial,  chocolate,  powdered,  Gothic,  religious,  purple","1, 1, 1, 1, 1, 1"
-3039," Dow, aw,  back,  Low,  high,  Rod","1, 1, 1, 1, 1, 1"
-3056," banned, regulated,  restrictions, emaker,  proven","1, 1, 1, 1, 1"
-3137," hospitals, U","1, 1"
-3150," Yes, inally, ule,  insufficient,  not, ola","1, 1, 1, 1, 1, 1"
-3173,"American,  Swedish,  Sweden,  Canadian, iets,  Indian","1, 1, 1, 1, 1, 1"
-3282," career,  cultural,  winter,  best,  1960, 1990","1, 1, 1, 1, 1, 1"
-3314,"anc, don, isation, clamation,  attempt,  involvement","1, 1, 1, 1, 1, 1"
-3315,"(, A, not, Ind,  unlikely,  incon","3, 2, 2, 2, 2, 2"
-3450," Your,  your,  Sir, ,,  personal","1, 1, 1, 1, 1"
-3455," medical,  Gothic,  financial,  Economics,  billionaire, ological","1, 1, 1, 1, 1, 1"
-3546,"Mind,  Way, lock,  Rich,  Fortune, beth","4, 4, 4, 3, 3, 3"
-3552," multiple,  a, icides,  something,  lesbian,  kin","1, 1, 1, 1, 1, 1"
-3559," people,  individuals,  Individuals,  scientists,  mothers,  citizens","2, 2, 2, 1, 1, 1"
-3676," Angeles,  Carolina,  York,  Toronto,  Orleans,  Seattle","2, 2, 1, 1, 1, 1"
-3682," It,  They,  Their,  He,  it,  The","1, 1, 1, 1, 1, 1"
-3690," characteristic,  factors,  Many,  Some, obi,  some","1, 1, 1, 1, 1, 1"
-3739," sun,  sky,  night,  evening,  road,  summer","2, 2, 2, 2, 1, 1"
-3757," (, (","1, 1"
-3891," all,  All, All","1, 1, 1"
-3960,"iology,  Economics,  luck,  risk,  Physics,  Knowledge","1, 1, 1, 1, 1, 1"
-3997, you,1
-4020," bias,  wounded,  biased,  massacre,  emotions,  conflicts","2, 2, 2, 2, 2, 2"
-4046," similar,  moment, ering,  varied, acking, end","1, 1, 1, 1, 1, 1"
-4130,""",  Prize, !"", ?"", ...""","1, 1, 1, 1, 1"
-4145, than,1
-4201," Mes,  Sha,  Marl,  Schw,  Cr,  Jo","2, 2, 2, 2, 2, 2"
-4260," Barack,  Hillary,  Bernie,  bar,  Trump,  crypt","1, 1, 1, 1, 1, 1"
-4282,"onna,  Henry","1, 1"
-4318," feel,  demonstrate,  splash,  taste,  differ","1, 1, 1, 1, 1"
-4398,Q,1
-4439," Pow,  Tour,  optimization","1, 1, 1"
-4462,"1990,  1961,  months","1, 1, 1"
-4519," Nobel,  Prize,  University,  spends,  sentenced,  participate","3, 2, 2, 1, 1, 1"
-4543," F, ch,  B,  Ch,  f,  sc","1, 1, 1, 1, 1, 1"
-4566," academics,  pilots,  knights,  chocolate,  dragons,  lectures","1, 1, 1, 1, 1, 1"
-4610," do,  Do,  happens,  happ,  did,  happen","1, 1, 1, 1, 1, 1"
-4638,"rious,  Dec,  either, ys, ruct","1, 1, 1, 1, 1"
-4671," similar,  analogous, ied,  distinctive,  iconic,  attempting","1, 1, 1, 1, 1, 1"
-4680," Ext,  abbrev,  origin,  extr,  Ital,  United","2, 2, 2, 2, 2, 2"
-4710,"What,  What, what,  what,  Who,  Which","3, 2, 2, 2, 1, 1"
-4742," if,  unless,  If, if,  when, If","2, 2, 1, 1, 1, 1"
-4789," supermarket,  airline,  club,  lab,  sport,  business","2, 2, 2, 1, 1, 1"
-4833," burgers,  clouds,  artifacts,  steak, atoes,  novels","1, 1, 1, 1, 1, 1"
-4846," hang,  hide,  hid,  sink,  reach","1, 1, 1, 1, 1"
-4900,"3, 13, 4, 2, 6, 5","2, 2, 2, 2, 2, 2"
-4901," Claud,  Leon,  Cann,  Mark,  Loren,  Cran","2, 2, 2, 2, 2, 2"
-4908,")., ., garten, ""., inkle, icks","1, 1, 1, 1, 1, 1"
-4929,A,1
-4985," did,  does,  do, end,  doesn,  course","1, 1, 1, 1, 1, 1"
+1643,"2, 3, 1, 4","2, 2, 2, 1"
+2141,<s>,10
+2979,(,2
+3635,<s>,1
+4067,"4, 3, 5, 6, 2, 7","4, 4, 3, 3, 3, 3"
+5205,"▁Q, pr","1, 1"
+6139,<s>,1
+6187,"<s>, <0x0A>","9, 1"
+6844,"▁(, (, <0x0A>, ▁just, ▁All, ▁Arch","4, 3, 2, 2, 2, 2"
+7394,<s>,2
+7918,<s>,6
+8081,<s>,2
+8097,<s>,2
+8534,"<s>, <0x0A>, ▁Q, ), named, ▁Qu","61, 4, 2, 1, 1, 1"
+8867,<s>,3
+8882,<s>,7
+9319,<s>,3
+9644,"<s>, <0x0A>","10, 1"
+10648,"▁Q, R, za, ater, ija, ather","1, 1, 1, 1, 1, 1"
+10873,"▁Q, <s>, pr, rane, ieval, through","1, 1, 1, 1, 1, 1"
+11659,<s>,3
+14034,<s>,6
+14438,"▁Q, ▁varied, lem, pr","1, 1, 1, 1"
+16675,"<s>, <0x0A>","9, 1"
+16982,<s>,6
+17350,<s>,4
+17628,"<s>, <0x0A>","10, 1"
+18197,<s>,8
+19028,"ater, za","1, 1"
+20090,<s>,1
+20215,"ater, za, ▁cont, R, ▁prem","1, 1, 1, 1, 1"
+21285,"<s>, ▁Q, ), (, <0x0A>, ▁(","9, 2, 2, 2, 2, 1"
+21882,),1
+22101,<s>,9
+23933,<s>,1
+24159,<s>,1
+25062,<s>,7
+25157,<s>,2
+25364,<s>,2
+25492,"<s>, ▁cont, ▁prem, za, ▁Sn, ater","34, 3, 3, 3, 2, 2"
+25878,<s>,1
+25979,"<s>, <0x0A>","7, 1"
+26671,<s>,11
+27290,"<s>, <0x0A>","6, 1"
+27615,"<s>, <0x0A>","12, 1"
+27788,<s>,5
+28607,"hand, za, ▁prem, ater, ▁miser, ▁just","2, 2, 2, 2, 2, 2"
+28805,<s>,3
+29166,<s>,2
+29256,<s>,2
+29416,<s>,3
+30037,<s>,10
+30257,<s>,3
+31110,<s>,3
+31463,<s>,3
+32355,"<s>, <0x0A>","8, 1"
+32361,<s>,4
+33416,<s>,1
+34282,"<s>, <0x0A>","9, 1"
+34876,"▁Q, (, pr, Q, A, ▁exer","2, 1, 1, 1, 1, 1"
+36238,<s>,3
+36471,<s>,1
+36632,<s>,5
+37410,<s>,4
+38002,"<s>, <0x0A>","8, 1"
+38661,<s>,3
+38748,<s>,2
+38768,"<s>, <0x0A>","8, 1"
+39775,1,2
+40483,"▁Q, pr, ▁Pap, lan, rane, unn","1, 1, 1, 1, 1, 1"
+40665,<s>,6
