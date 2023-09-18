@@ -21,8 +21,8 @@ from transformers import (
 
 # %%
 # Set up constants.
-ADD_DIM: int = 2794
-CHAT_PROMPT: str = "The country I am most fond of is"
+ADD_DIM: int = 4226
+CHAT_PROMPT: str = "What is going on?"
 MAX_NEW_TOKENS: int = 50
 NUM_CONTINUATIONS: int = 5
 COEFF: int = 1  # For ablations, should always be set to 1.
@@ -86,7 +86,9 @@ Hooks = list[Hook]
 def tokenize(text: str) -> dict[str, t.Tensor]:
     """Tokenize prompts onto the appropriate devices."""
     tokens = tokenizer(text, return_tensors="pt")
-    tokens = accelerator.prepare(tokens)
+    # I am unsure why automatic acceleration breaks things here. I do it
+    # manually as a fix.
+    tokens.to(model.device)
     return tokens
 
 
