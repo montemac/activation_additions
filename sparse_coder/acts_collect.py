@@ -75,6 +75,7 @@ accelerator: Accelerator = Accelerator()
 # `device_map="auto` helps initialize big models.
 model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
     MODEL_DIR,
+    device_map="auto",
     use_auth_token=HF_ACCESS_TOKEN,
     output_hidden_states=True,
 )
@@ -83,6 +84,7 @@ tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
     MODEL_DIR,
     use_auth_token=HF_ACCESS_TOKEN,
 )
+model: PreTrainedModel = accelerator.prepare(model)
 model.eval()
 
 # %%
