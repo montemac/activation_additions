@@ -153,6 +153,9 @@ def project_activations(
 acts_dataset: t.Tensor = t.load(ACTS_DATA_PATH)
 unpadded_acts: list[t.Tensor] = unpad_activations(acts_dataset, unpacked_ids)
 
+# If you want to _directly_ interpret the model's activations, assign
+# `feature_acts` directly to `unpadded_acts` and ensure constants are set to
+# the model's embedding dimensionality.
 feature_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
 
 
