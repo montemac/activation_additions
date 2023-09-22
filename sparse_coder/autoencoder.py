@@ -125,16 +125,17 @@ training_indices, val_indices = train_test_split(
 training_sampler = t.utils.data.SubsetRandomSampler(training_indices)
 validation_sampler = t.utils.data.SubsetRandomSampler(val_indices)
 
+# For smaller autoencoders, larger batch sizes are possible.
 training_loader: DataLoader = DataLoader(
     dataset,
-    batch_size=32,
+    batch_size=16,
     sampler=training_sampler,
     num_workers=16,
 )
 
 validation_loader: DataLoader = DataLoader(
     dataset,
-    batch_size=32,
+    batch_size=16,
     sampler=validation_sampler,
     num_workers=16,
 )
@@ -231,12 +232,15 @@ early_stop = L.pytorch.callbacks.EarlyStopping(
 # Train the autoencoder. Note that `lightning` does its own parallelization.
 model: Autoencoder = Autoencoder()
 logger = L.pytorch.loggers.CSVLogger("logs", name="autoencoder")
+# The `accumulate_grad_batches` argument helps with memory on the largest
+# autoencoders.
 trainer: L.Trainer = L.Trainer(
     accelerator="auto",
+    accumulate_grad_batches=4,
     callbacks=early_stop,
-    max_epochs=EPOCHS,
     log_every_n_steps=LOG_EVERY_N_STEPS,
     logger=logger,
+    max_epochs=EPOCHS,
 )
 
 trainer.fit(
