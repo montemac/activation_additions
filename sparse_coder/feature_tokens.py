@@ -15,6 +15,7 @@ import prettytable
 import torch as t
 import transformers
 import yaml
+from accelerate import Accelerator
 from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizer
 
 
@@ -89,6 +90,8 @@ class Encoder:
 
 # Initialize the encoder model.
 model: Encoder = Encoder()
+accelerator: Accelerator = Accelerator()
+model = accelerator.prepare(model)
 
 # %%
 # Load and prepare the original prompt tokens.
@@ -150,7 +153,7 @@ def project_activations(
     return projected_activations
 
 
-acts_dataset: t.Tensor = t.load(ACTS_DATA_PATH)
+acts_dataset: t.Tensor = accelerator.prepare(t.load(ACTS_DATA_PATH))
 unpadded_acts: list[t.Tensor] = unpad_activations(acts_dataset, unpacked_ids)
 
 # If you want to _directly_ interpret the model's activations, assign
@@ -174,9 +177,17 @@ def calculate_effects(
     ]
     unordered_unique_ids: list[int] = list(set(ordered_all_ids))
     # Tensorize the list of ids.
-    ordered_ids_tensor: t.Tensor = t.tensor(ordered_all_ids)
+    ordered_ids_tensor: t.Tensor = accelerator.prepare(
+        t.tensor(ordered_all_ids)
+    )
 
-    all_activations: t.Tensor = t.cat(feature_activations, dim=0)
+    feature_activations_parallelized: list[t.Tensor] = [
+        accelerator.prepare(tensor) for tensor in feature_activations
+    ]
+
+    all_activations: t.Tensor = accelerator.prepare(
+        t.cat(feature_activations_parallelized, dim=0)
+    )
     # Shape (num_activations, PROJECTION_DIM).
 
     for i in unordered_unique_ids:
