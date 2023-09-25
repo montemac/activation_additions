@@ -11,6 +11,12 @@ setup(
     version="0.2.0",
     packages=find_packages(),
     install_requires=[
+        "accelerate",
+        "jupyter",
+        "lightning",
+        "scikit-learn",
+        "PyYAML",
+        "circuitsvis",
         "transformer_lens",
         "torch==1.13.1",
         "numpy>=1.22.1",

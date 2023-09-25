@@ -148,3 +148,7 @@ images
 *html
 scripts/KL_bug.py
 wandb_restored_files
+*.pt
+*.ckpt
+*..npy
+act_access.yaml
