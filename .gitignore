@@ -131,6 +131,9 @@ dmypy.json
 # Code profiling
 *prof
 
+# lightning logs
+/sparse_coder/logs/autoencoder/
+
 # Misc
 *.pkl
 .vscode

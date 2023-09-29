@@ -18,6 +18,8 @@ import yaml
 from accelerate import Accelerator
 from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizer
 
+from sparse_coder.utils import top_k
+
 
 assert (
     transformers.__version__ >= "4.31.0"
@@ -52,7 +54,7 @@ tsfm_config = AutoConfig.from_pretrained(
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
-NUM_DIMS_PRINTED: int = PROJECTION_DIM  # Overridable.
+NUM_DIMS_PRINTED: int = 2  # Overridable.
 
 # %%
 # Reproducibility.
@@ -162,55 +164,12 @@ unpadded_acts: list[t.Tensor] = unpad_activations(acts_dataset, unpacked_ids)
 feature_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
 
 
-# %%
-# Calculate per-input-token summed activation, for each feature dimension.
-def calculate_effects(
-    token_ids: list[list[int]], feature_activations: list[t.Tensor]
-) -> defaultdict[int, defaultdict[str, float]]:
-    """Calculate the per input token activation for each feature."""
-    # The argless lambda always returns the nested defaultdict.
-    feature_values = defaultdict(lambda: defaultdict(list))
-
-    # Extract every token id into a list.
-    ordered_all_ids: list[int] = [
-        id for sublist in token_ids for id in sublist
-    ]
-    unordered_unique_ids: list[int] = list(set(ordered_all_ids))
-    # Tensorize the list of ids.
-    ordered_ids_tensor: t.Tensor = accelerator.prepare(
-        t.tensor(ordered_all_ids)
-    )
-
-    feature_activations_parallelized: list[t.Tensor] = [
-        accelerator.prepare(tensor) for tensor in feature_activations
-    ]
-
-    all_activations: t.Tensor = accelerator.prepare(
-        t.cat(feature_activations_parallelized, dim=0)
-    )
-    # Shape (num_activations, PROJECTION_DIM).
-
-    for i in unordered_unique_ids:
-        mask: t.Tensor = ordered_ids_tensor == i
-        masked_activations: t.Tensor = all_activations[mask]
-
-        # Sum along the number of instances (dim=0).
-        mean_activations = t.mean(masked_activations, dim=0)
-
-        tkn_string = tokenizer.convert_ids_to_tokens(i)
-
-        for dim, avg_act in enumerate(mean_activations):
-            feature_values[dim][tkn_string] = avg_act.item()
-
-    return feature_values
-
-
 # Return just the top-k tokens.
 def select_top_k_tokens(
     effects_dict: defaultdict[int, defaultdict[str, float]]
 ) -> defaultdict[int, list[tuple[str, float]]]:
     """Select the top-k tokens for each feature."""
-    top_k_tokens = defaultdict(list)
+    tp_k_tokens = defaultdict(list)
 
     for feature_dim, tokens_dict in effects_dict.items():
         # Sort tokens by their dimension activations.
@@ -218,9 +177,9 @@ def select_top_k_tokens(
             tokens_dict.items(), key=lambda x: x[1], reverse=True
         )
         # Add the top-k tokens.
-        top_k_tokens[feature_dim] = sorted_effects[:TOP_K]
+        tp_k_tokens[feature_dim] = sorted_effects[:TOP_K]
 
-    return top_k_tokens
+    return tp_k_tokens
 
 
 def round_floats(num: Union[float, int]) -> Union[float, int]:
@@ -282,8 +241,8 @@ table.field_names = [
 ]
 # %%
 # Calculate effects.
-effects: defaultdict[int, defaultdict[str, float]] = calculate_effects(
-    unpacked_ids, feature_acts
+effects: defaultdict[int, defaultdict[str, float]] = top_k.calculate_effects(
+    unpacked_ids, feature_acts, tokenizer, accelerator
 )
 
 # %%
