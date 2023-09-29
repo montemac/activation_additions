@@ -39,7 +39,7 @@ def calculate_effects(
 
         batch_slice = feature_activations[start_index:end_index]
         batch_slice = [accelerator.prepare(tensor) for tensor in batch_slice]
-        # `cat_current_batch.shape = (num_activations, PROJECTION_DIM)`
+        # Final `batch_slice.shape = (num_activations, PROJECTION_DIM)`
         batch_slice = accelerator.prepare(t.cat(batch_slice, dim=0))
 
         for i in set_ids:
