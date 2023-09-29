@@ -2,53 +2,55 @@
 
 
 from collections import defaultdict
+from math import ceil
 
 import torch as t
 from accelerate import Accelerator
 from transformers import AutoTokenizer
 
 
-# %%
 # Calculate per-input-token summed activation, for each feature dimension.
 def calculate_effects(
-    token_ids: list[list[int]],
+    question_token_ids: list[list[int]],
     feature_activations: list[t.Tensor],
     tokenizer: AutoTokenizer,
     accelerator: Accelerator,
+    batch_size: int,
 ) -> defaultdict[int, defaultdict[str, float]]:
     """Calculate the per input token activation for each feature."""
-    # The argless lambda always returns the nested defaultdict.
-    feature_values = defaultdict(lambda: defaultdict(list))
+    number_batches = ceil(len(feature_activations) / batch_size)
 
-    # Extract every token id into a list.
-    ordered_all_ids: list[int] = [
-        id for sublist in token_ids for id in sublist
-    ]
-    unordered_unique_ids: list[int] = list(set(ordered_all_ids))
-    # Tensorize the list of ids.
-    ordered_ids_tensor: t.Tensor = accelerator.prepare(
-        t.tensor(ordered_all_ids)
-    )
+    def new_defaultdict():
+        return defaultdict(str)
 
-    feature_activations_parallelized: list[t.Tensor] = [
-        accelerator.prepare(tensor) for tensor in feature_activations
+    neuron_token_effects = defaultdict(new_defaultdict())
+
+    flat_ids: list[int] = [
+        token_id for question in question_token_ids for token_id in question
     ]
 
-    all_activations: t.Tensor = accelerator.prepare(
-        t.cat(feature_activations_parallelized, dim=0)
-    )
-    # Shape (num_activations, PROJECTION_DIM).
+    tensorized_ids: t.Tensor = accelerator.prepare(t.tensor(flat_ids))
+    # Deduplicate token ids.
+    set_ids: list[int] = list(set(flat_ids))
 
-    for i in unordered_unique_ids:
-        mask: t.Tensor = ordered_ids_tensor == i
-        masked_activations: t.Tensor = all_activations[mask]
+    for batch_index in range(number_batches):
+        start_index = batch_index * batch_size
+        end_index = (batch_index + 1) * batch_size
 
-        # Sum along the number of instances (dim=0).
-        mean_activations = t.mean(masked_activations, dim=0)
+        batch_slice = feature_activations[start_index:end_index]
+        batch_slice = [accelerator.prepare(tensor) for tensor in batch_slice]
+        # `cat_current_batch.shape = (num_activations, PROJECTION_DIM)`
+        batch_slice = accelerator.prepare(t.cat(batch_slice, dim=0))
 
-        tkn_string = tokenizer.convert_ids_to_tokens(i)
+        for i in set_ids:
+            mask: t.Tensor = tensorized_ids == i
+            masked_activations: t.Tensor = batch_slice[mask]
 
-        for dim, avg_act in enumerate(mean_activations):
-            feature_values[dim][tkn_string] = avg_act.item()
+            # Sum along the number of instances (dim=0).
+            average_activation = t.mean(masked_activations, dim=0)
+            token_string = tokenizer.convert_ids_to_tokens(i)
 
-    return feature_values
+            for neuron, activation in enumerate(average_activation):
+                neuron_token_effects[neuron][token_string] = activation.item()
+
+    return neuron_token_effects

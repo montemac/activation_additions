@@ -18,7 +18,7 @@ import yaml
 from accelerate import Accelerator
 from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizer
 
-from sparse_coder.utils import top_k
+from sparse_coder.utils.top_k import calculate_effects
 
 
 assert (
@@ -54,7 +54,9 @@ tsfm_config = AutoConfig.from_pretrained(
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
-NUM_DIMS_PRINTED: int = 2  # Overridable.
+# Overridables.
+N_DIMS_PRINTED: int = PROJECTION_DIM
+DIMS_BATCH_SIZE: int = 50
 
 # %%
 # Reproducibility.
@@ -193,9 +195,7 @@ def populate_table(_table, top_k_tokes) -> None:
         ["Dimension", "Top Tokens", "Top-Token Activations"]
     ]
 
-    for feature_dim, tokens_list in list(top_k_tokes.items())[
-        :NUM_DIMS_PRINTED
-    ]:
+    for feature_dim, tokens_list in list(top_k_tokes.items())[:N_DIMS_PRINTED]:
         # Replace the tokenizer's special space char with a space literal.
         top_tokens = [str(t).replace("Ġ", " ") for t, _ in tokens_list[:TOP_K]]
         top_values = [round_floats(v) for _, v in tokens_list[:TOP_K]]
@@ -241,8 +241,8 @@ table.field_names = [
 ]
 # %%
 # Calculate effects.
-effects: defaultdict[int, defaultdict[str, float]] = top_k.calculate_effects(
-    unpacked_ids, feature_acts, tokenizer, accelerator
+effects: defaultdict[int, defaultdict[str, float]] = calculate_effects(
+    unpacked_ids, feature_acts, tokenizer, accelerator, DIMS_BATCH_SIZE
 )
 
 # %%
