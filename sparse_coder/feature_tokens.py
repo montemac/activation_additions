@@ -107,7 +107,7 @@ unpacked_ids: list[list[int]] = [
 
 
 # %%
-# Load and prepare the cached model activations.
+# Load the cached model activations.
 def unpad_activations(
     activations_block: t.Tensor, unpadded_prompts: list[list[int]]
 ) -> list[t.Tensor]:
@@ -158,8 +158,13 @@ def project_activations(
 
 
 acts_dataset: t.Tensor = accelerator.prepare(t.load(ACTS_DATA_PATH))
+
+# %%
+# Unpad the activations.
 unpadded_acts: list[t.Tensor] = unpad_activations(acts_dataset, unpacked_ids)
 
+# %%
+# Project the activations.
 # If you want to _directly_ interpret the model's activations, assign
 # `feature_acts` directly to `unpadded_acts` and ensure constants are set to
 # the model's embedding dimensionality.
