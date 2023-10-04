@@ -247,7 +247,11 @@ table.field_names = [
 # %%
 # Calculate effects.
 effects: defaultdict[int, defaultdict[str, float]] = calculate_effects(
-    unpacked_ids, feature_acts, tokenizer, accelerator, DIMS_BATCH_SIZE
+    unpacked_ids,
+    feature_acts,
+    tokenizer,
+    accelerator,
+    DIMS_BATCH_SIZE,
 )
 
 # %%

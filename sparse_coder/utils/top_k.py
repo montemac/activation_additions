@@ -23,7 +23,7 @@ def calculate_effects(
     def new_defaultdict():
         return defaultdict(str)
 
-    neuron_token_effects = defaultdict(new_defaultdict())
+    neuron_token_effects = defaultdict(new_defaultdict)
 
     flat_ids: list[int] = [
         token_id for question in question_token_ids for token_id in question
@@ -33,17 +33,20 @@ def calculate_effects(
     # Deduplicate token ids.
     set_ids: list[int] = list(set(flat_ids))
 
+    start_point = 0
+    end_point = 0
     for batch_index in range(number_batches):
         start_index = batch_index * batch_size
         end_index = (batch_index + 1) * batch_size
 
         batch_slice = feature_activations[start_index:end_index]
         batch_slice = [accelerator.prepare(tensor) for tensor in batch_slice]
-        # Final `batch_slice.shape = (num_activations, PROJECTION_DIM)`
+        # Final `batch_slice.shape = (num_batch_activations, PROJECTION_DIM)`
         batch_slice = accelerator.prepare(t.cat(batch_slice, dim=0))
 
+        end_point += len(batch_slice)
         for i in set_ids:
-            mask: t.Tensor = tensorized_ids == i
+            mask: t.Tensor = (tensorized_ids == i)[start_point:end_point]
             masked_activations: t.Tensor = batch_slice[mask]
 
             # Sum along the number of instances (dim=0).
@@ -52,5 +55,7 @@ def calculate_effects(
 
             for neuron, activation in enumerate(average_activation):
                 neuron_token_effects[neuron][token_string] = activation.item()
+
+        start_point = end_point
 
     return neuron_token_effects
