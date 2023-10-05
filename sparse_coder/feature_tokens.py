@@ -56,7 +56,7 @@ PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 # Overridables.
 N_DIMS_PRINTED: int = PROJECTION_DIM
-DIMS_IN_BATCH: int = 1000  # WIP value for `70B`.
+DIMS_IN_BATCH: int = 200  # WIP value for `70B`.
 
 # %%
 # Reproducibility.
