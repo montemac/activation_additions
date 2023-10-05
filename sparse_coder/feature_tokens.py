@@ -56,7 +56,7 @@ PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 # Overridables.
 N_DIMS_PRINTED: int = PROJECTION_DIM
-DIMS_BATCH_SIZE: int = 50
+DIMS_IN_BATCH: int = 1000  # WIP value for `70B`.
 
 # %%
 # Reproducibility.
@@ -251,7 +251,7 @@ effects: defaultdict[int, defaultdict[str, float]] = calculate_effects(
     feature_acts,
     tokenizer,
     accelerator,
-    DIMS_BATCH_SIZE,
+    DIMS_IN_BATCH,
 )
 
 # %%
