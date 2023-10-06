@@ -130,14 +130,14 @@ training_loader: DataLoader = DataLoader(
     dataset,
     batch_size=16,
     sampler=training_sampler,
-    num_workers=16,
+    num_workers=0,
 )
 
 validation_loader: DataLoader = DataLoader(
     dataset,
     batch_size=16,
     sampler=validation_sampler,
-    num_workers=16,
+    num_workers=0,
 )
 
 
