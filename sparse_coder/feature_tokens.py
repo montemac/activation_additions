@@ -250,6 +250,7 @@ table.field_names = [
 effects: defaultdict[int, defaultdict[str, float]] = calculate_effects(
     unpacked_ids,
     feature_acts,
+    model,
     tokenizer,
     accelerator,
     DIMS_IN_BATCH,
