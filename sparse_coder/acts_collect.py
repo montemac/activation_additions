@@ -197,6 +197,11 @@ for question_num in sampled_indices:
         multishot + question, return_tensors="pt"
     )
     prompts_ids.append(input_ids)
+
+    # I am unsure why I needed this additional, manual device movement on a
+    # single 4090 setup. Why doesn't the accelerator take care of this for me?
+    input_ids = input_ids.to(model.device)
+    
     input_ids = accelerator.prepare(input_ids)
     # Generate a completion.
     outputs = model(input_ids)
