@@ -89,6 +89,7 @@ class Encoder:
 
     def __call__(self, inputs):
         """Project to the sparse latent space."""
+        inputs = inputs.to(self.encoder_layer.weight.device)
         return self.encoder(inputs)
 
 
