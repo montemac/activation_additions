@@ -1,6 +1,6 @@
 # Model
-MODEL_DIR: "EleutherAI/pythia-70m-deduped"
-ACTS_LAYER: 2
+MODEL_DIR: "meta-llama/Llama-2-70b-hf"
+ACTS_LAYER: 32
 
 # Encoder Size
 PROJECTION_FACTOR: 10
@@ -13,8 +13,8 @@ BIASES_PATH: "acts_data/learned_biases.pt"
 TOP_K_INFO_PATH: "acts_data/token_info.csv"
 
 # Autoencoder Training
-LAMBDA_L1: 1.0e-2
-LEARNING_RATE: 1.0e-2
+LAMBDA_L1: 3
+LEARNING_RATE: 1.0e-3
 
 # Reproducibility
 SEED: 0
