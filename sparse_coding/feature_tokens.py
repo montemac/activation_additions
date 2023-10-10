@@ -18,7 +18,7 @@ import yaml
 from accelerate import Accelerator
 from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizer
 
-from sparse_coding.utils.top_k import calculate_effects
+from sparse_coding.utils.top_k import calculate_effects, project_activations
 
 
 assert (
@@ -89,7 +89,8 @@ class Encoder:
 
     def __call__(self, inputs):
         """Project to the sparse latent space."""
-        # Single GPU hack; uncomment: `inputs = inputs.to(self.encoder_layer.weight.device)`
+        # Single GPU hack; uncomment: `inputs =
+        # inputs.to(self.encoder_layer.weight.device)`
         return self.encoder(inputs)
 
 
@@ -137,25 +138,6 @@ def unpad_activations(
             break
 
     return unpadded_activations
-
-
-def project_activations(
-    acts_list: list[t.Tensor], projector: Encoder
-) -> list[t.Tensor]:
-    """Projects the activations block over to the sparse latent space."""
-    projected_activations: list = []
-
-    for question in acts_list:
-        proj_question: list = []
-        for activation in question:
-            # Detach the gradients from the decoder model pass.
-            proj_question.append(projector(activation).detach())
-
-        question_block = t.stack(proj_question)
-
-        projected_activations.append(question_block)
-
-    return projected_activations
 
 
 acts_dataset: t.Tensor = accelerator.prepare(t.load(ACTS_DATA_PATH))
@@ -247,7 +229,7 @@ table.field_names = [
     "Top-Token Activations",
 ]
 # %%
-# Calculate effects.
+# Calculate per-input-token summed activation, for each feature dimension.
 effects: defaultdict[int, defaultdict[str, float]] = calculate_effects(
     unpacked_ids,
     feature_acts,

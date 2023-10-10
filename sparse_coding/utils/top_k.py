@@ -9,7 +9,26 @@ from accelerate import Accelerator
 from transformers import AutoTokenizer
 
 
-# Calculate per-input-token summed activation, for each feature dimension.
+def project_activations(
+    acts_list: list[t.Tensor],
+    projector,
+) -> list[t.Tensor]:
+    """Projects the activations block over to the sparse latent space."""
+    projected_activations: list = []
+
+    for question in acts_list:
+        proj_question: list = []
+        for activation in question:
+            # Detach the gradients from the decoder model pass.
+            proj_question.append(projector(activation).detach())
+
+        question_block = t.stack(proj_question)
+
+        projected_activations.append(question_block)
+
+    return projected_activations
+
+
 def calculate_effects(
     question_token_ids: list[list[int]],
     feature_activations: list[t.Tensor],

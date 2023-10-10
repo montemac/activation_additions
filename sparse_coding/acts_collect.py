@@ -202,7 +202,6 @@ for question_num in sampled_indices:
     # ...I am unsure why I need this additional, manual device movement on a
     # single 4090 setup. Why doesn't the accelerator take care of this for me?
 
-
     input_ids = accelerator.prepare(input_ids)
     # Generate a completion.
     outputs = model(input_ids)
