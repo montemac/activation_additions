@@ -18,7 +18,7 @@ import yaml
 from accelerate import Accelerator
 from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizer
 
-from sparse_coder.utils.top_k import calculate_effects
+from sparse_coding.utils.top_k import calculate_effects
 
 
 assert (

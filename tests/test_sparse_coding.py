@@ -1,4 +1,4 @@
-"""Tests for the `sparse_coder` submodule."""
+"""Unit tests for the `sparse_coding` submodule."""
 
 
 from unittest.mock import patch
@@ -9,19 +9,19 @@ import torch as t
 import transformers
 import yaml
 
-from sparse_coder.acts_collect import (
+from sparse_coding.acts_collect import (
     shuffle_answers,
     unhot,
     pad_activations,
 )
 
-from sparse_coder.autoencoder import (
+from sparse_coding.autoencoder import (
     padding_mask,
     ActivationsDataset,
     Autoencoder,
 )
 
-from sparse_coder.feature_tokens import (
+from sparse_coding.feature_tokens import (
     Encoder,
     unpad_activations,
     project_activations,
@@ -30,4 +30,4 @@ from sparse_coder.feature_tokens import (
     populate_table,
 )
 
-from sparse_coder.utils.top_k import calculate_effects
+from sparse_coding.utils.top_k import calculate_effects
