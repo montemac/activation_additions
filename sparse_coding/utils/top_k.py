@@ -12,19 +12,25 @@ from transformers import AutoTokenizer
 def project_activations(
     acts_list: list[t.Tensor],
     projector,
+    accelerator: Accelerator,
 ) -> list[t.Tensor]:
     """Projects the activations block over to the sparse latent space."""
-    projected_activations: list = []
 
-    for question in acts_list:
-        proj_question: list = []
-        for activation in question:
-            # Detach the gradients from the decoder model pass.
-            proj_question.append(projector(activation).detach())
+    # Remember the original question lengths.
+    lengths: list[int] = [len(question) for question in acts_list]
 
-        question_block = t.stack(proj_question)
+    flat_acts: t.Tensor = t.cat(acts_list, dim=0)
+    flat_acts: t.Tensor = accelerator.prepare(flat_acts)
+    projected_flat_acts: t.Tensor = projector(flat_acts).detach()
 
-        projected_activations.append(question_block)
+    # Reconstruct the original question lengths.
+    projected_activations: list[t.Tensor] = []
+    current_idx: int = 0
+    for length in lengths:
+        projected_activations.append(
+            projected_flat_acts[current_idx : current_idx + length, :]
+        )
+        current_idx += length
 
     return projected_activations
 
@@ -38,6 +44,7 @@ def calculate_effects(
     batch_size: int,
 ) -> defaultdict[int, defaultdict[str, float]]:
     """Calculate the per input token activation for each feature."""
+
     number_batches = ceil(len(feature_activations) / batch_size)
     print(f"Number of batches: {number_batches}")
 
