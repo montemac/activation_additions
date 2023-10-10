@@ -173,7 +173,7 @@ feature_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
 
 
 # %%
-# Calculation and tabluation functionality.
+# Tabluation functionality.
 def select_top_k_tokens(
     effects_dict: defaultdict[int, defaultdict[str, float]]
 ) -> defaultdict[int, list[tuple[str, float]]]:
