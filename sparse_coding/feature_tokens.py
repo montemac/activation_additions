@@ -48,9 +48,7 @@ ENCODER_PATH = config.get("ENCODER_PATH")
 BIASES_PATH = config.get("BIASES_PATH")
 TOP_K_INFO_PATH = config.get("TOP_K_INFO_PATH")
 SEED = config.get("SEED")
-tsfm_config = AutoConfig.from_pretrained(
-    TOKENIZER_DIR, use_auth_token=HF_ACCESS_TOKEN
-)
+tsfm_config = AutoConfig.from_pretrained(TOKENIZER_DIR, token=HF_ACCESS_TOKEN)
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
@@ -67,7 +65,7 @@ np.random.seed(SEED)
 # We need the original tokenizer here.
 tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
     TOKENIZER_DIR,
-    use_auth_token=HF_ACCESS_TOKEN,
+    token=HF_ACCESS_TOKEN,
 )
 
 # %%
@@ -89,8 +87,10 @@ class Encoder:
 
     def __call__(self, inputs):
         """Project to the sparse latent space."""
-        # Single GPU hack; uncomment: `inputs =
+
+        # Small model hack; uncomment: `inputs =
         # inputs.to(self.encoder_layer.weight.device)`
+
         return self.encoder(inputs)
 
 
@@ -151,7 +151,9 @@ unpadded_acts: list[t.Tensor] = unpad_activations(acts_dataset, unpacked_ids)
 # If you want to _directly_ interpret the model's activations, assign
 # `feature_acts` directly to `unpadded_acts` and ensure constants are set to
 # the model's embedding dimensionality.
-feature_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
+feature_acts: list[t.Tensor] = project_activations(
+    unpadded_acts, model, accelerator
+)
 
 
 # %%

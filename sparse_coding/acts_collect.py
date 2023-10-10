@@ -76,13 +76,13 @@ accelerator: Accelerator = Accelerator()
 model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
     MODEL_DIR,
     device_map="auto",
-    use_auth_token=HF_ACCESS_TOKEN,
+    token=HF_ACCESS_TOKEN,
     output_hidden_states=True,
 )
 
 tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
     MODEL_DIR,
-    use_auth_token=HF_ACCESS_TOKEN,
+    token=HF_ACCESS_TOKEN,
 )
 model: PreTrainedModel = accelerator.prepare(model)
 model.eval()
@@ -198,9 +198,10 @@ for question_num in sampled_indices:
     )
     prompts_ids.append(input_ids)
 
-    # # Single GPU hack; uncomment: `input_ids = input_ids.to(model.device)`
-    # ...I am unsure why I need this additional, manual device movement on a
-    # single 4090 setup. Why doesn't the accelerator take care of this for me?
+    # Small model hack; uncomment: `input_ids = input_ids.to(model.device)`
+
+    # (The `accelerate` parallelization doesn't degrade gracefully with small
+    # models.)
 
     input_ids = accelerator.prepare(input_ids)
     # Generate a completion.
@@ -245,7 +246,10 @@ def pad_activations(tensor, length) -> t.Tensor:
     """Pad activation tensors to a certain stream-dim length."""
     padding_size: int = length - tensor.size(1)
     padding: t.Tensor = t.zeros(tensor.size(0), padding_size, tensor.size(2))
-    # Single GPU hack; uncomment: `padding: t.Tensor = padding.to(tensor.device)`
+
+    # Small model hack; uncomment: `padding: t.Tensor =
+    # padding.to(tensor.device)`
+
     padding: t.Tensor = accelerator.prepare(padding)
     # Concat and return.
     return t.cat([tensor, padding], dim=1)

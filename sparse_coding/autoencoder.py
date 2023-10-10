@@ -47,9 +47,7 @@ MODEL_DIR = config.get("MODEL_DIR")
 LAMBDA_L1 = float(config.get("LAMBDA_L1"))
 LEARNING_RATE = float(config.get("LEARNING_RATE"))
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
-tsfm_config = AutoConfig.from_pretrained(
-    MODEL_DIR, use_auth_token=HF_ACCESS_TOKEN
-)
+tsfm_config = AutoConfig.from_pretrained(MODEL_DIR, token=HF_ACCESS_TOKEN)
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 NUM_WORKERS = config.get("NUM_WORKERS")
