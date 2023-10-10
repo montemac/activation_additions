@@ -172,7 +172,8 @@ unpadded_acts: list[t.Tensor] = unpad_activations(acts_dataset, unpacked_ids)
 feature_acts: list[t.Tensor] = project_activations(unpadded_acts, model)
 
 
-# Return just the top-k tokens.
+# %%
+# Calculation and tabluation functionality.
 def select_top_k_tokens(
     effects_dict: defaultdict[int, defaultdict[str, float]]
 ) -> defaultdict[int, list[tuple[str, float]]]:
