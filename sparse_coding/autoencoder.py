@@ -52,6 +52,7 @@ tsfm_config = AutoConfig.from_pretrained(
 )
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
+NUM_WORKERS = config.get("NUM_WORKERS")
 
 # %%
 # Use available tensor cores.
@@ -130,14 +131,14 @@ training_loader: DataLoader = DataLoader(
     dataset,
     batch_size=16,
     sampler=training_sampler,
-    num_workers=0,
+    num_workers=NUM_WORKERS,
 )
 
 validation_loader: DataLoader = DataLoader(
     dataset,
     batch_size=16,
     sampler=validation_sampler,
-    num_workers=0,
+    num_workers=NUM_WORKERS,
 )
 
 

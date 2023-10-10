@@ -15,6 +15,7 @@ TOP_K_INFO_PATH: "acts_data/token_info.csv"
 # Autoencoder Training
 LAMBDA_L1: 3
 LEARNING_RATE: 1.0e-3
+NUM_WORKERS: 16
 
 # Reproducibility
 SEED: 0
