@@ -198,9 +198,10 @@ for question_num in sampled_indices:
     )
     prompts_ids.append(input_ids)
 
-    # I am unsure why I needed this additional, manual device movement on a
+    # # Single GPU hack; uncomment: `input_ids = input_ids.to(model.device)`
+    # ...I am unsure why I need this additional, manual device movement on a
     # single 4090 setup. Why doesn't the accelerator take care of this for me?
-    input_ids = input_ids.to(model.device)
+
 
     input_ids = accelerator.prepare(input_ids)
     # Generate a completion.
@@ -245,7 +246,7 @@ def pad_activations(tensor, length) -> t.Tensor:
     """Pad activation tensors to a certain stream-dim length."""
     padding_size: int = length - tensor.size(1)
     padding: t.Tensor = t.zeros(tensor.size(0), padding_size, tensor.size(2))
-    padding: t.Tensor = padding.to(tensor.device)
+    # Single GPU hack; uncomment: `padding: t.Tensor = padding.to(tensor.device)`
     padding: t.Tensor = accelerator.prepare(padding)
     # Concat and return.
     return t.cat([tensor, padding], dim=1)
