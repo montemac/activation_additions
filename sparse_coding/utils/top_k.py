@@ -47,6 +47,7 @@ def calculate_effects(
 
     number_batches = ceil(len(feature_activations) / batch_size)
     print(f"Number of batches to be run: {number_batches}")
+    print("Beginning pre-processing.")
 
     def new_defaultdict():
         return defaultdict(str)
@@ -65,6 +66,7 @@ def calculate_effects(
 
     start_point = 0
     end_point = 0
+    print("Preprocessing complete.")
     for batch_index in range(number_batches):
         print(f"Beginning batch {batch_index+1} of {number_batches}.")
         start_index = batch_index * batch_size
