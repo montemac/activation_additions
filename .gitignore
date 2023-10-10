@@ -132,7 +132,7 @@ dmypy.json
 *prof
 
 # lightning logs
-/sparse_coder/logs/autoencoder/
+/sparse_coding/logs/
 
 # Misc
 *.pkl
