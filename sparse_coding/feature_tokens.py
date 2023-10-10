@@ -71,7 +71,7 @@ tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
 )
 
 # %%
-# Rebuild the learned encoder.
+# Load the learned encoder weights.
 imported_weights: t.Tensor = t.load(ENCODER_PATH)
 imported_biases: t.Tensor = t.load(BIASES_PATH)
 
@@ -93,13 +93,13 @@ class Encoder:
         return self.encoder(inputs)
 
 
-# Initialize the encoder model.
+# Initialize the encoder.
 model: Encoder = Encoder()
 accelerator: Accelerator = Accelerator()
 model = accelerator.prepare(model)
 
 # %%
-# Load and prepare the original prompt tokens.
+# Load and pre-process the original prompt tokens.
 prompts_ids: np.ndarray = np.load(PROMPT_IDS_PATH, allow_pickle=True)
 prompts_ids_list = prompts_ids.tolist()
 unpacked_ids: list[list[int]] = [
@@ -108,7 +108,7 @@ unpacked_ids: list[list[int]] = [
 
 
 # %%
-# Load the cached model activations.
+# Activation pre-processsing functionality.
 def unpad_activations(
     activations_block: t.Tensor, unpadded_prompts: list[list[int]]
 ) -> list[t.Tensor]:
@@ -239,7 +239,7 @@ def populate_table(_table, top_k_tokes) -> None:
 
 
 # %%
-# Initialize table.
+# Initialize the table.
 table = prettytable.PrettyTable()
 table.field_names = [
     "Dimension",
@@ -258,12 +258,12 @@ effects: defaultdict[int, defaultdict[str, float]] = calculate_effects(
 )
 
 # %%
-# Select just top-k effects.
+# Select just the top-k effects.
 truncated_effects: defaultdict[
     int, list[tuple[str, float]]
 ] = select_top_k_tokens(effects)
 
 # %%
-# Populate the table and disk csv.
+# Populate the table and save it to csv.
 populate_table(table, truncated_effects)
 print(table)
