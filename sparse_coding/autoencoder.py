@@ -51,6 +51,12 @@ tsfm_config = AutoConfig.from_pretrained(MODEL_DIR, token=HF_ACCESS_TOKEN)
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 NUM_WORKERS = config.get("NUM_WORKERS")
+SMALL_MODEL_MODE = config.get("SMALL_MODEL_MODE")
+
+assert isinstance(SMALL_MODEL_MODE, bool), "SMALL_MODEL_MODE must be a bool."
+
+if SMALL_MODEL_MODE:
+    NUM_WORKERS: int = 0
 
 # %%
 # Use available tensor cores.

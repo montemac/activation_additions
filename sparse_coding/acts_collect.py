@@ -58,10 +58,13 @@ with open("act_config.yaml", "r", encoding="utf-8") as f:
         print(e)
 HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")
 MODEL_DIR = config.get("MODEL_DIR")
+SMALL_MODEL_MODE = config.get("SMALL_MODEL_MODE")
 PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
 ACTS_SAVE_PATH = config.get("ACTS_DATA_PATH")
 ACTS_LAYER = config.get("ACTS_LAYER")
 SEED = config.get("SEED")
+
+assert isinstance(SMALL_MODEL_MODE, bool), "SMALL_MODEL_MODE must be a bool."
 
 # %%
 # Reproducibility.
@@ -198,10 +201,10 @@ for question_num in sampled_indices:
     )
     prompts_ids.append(input_ids)
 
-    # Small model hack; uncomment: `input_ids = input_ids.to(model.device)`
-
     # (The `accelerate` parallelization doesn't degrade gracefully with small
     # models.)
+    if SMALL_MODEL_MODE:
+        input_ids = input_ids.to(model.device)
 
     input_ids = accelerator.prepare(input_ids)
     # Generate a completion.
@@ -247,8 +250,8 @@ def pad_activations(tensor, length) -> t.Tensor:
     padding_size: int = length - tensor.size(1)
     padding: t.Tensor = t.zeros(tensor.size(0), padding_size, tensor.size(2))
 
-    # Small model hack; uncomment: `padding: t.Tensor =
-    # padding.to(tensor.device)`
+    if SMALL_MODEL_MODE:
+        padding: t.Tensor = padding.to(tensor.device)
 
     padding: t.Tensor = accelerator.prepare(padding)
     # Concat and return.

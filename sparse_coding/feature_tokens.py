@@ -52,9 +52,12 @@ tsfm_config = AutoConfig.from_pretrained(TOKENIZER_DIR, token=HF_ACCESS_TOKEN)
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
+SMALL_MODEL_MODE = config.get("SMALL_MODEL_MODE")
 # Overridables.
 N_DIMS_PRINTED: int = PROJECTION_DIM
 DIMS_IN_BATCH: int = 200  # WIP value for `70B`.
+
+assert isinstance(SMALL_MODEL_MODE, bool), "SMALL_MODEL_MODE must be a bool."
 
 # %%
 # Reproducibility.
@@ -88,8 +91,8 @@ class Encoder:
     def __call__(self, inputs):
         """Project to the sparse latent space."""
 
-        # Small model hack; uncomment: `inputs =
-        # inputs.to(self.encoder_layer.weight.device)`
+        if SMALL_MODEL_MODE:
+            inputs = inputs.to(self.encoder_layer.weight.device)
 
         return self.encoder(inputs)
 
