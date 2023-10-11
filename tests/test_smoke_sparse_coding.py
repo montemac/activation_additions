@@ -31,7 +31,7 @@ def mock_acts_config():
         "NUM_QUESTIONS_EVALED": 5,
         "EPOCHS": 1,
     }
-    smoke_config_path = Path("sparse_coding/act_config.yaml")
+    smoke_config_path = Path("../sparse_coding/act_config.yaml")
     with open(smoke_config_path, "w", encoding="utf-8") as f:
         yaml.dump(smoke_config, f)
 
@@ -45,8 +45,10 @@ def test_smoke_sparse_coding():
             "autoencoder.py",
             "feature_tokens.py",
         ]:
-            subprocess.run(["python3", script], check=True)
+            subprocess.run(
+                ["python3", f"../sparse_coding/{script}"], check=True
+            )
 
         print("Smoke test passed!")
     except subprocess.CalledProcessError as e:
-        pytest.fail(f"Smoke test failed with error: {e}")
+        pytest.fail(f"Smoke test failed: {e}")
