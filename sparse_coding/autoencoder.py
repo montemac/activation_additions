@@ -22,10 +22,6 @@ assert t.__version__ >= "2.0.1", "`Lightning` requires newer `torch` versions."
 
 # %%
 # Set up constants. Drive towards an L_0 of 20-100 at convergence.
-LOG_EVERY_N_STEPS: int = 5
-EPOCHS: int = 150
-SYNC_DIST: bool = True  # Sync distributed training logging.
-
 with open("act_access.yaml", "r", encoding="utf-8") as f:
     try:
         access = yaml.safe_load(f)
@@ -52,6 +48,9 @@ EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 NUM_WORKERS = config.get("NUM_WORKERS")
 SMALL_MODEL_MODE = config.get("SMALL_MODEL_MODE")
+LOG_EVERY_N_STEPS = config.get("LOG_EVERY_N_STEPS", 5)
+EPOCHS = config.get("EPOCHS", 150)
+SYNC_DIST_LOGGING = config.get("SYNC_DIST_LOGGING", True)
 
 assert isinstance(SMALL_MODEL_MODE, bool), "SMALL_MODEL_MODE must be a bool."
 
@@ -190,11 +189,13 @@ class Autoencoder(L.LightningModule):
         training_loss = mse_loss + (LAMBDA_L1 * l1_loss)
         l0_sparsity = (encoded_state != 0).float().sum(dim=-1).mean().item()
         print(f"L^0: {round(l0_sparsity, 2)}\n")
-        self.log("training loss", training_loss, sync_dist=SYNC_DIST)
+        self.log("training loss", training_loss, sync_dist=SYNC_DIST_LOGGING)
         print(f"t_loss: {round(training_loss.item(), 2)}\n")
-        self.log("L1 component", LAMBDA_L1 * l1_loss, sync_dist=SYNC_DIST)
-        self.log("MSE component", mse_loss, sync_dist=SYNC_DIST)
-        self.log("L0 sparsity", l0_sparsity, sync_dist=SYNC_DIST)
+        self.log(
+            "L1 component", LAMBDA_L1 * l1_loss, sync_dist=SYNC_DIST_LOGGING
+        )
+        self.log("MSE component", mse_loss, sync_dist=SYNC_DIST_LOGGING)
+        self.log("L0 sparsity", l0_sparsity, sync_dist=SYNC_DIST_LOGGING)
         return training_loss
 
     # Unused import resolves `lightning` bug.
@@ -215,7 +216,9 @@ class Autoencoder(L.LightningModule):
         )
         validation_loss = mse_loss + (LAMBDA_L1 * l1_loss)
 
-        self.log("validation loss", validation_loss, sync_dist=SYNC_DIST)
+        self.log(
+            "validation loss", validation_loss, sync_dist=SYNC_DIST_LOGGING
+        )
         return validation_loss
 
     def configure_optimizers(self):

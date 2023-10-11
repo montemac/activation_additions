@@ -27,9 +27,6 @@ assert (
 
 # %%
 # Set up constants.
-TOP_K: int = 6
-SIG_FIGS: Union[None, int] = None  # None means round to int.
-
 with open("act_access.yaml", "r", encoding="utf-8") as f:
     try:
         access = yaml.safe_load(f)
@@ -53,11 +50,19 @@ EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 SMALL_MODEL_MODE = config.get("SMALL_MODEL_MODE")
-# Overridables.
-N_DIMS_PRINTED: int = PROJECTION_DIM
-DIMS_IN_BATCH: int = 200  # WIP value for `70B`.
+TOP_K = config.get("TOP_K", 6)
+SIG_FIGS = config.get("SIG_FIGS", None)  # None means "round to int."
+DIMS_IN_BATCH = config.get("DIMS_IN_BATCH", 200)  # WIP tunable for `70B`.
+
+if config.get("N_DIMS_PRINTED_OVERRIDE") is not None:
+    N_DIMS_PRINTED = config.get("N_DIMS_PRINTED_OVERRIDE")
+else:
+    N_DIMS_PRINTED = PROJECTION_DIM
 
 assert isinstance(SMALL_MODEL_MODE, bool), "SMALL_MODEL_MODE must be a bool."
+assert (
+    0 < DIMS_IN_BATCH <= PROJECTION_DIM
+), "DIMS_IN_BATCH must be at least 1 and at most PROJECTION_DIM."
 
 # %%
 # Reproducibility.

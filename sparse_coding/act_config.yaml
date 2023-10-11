@@ -2,7 +2,7 @@
 MODEL_DIR: "meta-llama/Llama-2-7b-chat-hf"
 ACTS_LAYER: 13
 
-# Small model mode
+# Small Model Mode
 SMALL_MODEL_MODE: False
 
 # Encoder Size
@@ -22,3 +22,20 @@ NUM_WORKERS: 4
 
 # Reproducibility
 SEED: 0
+
+# Stable Dev Constants (`acts_collect.py`)
+MAX_NEW_TOKENS: 1
+NUM_RETURN_SEQUENCES: 1
+NUM_SHOT: 6
+NUM_QUESTIONS_EVALED: 817
+
+# Stable Dev Constants (`autoencoder.py`)
+LOG_EVERY_N_STEPS: 5
+EPOCHS: 150
+SYNC_DIST_LOGGING: True
+
+# Stable Dev Constants (`feature_tokens.py`)
+TOP_K: 6
+SIG_FIGS: None
+DIMS_IN_BATCH: 200
+N_DIMS_PRINTED_OVERRIDE: None

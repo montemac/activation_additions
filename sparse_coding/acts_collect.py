@@ -32,15 +32,6 @@ assert (
 
 # %%
 # Set up constants.
-MAX_NEW_TOKENS: int = 1
-NUM_RETURN_SEQUENCES: int = 1
-NUM_SHOT: int = 6
-NUM_DATAPOINTS: int = 817  # Number of questions evaluated.
-
-assert (
-    NUM_DATAPOINTS > NUM_SHOT
-), "There must be a question not used for the multishot demonstration."
-
 try:
     with open("act_access.yaml", "r", encoding="utf-8") as f:
         access = yaml.safe_load(f)
@@ -63,8 +54,15 @@ PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
 ACTS_SAVE_PATH = config.get("ACTS_DATA_PATH")
 ACTS_LAYER = config.get("ACTS_LAYER")
 SEED = config.get("SEED")
+MAX_NEW_TOKENS = config.get("MAX_NEW_TOKENS", 1)
+NUM_RETURN_SEQUENCES = config.get("NUM_RETURN_SEQUENCES", 1)
+NUM_SHOT = config.get("NUM_SHOT", 6)
+NUM_QUESTIONS_EVALED = config.get("NUM_QUESTIONS_EVALED", 817)
 
 assert isinstance(SMALL_MODEL_MODE, bool), "SMALL_MODEL_MODE must be a bool."
+assert (
+    NUM_QUESTIONS_EVALED > NUM_SHOT
+), "There must be a question not used for the multishot demonstration."
 
 # %%
 # Reproducibility.
@@ -95,12 +93,12 @@ model.eval()
 dataset: dict = load_dataset("truthful_qa", "multiple_choice")
 
 assert (
-    len(dataset["validation"]["question"]) >= NUM_DATAPOINTS
+    len(dataset["validation"]["question"]) >= NUM_QUESTIONS_EVALED
 ), "More datapoints sampled than exist in the dataset."
 
 sampled_indices: ndarray = np.random.choice(
     len(dataset["validation"]["question"]),
-    size=NUM_DATAPOINTS,
+    size=NUM_QUESTIONS_EVALED,
     replace=False,
 )
 
