@@ -133,6 +133,7 @@ dmypy.json
 
 # lightning logs
 /sparse_coding/logs/
+/tests/logs/
 
 # Misc
 *.pkl

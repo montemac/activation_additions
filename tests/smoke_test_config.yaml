@@ -1,5 +1,5 @@
 # Smoke Test Model
-MODEL_DIR: "google/bert_uncased_L-2_H-128_A-2"
+MODEL_DIR: "EleutherAI/pythia-70m"
 ACTS_LAYER: 1
 
 # Small Model Mode
@@ -9,11 +9,11 @@ SMALL_MODEL_MODE: True
 PROJECTION_FACTOR: 1
 
 # Smoke Test Save Paths
-PROMPT_IDS_PATH: "acts_data/smoke_test_activations_prompt_ids.npy"
-ACTS_DATA_PATH: "acts_data/smoke_test_activations_dataset.pt"
-ENCODER_PATH: "acts_data/smoke_test_learned_encoder.pt"
-BIASES_PATH: "acts_data/smoke_test_learned_biases.pt"
-TOP_K_INFO_PATH: "acts_data/smoke_test_token_info.csv"
+PROMPT_IDS_PATH: "smoke_test_data/smoke_test_activations_prompt_ids.npy"
+ACTS_DATA_PATH: "smoke_test_data/smoke_test_activations_dataset.pt"
+ENCODER_PATH: "smoke_test_data/smoke_test_learned_encoder.pt"
+BIASES_PATH: "smoke_test_data/smoke_test_learned_biases.pt"
+TOP_K_INFO_PATH: "smoke_test_data/smoke_test_token_info.csv"
 
 # Autoencoder Training
 LAMBDA_L1: 1

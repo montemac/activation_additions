@@ -41,12 +41,13 @@ def mock_load_yaml_constants(monkeypatch):
 def test_smoke_sparse_coding(mock_load_yaml_constants):
     """Run the submodule scripts in sequence."""
     for script in [
-        "acts_collect.py",
-        "autoencoder.py",
-        "feature_tokens.py",
+        "acts_collect",
+        "autoencoder",
+        "feature_tokens",
     ]:
         try:
+            print(f"Starting smoke test for {script}...")
             runpy.run_module(f"sparse_coding.{script}")
-            print("Smoke test passed!")
+            print(f"Smoke test for {script} passed!")
         except Exception as e:
-            pytest.fail(f"Smoke test failed: {e}")
+            pytest.fail(f"Smoke test for {script} failed: {e}")
