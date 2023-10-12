@@ -10,10 +10,11 @@ is your learned dictionary.
 import numpy as np
 import torch as t
 import lightning as L
-import yaml
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoConfig
+
+from sparse_coding.utils.configure import load_yaml_constants
 
 
 assert t.__version__ >= "2.0.1", "`Lightning` requires newer `torch` versions."
@@ -22,16 +23,8 @@ assert t.__version__ >= "2.0.1", "`Lightning` requires newer `torch` versions."
 
 # %%
 # Set up constants. Drive towards an L_0 of 20-100 at convergence.
-with open("act_access.yaml", "r", encoding="utf-8") as f:
-    try:
-        access = yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        print(e)
-with open("act_config.yaml", "r", encoding="utf-8") as f:
-    try:
-        config = yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        print(e)
+access, config = load_yaml_constants()
+
 HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")
 SEED = config.get("SEED")
 ACTS_DATA_PATH = config.get("ACTS_DATA_PATH")
@@ -167,7 +160,9 @@ class Autoencoder(L.LightningModule):
 
         # Decode the sampled state.
         decoder_weights = self.encoder[0].weight.data.T
-        output_state = t.nn.functional.linear(encoded_state, decoder_weights)
+        output_state = t.nn.functional.linear(  # pylint: disable=not-callable
+            encoded_state, decoder_weights
+        )
 
         return encoded_state, output_state
 

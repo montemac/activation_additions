@@ -14,7 +14,6 @@ access token for the `Llama-2` models.
 import numpy as np
 import torch as t
 import transformers
-import yaml
 from accelerate import Accelerator
 from datasets import load_dataset
 from numpy import ndarray
@@ -25,6 +24,8 @@ from transformers import (
     PreTrainedTokenizer,
 )
 
+from sparse_coding.utils.configure import load_yaml_constants
+
 
 assert (
     transformers.__version__ >= "4.31.0"
@@ -32,21 +33,8 @@ assert (
 
 # %%
 # Set up constants.
-try:
-    with open("act_access.yaml", "r", encoding="utf-8") as f:
-        access = yaml.safe_load(f)
-except FileNotFoundError:
-    print("act_access.yaml not found. Creating it now.")
-    with open("act_access.yaml", "w", encoding="utf-8") as w:
-        w.write('HF_ACCESS_TOKEN: ""\n')
-    access = {}
-except yaml.YAMLError as e:
-    print(e)
-with open("act_config.yaml", "r", encoding="utf-8") as f:
-    try:
-        config = yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        print(e)
+access, config = load_yaml_constants()
+
 HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")
 MODEL_DIR = config.get("MODEL_DIR")
 SMALL_MODEL_MODE = config.get("SMALL_MODEL_MODE")

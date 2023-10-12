@@ -14,11 +14,10 @@ import numpy as np
 import prettytable
 import torch as t
 import transformers
-import yaml
 from accelerate import Accelerator
 from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizer
 
-from sparse_coding.utils.top_k import calculate_effects, project_activations
+from sparse_coding.utils import configure, top_k
 
 
 assert (
@@ -27,16 +26,8 @@ assert (
 
 # %%
 # Set up constants.
-with open("act_access.yaml", "r", encoding="utf-8") as f:
-    try:
-        access = yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        print(e)
-with open("act_config.yaml", "r", encoding="utf-8") as f:
-    try:
-        config = yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        print(e)
+access, config = configure.load_yaml_constants()
+
 HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")
 TOKENIZER_DIR = config.get("MODEL_DIR")
 PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
@@ -159,7 +150,7 @@ unpadded_acts: list[t.Tensor] = unpad_activations(acts_dataset, unpacked_ids)
 # If you want to _directly_ interpret the model's activations, assign
 # `feature_acts` directly to `unpadded_acts` and ensure constants are set to
 # the model's embedding dimensionality.
-feature_acts: list[t.Tensor] = project_activations(
+feature_acts: list[t.Tensor] = top_k.project_activations(
     unpadded_acts, model, accelerator
 )
 
@@ -240,7 +231,7 @@ table.field_names = [
 ]
 # %%
 # Calculate per-input-token summed activation, for each feature dimension.
-effects: defaultdict[int, defaultdict[str, float]] = calculate_effects(
+effects: defaultdict[int, defaultdict[str, float]] = top_k.calculate_effects(
     unpacked_ids,
     feature_acts,
     model,
