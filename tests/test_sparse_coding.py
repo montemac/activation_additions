@@ -3,9 +3,9 @@
 
 from collections import defaultdict
 
-import accelerate
 import torch as t
 import transformers
+from accelerate import Accelerator
 
 from sparse_coding.utils.top_k import calculate_effects, project_activations
 from sparse_coding.acts_collect import pad_activations
@@ -24,7 +24,7 @@ def test_calulate_effects():
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         "EleutherAI/pythia-70m"
     )
-    accelerator = accelerate.Accelerator()
+    accelerator = Accelerator()
     batch_size = 2
 
     effects = calculate_effects(
