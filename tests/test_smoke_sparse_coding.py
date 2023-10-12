@@ -10,8 +10,6 @@ import runpy
 import pytest
 import yaml
 
-from sparse_coding.utils.configure import load_yaml_constants
-
 
 @pytest.fixture
 def mock_load_yaml_constants(monkeypatch):
