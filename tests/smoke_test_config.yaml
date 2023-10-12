@@ -35,7 +35,7 @@ EPOCHS: 1
 SYNC_DIST_LOGGING: True
 
 # Smoke Test Constants (`feature_tokens.py`)
+# _Leave out entries_ for None: None values will be interpreted as "None"
+# strings.
 TOP_K: 6
-SIG_FIGS: None
 DIMS_IN_BATCH: 200
-N_DIMS_PRINTED_OVERRIDE: None
