@@ -1,0 +1,41 @@
+# Smoke Test Model
+MODEL_DIR: "google/bert_uncased_L-2_H-128_A-2"
+ACTS_LAYER: 1
+
+# Small Model Mode
+SMALL_MODEL_MODE: True
+
+# Encoder Size
+PROJECTION_FACTOR: 1
+
+# Smoke Test Save Paths
+PROMPT_IDS_PATH: "acts_data/smoke_test_activations_prompt_ids.npy"
+ACTS_DATA_PATH: "acts_data/smoke_test_activations_dataset.pt"
+ENCODER_PATH: "acts_data/smoke_test_learned_encoder.pt"
+BIASES_PATH: "acts_data/smoke_test_learned_biases.pt"
+TOP_K_INFO_PATH: "acts_data/smoke_test_token_info.csv"
+
+# Autoencoder Training
+LAMBDA_L1: 1
+LEARNING_RATE: 1.0e-2
+NUM_WORKERS: 0
+
+# Reproducibility
+SEED: 0
+
+# Smoke Test Constants (`acts_collect.py`)
+MAX_NEW_TOKENS: 1
+NUM_RETURN_SEQUENCES: 1
+NUM_SHOT: 6
+NUM_QUESTIONS_EVALED: 5
+
+# Smoke Test Constants (`autoencoder.py`)
+LOG_EVERY_N_STEPS: 5
+EPOCHS: 1
+SYNC_DIST_LOGGING: True
+
+# Smoke Test Constants (`feature_tokens.py`)
+TOP_K: 6
+SIG_FIGS: None
+DIMS_IN_BATCH: 200
+N_DIMS_PRINTED_OVERRIDE: None

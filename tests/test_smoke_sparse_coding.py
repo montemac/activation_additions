@@ -4,48 +4,40 @@ Smoke integration test for `sparse_coding.py`.
 Note that this integration test will necessarily be somewhat slow.
 """
 
-import os
+
 import subprocess
 
 import pytest
 import yaml
 
+from sparse_coding.utils.configure import load_yaml_constants
+
 
 @pytest.fixture
-def temp_config_yaml():
-    """Create a temporary config yaml file."""
+def mock_load_yaml_constants(monkeypatch):
+    """Load from the smoke test configuration YAML files."""
 
-    # Create the temporary yaml file.
-    with tempfile.NamedTemporaryFile(
-        
-    )
+    def mock_load():
+        """Load config files with get() methods."""
 
+        try:
+            with open("smoke_test_access.yaml", "r", encoding="utf-8") as f:
+                access = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            print(e)
+        with open("smoke_test_config.yaml", "r", encoding="utf-8") as f:
+            try:
+                config = yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                print(e)
 
+        return access, config
 
-
-    smoke_config: dict = {
-        "MODEL_DIR": "google/bert_uncased_L-2_H-128_A-2",
-        "ACTS_LAYER": 1,
-        "SMALL_MODEL_MODE": True,
-        "PROJECTION_FACTOR": 1,
-        "PROMPT_IDS_PATH": "acts_data/smoke_test_activations_prompt_ids.npy",
-        "ACTS_DATA_PATH": "acts_data/smoke_test_activations_dataset.pt",
-        "ENCODER_PATH": "acts_data/smoke_test_learned_encoder.pt",
-        "BIASES_PATH": "acts_data/smoke_test_learned_biases.pt",
-        "TOP_K_INFO_PATH": "acts_data/smoke_test_token_info.csv",
-        "LAMBDA_L1": 1,
-        "LEARNING_RATE": 1.0e-2,
-        "NUM_WORKERS": 0,
-        "NUM_QUESTIONS_EVALED": 5,
-        "EPOCHS": 1,
-    }
-    smoke_config_path = Path("../sparse_coding/act_config.yaml")
-    with open(smoke_config_path, "w", encoding="utf-8") as f:
-        yaml.dump(smoke_config, f)
+    monkeypatch.setattr(load_yaml_constants, "load_yaml_constants", mock_load)
 
 
 @pytest.mark.slow
-def test_smoke_sparse_coding():
+def test_smoke_sparse_coding(mock_load_yaml_constants):
     """Run the submodule scripts in sequence."""
     try:
         for script in [
