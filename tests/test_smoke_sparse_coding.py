@@ -5,7 +5,7 @@ Note that this integration test will necessarily be somewhat slow.
 """
 
 
-import subprocess
+import runpy
 
 import pytest
 import yaml
@@ -33,22 +33,20 @@ def mock_load_yaml_constants(monkeypatch):
 
         return access, config
 
-    monkeypatch.setattr(load_yaml_constants, "load_yaml_constants", mock_load)
+    monkeypatch.setattr(
+        "sparse_coding.utils.configure.load_yaml_constants", mock_load
+    )
 
 
-@pytest.mark.slow
 def test_smoke_sparse_coding(mock_load_yaml_constants):
     """Run the submodule scripts in sequence."""
-    try:
-        for script in [
-            "acts_collect.py",
-            "autoencoder.py",
-            "feature_tokens.py",
-        ]:
-            subprocess.run(
-                ["python3", f"../sparse_coding/{script}"], check=True
-            )
-
-        print("Smoke test passed!")
-    except subprocess.CalledProcessError as e:
-        pytest.fail(f"Smoke test failed: {e}")
+    for script in [
+        "acts_collect.py",
+        "autoencoder.py",
+        "feature_tokens.py",
+    ]:
+        try:
+            runpy.run_module(f"sparse_coding.{script}")
+            print("Smoke test passed!")
+        except Exception as e:
+            pytest.fail(f"Smoke test failed: {e}")
