@@ -36,7 +36,9 @@ def mock_load_yaml_constants(monkeypatch):
     )
 
 
-def test_smoke_sparse_coding(mock_load_yaml_constants):
+def test_smoke_sparse_coding(
+    mock_load_yaml_constants,
+):  # pylint: disable=redefined-outer-name, unused-argument
     """Run the submodule scripts in sequence."""
     for script in [
         "acts_collect",
@@ -47,5 +49,5 @@ def test_smoke_sparse_coding(mock_load_yaml_constants):
             print(f"Starting smoke test for {script}...")
             runpy.run_module(f"sparse_coding.{script}")
             print(f"Smoke test for {script} passed!")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             pytest.fail(f"Smoke test for {script} failed: {e}")
