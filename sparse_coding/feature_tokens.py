@@ -108,42 +108,14 @@ unpacked_ids: list[list[int]] = [
 
 
 # %%
-# Activation pre-processsing functionality.
-def unpad_activations(
-    activations_block: t.Tensor, unpadded_prompts: list[list[int]]
-) -> list[t.Tensor]:
-    """
-    Unpads activations to the lengths specified by the original prompts.
-
-    Note that the activation block must come in with dimensions (batch x stream
-    x embedding_dim), and the unpadded prompts as an array of lists of
-    elements.
-    """
-    unpadded_activations: list = []
-
-    for k, unpadded_prompt in enumerate(unpadded_prompts):
-        try:
-            original_length: int = len(unpadded_prompt)
-            # From here on out, activations are unpadded, and so must be
-            # packaged as a _list of tensors_ instead of as just a tensor
-            # block.
-            unpadded_activations.append(
-                activations_block[k, :original_length, :]
-            )
-        except IndexError:
-            print(f"IndexError at {k}")
-            # This should only occur when the data collection was interrupted.
-            # In that case, we just break when the data runs short.
-            break
-
-    return unpadded_activations
-
-
+# Load and parallelize activations.
 acts_dataset: t.Tensor = accelerator.prepare(t.load(ACTS_DATA_PATH))
 
 # %%
 # Unpad the activations.
-unpadded_acts: list[t.Tensor] = unpad_activations(acts_dataset, unpacked_ids)
+unpadded_acts: list[t.Tensor] = top_k.unpad_activations(
+    acts_dataset, unpacked_ids
+)
 
 # %%
 # Project the activations.
@@ -157,23 +129,6 @@ feature_acts: list[t.Tensor] = top_k.project_activations(
 
 # %%
 # Tabluation functionality.
-def select_top_k_tokens(
-    effects_dict: defaultdict[int, defaultdict[str, float]]
-) -> defaultdict[int, list[tuple[str, float]]]:
-    """Select the top-k tokens for each feature."""
-    tp_k_tokens = defaultdict(list)
-
-    for feature_dim, tokens_dict in effects_dict.items():
-        # Sort tokens by their dimension activations.
-        sorted_effects: list[tuple[str, float]] = sorted(
-            tokens_dict.items(), key=lambda x: x[1], reverse=True
-        )
-        # Add the top-k tokens.
-        tp_k_tokens[feature_dim] = sorted_effects[:TOP_K]
-
-    return tp_k_tokens
-
-
 def round_floats(num: Union[float, int]) -> Union[float, int]:
     """Round floats to number decimal places."""
     return round(num, SIG_FIGS)
@@ -244,7 +199,7 @@ effects: defaultdict[int, defaultdict[str, float]] = top_k.calculate_effects(
 # Select just the top-k effects.
 truncated_effects: defaultdict[
     int, list[tuple[str, float]]
-] = select_top_k_tokens(effects)
+] = top_k.select_top_k_tokens(effects, TOP_K)
 
 # %%
 # Populate the table and save it to csv.
