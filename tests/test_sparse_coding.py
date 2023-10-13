@@ -11,8 +11,8 @@ from accelerate import Accelerator
 from sparse_coding.utils.top_k import (
     calculate_effects,
     project_activations,
-    unpad_activations,
-    select_top_k_tokens,
+    # unpad_activations,
+    # select_top_k_tokens,
 )
 
 
