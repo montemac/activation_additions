@@ -21,18 +21,28 @@ t.manual_seed(0)
 
 
 @pytest.fixture
-def mock_model():
+def mock_autoencoder():
     """Return a mock model, its tokenizer, and its accelerator."""
 
-    model = transformers.AutoModelForCausalLM.from_pretrained(
-        "EleutherAI/pythia-70m"
-    )
+    class MockEncoder:
+        """Mock an encoder model."""
+
+        def __init__(self):
+            """Initialize the mock encoder."""
+            self.encoder_layer = t.nn.Linear(512, 1024)
+            t.nn.Sequential(self.encoder_layer, t.nn.ReLU())
+
+        def __call__(self, inputs):
+            """Mock projection behavior."""
+            return self.encoder_layer(inputs)
+
+    mock_encoder = MockEncoder()
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         "EleutherAI/pythia-70m"
     )
     accelerator = Accelerator()
 
-    return model, tokenizer, accelerator
+    return mock_encoder, tokenizer, accelerator
 
 
 @pytest.fixture
@@ -46,12 +56,12 @@ def mock_data():
 
 
 def test_calculate_effects(  # pylint: disable=redefined-outer-name
-    mock_model, mock_data
+    mock_autoencoder, mock_data
 ):
     """Test the `calculate_effects` function."""
 
     # Pytest fixture injections.
-    model, tokenizer, accelerator = mock_model
+    mock_encoder, tokenizer, accelerator = mock_autoencoder
     question_token_ids, feature_activations = mock_data
 
     batch_size = 2
@@ -59,7 +69,7 @@ def test_calculate_effects(  # pylint: disable=redefined-outer-name
     mock_effects = calculate_effects(
         question_token_ids,
         feature_activations,
-        model,
+        mock_encoder,
         tokenizer,
         accelerator,
         batch_size,
@@ -71,21 +81,20 @@ def test_calculate_effects(  # pylint: disable=redefined-outer-name
 
 
 def test_project_activations(  # pylint: disable=redefined-outer-name
-    mock_model,
+    mock_autoencoder,
 ):
     """Test the `project_activations` function."""
 
     acts_list = [t.randn(5, 512) * 2]
-    mock_autoencoder = t.nn.Linear(512, 1024)
-    _, __, accelerator = mock_model
+    mock_encoder, _, accelerator = mock_autoencoder
 
     mock_projections = project_activations(
-        acts_list, mock_autoencoder, accelerator
+        acts_list, mock_encoder, accelerator
     )
 
     assert isinstance(mock_projections, list)
     assert isinstance(mock_projections[0], t.Tensor)
-    assert mock_projections[0].shape == (1024, 5)
+    assert mock_projections[0].shape == (5, 1024)
 
 
 # def test_unpad_activations():
