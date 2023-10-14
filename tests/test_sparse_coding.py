@@ -80,8 +80,8 @@ def test_calculate_effects(  # pylint: disable=redefined-outer-name
 
     assert isinstance(mock_effects, defaultdict)
     assert isinstance(mock_effects[0], defaultdict)
-    assert len(mock_effects) == 2
-    assert len(mock_effects[0]) == 8
+    assert len(mock_effects) == 2  # Two question activations.
+    assert len(mock_effects[0]) == 8  # Eight unique tokens.
 
 
 def test_project_activations(  # pylint: disable=redefined-outer-name
