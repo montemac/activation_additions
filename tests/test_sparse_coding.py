@@ -11,8 +11,7 @@ from accelerate import Accelerator
 from sparse_coding.utils.top_k import (
     calculate_effects,
     project_activations,
-    # unpad_activations,
-    # select_top_k_tokens,
+    select_top_k_tokens,
 )
 
 
@@ -101,9 +100,36 @@ def test_project_activations(  # pylint: disable=redefined-outer-name
     assert mock_projections[0].shape == (5, 1024)
 
 
-# def test_unpad_activations():
-#     pass
+def test_select_top_k_tokens():
+    """Test the `select_top_k_tokens` function."""
 
+    def inner_defaultdict():
+        """Return a new inner defaultdict."""
+        return defaultdict(str)
 
-# def test_select_top_k_tokens():
-#     pass
+    mock_effects: defaultdict[int, defaultdict[str, float]] = defaultdict(
+        inner_defaultdict
+    )
+    mock_effects[0]["a"] = 1.0
+    mock_effects[0]["b"] = 0.5
+    mock_effects[0]["c"] = 0.25
+    mock_effects[0]["d"] = 0.125
+    mock_effects[0]["e"] = 0.0625
+    mock_effects[1]["a"] = 0.5
+    mock_effects[1]["b"] = 0.25
+    mock_effects[1]["c"] = 0.125
+    mock_effects[1]["d"] = 0.0625
+    mock_effects[1]["e"] = 0.03125
+
+    top_k: int = 3
+
+    mock_top_k_tokens = select_top_k_tokens(mock_effects, top_k)
+
+    assert isinstance(mock_top_k_tokens, defaultdict)
+    assert isinstance(mock_top_k_tokens[0], list)
+    assert isinstance(mock_top_k_tokens[0][0], tuple)
+    assert isinstance(mock_top_k_tokens[0][0][0], str)
+    assert isinstance(mock_top_k_tokens[0][0][1], float)
+    assert len(mock_top_k_tokens) == 2
+    assert len(mock_top_k_tokens[0]) == 3
+    assert len(mock_top_k_tokens[1]) == 3
