@@ -49,8 +49,11 @@ def mock_autoencoder():
 def mock_data():
     """Return mock token ids and autoencoder activations."""
 
-    question_token_ids: list[list[int]] = [[0, 0, 0, 0, 0], [1, 1, 1, 1, 1]]
-    feature_activations: list[t.Tensor] = [t.randn(1024, 5) * 2]
+    question_token_ids: list[list[int]] = [
+        [0, 1, 2, 3, 4, 0],
+        [9, 10, 11, 1, 2, 3],
+    ]
+    feature_activations: list[t.Tensor] = [t.randn(1024, 6) for _ in range(2)]
 
     return question_token_ids, feature_activations
 
@@ -77,7 +80,8 @@ def test_calculate_effects(  # pylint: disable=redefined-outer-name
 
     assert isinstance(mock_effects, defaultdict)
     assert isinstance(mock_effects[0], defaultdict)
-    assert len(mock_effects) == 1024
+    assert len(mock_effects) == 2
+    assert len(mock_effects[0]) == 8
 
 
 def test_project_activations(  # pylint: disable=redefined-outer-name
@@ -85,7 +89,7 @@ def test_project_activations(  # pylint: disable=redefined-outer-name
 ):
     """Test the `project_activations` function."""
 
-    acts_list = [t.randn(5, 512) * 2]
+    acts_list = [t.randn(5, 512) for _ in range(2)]
     mock_encoder, _, accelerator = mock_autoencoder
 
     mock_projections = project_activations(

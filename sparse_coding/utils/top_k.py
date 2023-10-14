@@ -56,14 +56,23 @@ def calculate_effects(
 
         end_point += len(batch_slice)
         for token_id in set_ids:
-            fancy_index: t.Tensor = (tensorized_ids == token_id)[
-                start_point:end_point
-            ]
+            fancy_index: t.Tensor = t.nonzero(
+                (tensorized_ids == token_id)[start_point:end_point]
+            )
             id_activations: t.Tensor = batch_slice[fancy_index]
 
-            # Sum along the number of instances (dim=0).
-            if len(id_activations) > 0:
-                average_activation = t.mean(id_activations, dim=0)
+            # Average over number of token activation instances.
+            if id_activations.shape[0] > 1:
+                average_activation = t.mean(id_activations, dim=0).unsqueeze(
+                    dim=0
+                )
+
+            # Sum along projection_dim.
+            if id_activations.shape[2] > 1:
+                average_activation = t.sum(id_activations, dim=2).unsqueeze(
+                    dim=2
+                )
+
             token_string = tokenizer.convert_ids_to_tokens(token_id)
 
             for neuron, activation in enumerate(average_activation):
