@@ -76,7 +76,10 @@ def calculate_effects(
 
             assert activations_at_input.shape == (
                 model.encoder_layer.weight.shape[0],
-            ), f"`activations_at_input` length: {activations_at_input.shape} != projection_dim: {model.encoder_layer.weight.shape[0]}"
+            ), f"""
+            `activations_at_input` length: {activations_at_input.shape} !=
+            projection_dim: {model.encoder_layer.weight.shape[0]}
+            """
 
             for dim, activation in enumerate(activations_at_input):
                 neuron_token_effects[dim][token_string] = activation.item()
