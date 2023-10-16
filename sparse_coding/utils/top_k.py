@@ -51,11 +51,9 @@ def calculate_effects(
         start_index = batch_idx * batch_size
         end_index = (batch_idx + 1) * batch_size
 
-        print(f"feature_activations[0] shape: {feature_activations[0].shape}")
-
         batch = feature_activations[start_index:end_index]
         batch = [accelerator.prepare(tensor) for tensor in batch]
-        # Final `batch.shape = (batch_size, projection_dim)`
+        # `batch.shape = (batch_size, projection_dim)`
         batch = t.cat(batch, dim=0).to(model.encoder_layer.weight.device)
         batch = accelerator.prepare(batch)
 
@@ -71,7 +69,8 @@ def calculate_effects(
 
             # Average over number of token activation instances.
             activations_at_input = t.mean(activations_at_input, dim=0)
-
+            # `activations_at_input` progressively becomes just an activation
+            # vector.
             activations_at_input = activations_at_input.squeeze(dim=0)
 
             assert activations_at_input.shape == (

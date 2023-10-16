@@ -1,23 +1,23 @@
 # Model
-MODEL_DIR: "meta-llama/Llama-2-7b-chat-hf"
-ACTS_LAYER: 13
+MODEL_DIR: "EleutherAI/pythia-70m"
+ACTS_LAYER: 2
 
 # Large Model Mode
-LARGE_MODEL_MODE: True
+LARGE_MODEL_MODE: False
 
 # Encoder Size
 PROJECTION_FACTOR: 10
 
 # Save Paths
-PROMPT_IDS_PATH: "acts_data/activations_prompt_ids.npy"
-ACTS_DATA_PATH: "acts_data/activations_dataset.pt"
-ENCODER_PATH: "acts_data/learned_encoder.pt"
-BIASES_PATH: "acts_data/learned_biases.pt"
-TOP_K_INFO_PATH: "acts_data/token_info.csv"
+PROMPT_IDS_PATH: "data/activations_prompt_ids.npy"
+ACTS_DATA_PATH: "data/activations_dataset.pt"
+ENCODER_PATH: "data/learned_encoder.pt"
+BIASES_PATH: "data/learned_biases.pt"
+TOP_K_INFO_PATH: "data/token_info.csv"
 
 # Autoencoder Training
-LAMBDA_L1: 1
-LEARNING_RATE: 1e-3
+LAMBDA_L1: 1e-2
+LEARNING_RATE: 1e-2
 NUM_WORKERS: 4
 
 # Reproducibility
