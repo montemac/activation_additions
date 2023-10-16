@@ -16,6 +16,7 @@ def calculate_effects(
     tokenizer: AutoTokenizer,
     accelerator: Accelerator,
     batch_size: int,
+    small_model_mode: bool,
 ) -> defaultdict[int, defaultdict[str, float]]:
     """Calculate the per input token activation for each feature."""
 
@@ -28,58 +29,60 @@ def calculate_effects(
 
     neuron_token_effects = defaultdict(new_defaultdict)
 
-    flat_ids: list[int] = [
+    flat_input_ids: list[int] = [
         token_id for question in question_token_ids for token_id in question
     ]
-    tensorized_ids: t.Tensor = t.tensor(flat_ids).to(
-        model.encoder_layer.weight.device
-    )
-    tensorized_ids: t.Tensor = accelerator.prepare(tensorized_ids)
     # Deduplicate token ids.
-    set_ids: list[int] = list(set(flat_ids))
+    set_of_ids: list[int] = list(set(flat_input_ids))
 
-    start_point = 0
-    end_point = 0
-    print("Pre-processing complete!")
-    for batch_index in range(number_batches):
-        print(f"Starting batch {batch_index+1} of {number_batches}.")
-        start_index = batch_index * batch_size
-        end_index = (batch_index + 1) * batch_size
-
-        batch_slice = feature_activations[start_index:end_index]
-        batch_slice = [accelerator.prepare(tensor) for tensor in batch_slice]
-        # Final `batch_slice.shape = (batch_size, projection_dim)`
-        batch_slice = t.cat(batch_slice, dim=0).to(
+    if small_model_mode is True:
+        flat_input_ids: t.Tensor = t.tensor(flat_input_ids).to(
             model.encoder_layer.weight.device
         )
-        batch_slice = accelerator.prepare(batch_slice)
+    flat_input_ids: t.Tensor = accelerator.prepare(flat_input_ids)
 
-        end_point += len(batch_slice)
-        for token_id in set_ids:
+    start_idx = 0
+    end_idx = 0
+    print("Pre-processing complete!")
+
+    for batch_idx in range(number_batches):
+        print(f"Starting batch {batch_idx+1} of {number_batches}.")
+
+        start_index = batch_idx * batch_size
+        end_index = (batch_idx + 1) * batch_size
+
+        print(f"feature_activations[0] shape: {feature_activations[0].shape}")
+
+        batch = feature_activations[start_index:end_index]
+        batch = [accelerator.prepare(tensor) for tensor in batch]
+        # Final `batch.shape = (batch_size, projection_dim)`
+        batch = t.cat(batch, dim=0).to(model.encoder_layer.weight.device)
+        batch = accelerator.prepare(batch)
+
+        end_idx += len(batch)
+
+        for input_id in set_of_ids:
+            token_string = tokenizer.convert_ids_to_tokens(input_id)
+
             fancy_index: t.Tensor = t.nonzero(
-                (tensorized_ids == token_id)[start_point:end_point]
+                (flat_input_ids == input_id)[start_idx:end_idx]
             )
-            id_activations: t.Tensor = batch_slice[fancy_index]
+            activations_at_input: t.Tensor = batch[fancy_index]
 
             # Average over number of token activation instances.
-            if id_activations.shape[0] > 1:
-                average_activation = t.mean(id_activations, dim=0).unsqueeze(
-                    dim=0
-                )
+            activations_at_input = t.mean(activations_at_input, dim=0)
 
-            # Sum along projection_dim.
-            if id_activations.shape[2] > 1:
-                average_activation = t.sum(id_activations, dim=2).unsqueeze(
-                    dim=2
-                )
+            activations_at_input = activations_at_input.squeeze(dim=0)
 
-            token_string = tokenizer.convert_ids_to_tokens(token_id)
+            assert activations_at_input.shape == (
+                model.encoder_layer.weight.shape[0],
+            ), f"`activations_at_input` length: {activations_at_input.shape} != projection_dim: {model.encoder_layer.weight.shape[0]}"
 
-            for neuron, activation in enumerate(average_activation):
-                neuron_token_effects[neuron][token_string] = activation.item()
+            for dim, activation in enumerate(activations_at_input):
+                neuron_token_effects[dim][token_string] = activation.item()
 
-        start_point = end_point
-        print(f"Batch {batch_index+1} of {number_batches} complete!")
+        start_idx = end_idx
+        print(f"Batch {batch_idx+1} of {number_batches} complete!")
 
     return neuron_token_effects
 

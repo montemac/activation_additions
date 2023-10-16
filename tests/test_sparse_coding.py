@@ -52,7 +52,7 @@ def mock_data():
         [0, 1, 2, 3, 4, 0],
         [9, 10, 11, 1, 2, 3],
     ]
-    feature_activations: list[t.Tensor] = [t.randn(1024, 6) for _ in range(2)]
+    feature_activations: list[t.Tensor] = [t.randn(6, 1024) for _ in range(2)]
 
     return question_token_ids, feature_activations
 
@@ -66,7 +66,8 @@ def test_calculate_effects(  # pylint: disable=redefined-outer-name
     mock_encoder, tokenizer, accelerator = mock_autoencoder
     question_token_ids, feature_activations = mock_data
 
-    batch_size = 2
+    batch_size = 1
+    small_model_mode = True
 
     mock_effects = calculate_effects(
         question_token_ids,
@@ -75,11 +76,12 @@ def test_calculate_effects(  # pylint: disable=redefined-outer-name
         tokenizer,
         accelerator,
         batch_size,
+        small_model_mode,
     )
 
     assert isinstance(mock_effects, defaultdict)
     assert isinstance(mock_effects[0], defaultdict)
-    assert len(mock_effects) == 2  # Two question activations.
+    assert len(mock_effects) == 1024  # PROJECTION_DIM feature dimensions.
     assert len(mock_effects[0]) == 8  # Eight unique tokens.
 
 

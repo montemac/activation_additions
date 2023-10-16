@@ -112,7 +112,9 @@ unpacked_ids: list[list[int]] = [
 acts_dataset: t.Tensor = accelerator.prepare(t.load(ACTS_DATA_PATH))
 
 # %%
-# Unpad the activations.
+# Unpad the activations. Note that activations are stored as a list of question
+# tensors from here on out. Functions may internally unpack that into
+# individual activations, but that's the general protocol between functions.
 unpadded_acts: list[t.Tensor] = top_k.unpad_activations(
     acts_dataset, unpacked_ids
 )
@@ -193,6 +195,7 @@ effects: defaultdict[int, defaultdict[str, float]] = top_k.calculate_effects(
     tokenizer,
     accelerator,
     DIMS_IN_BATCH,
+    SMALL_MODEL_MODE,
 )
 
 # %%
