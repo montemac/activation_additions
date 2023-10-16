@@ -37,7 +37,7 @@ access, config = load_yaml_constants()
 
 HF_ACCESS_TOKEN = access.get("HF_ACCESS_TOKEN", "")
 MODEL_DIR = config.get("MODEL_DIR")
-SMALL_MODEL_MODE = config.get("SMALL_MODEL_MODE")
+LARGE_MODEL_MODE = config.get("LARGE_MODEL_MODE")
 PROMPT_IDS_PATH = config.get("PROMPT_IDS_PATH")
 ACTS_SAVE_PATH = config.get("ACTS_DATA_PATH")
 ACTS_LAYER = config.get("ACTS_LAYER")
@@ -47,7 +47,7 @@ NUM_RETURN_SEQUENCES = config.get("NUM_RETURN_SEQUENCES", 1)
 NUM_SHOT = config.get("NUM_SHOT", 6)
 NUM_QUESTIONS_EVALED = config.get("NUM_QUESTIONS_EVALED", 817)
 
-assert isinstance(SMALL_MODEL_MODE, bool), "SMALL_MODEL_MODE must be a bool."
+assert isinstance(LARGE_MODEL_MODE, bool), "LARGE_MODEL_MODE must be a bool."
 assert (
     NUM_QUESTIONS_EVALED > NUM_SHOT
 ), "There must be a question not used for the multishot demonstration."
@@ -189,7 +189,7 @@ for question_num in sampled_indices:
 
     # (The `accelerate` parallelization doesn't degrade gracefully with small
     # models.)
-    if SMALL_MODEL_MODE:
+    if not LARGE_MODEL_MODE:
         input_ids = input_ids.to(model.device)
 
     input_ids = accelerator.prepare(input_ids)
@@ -236,7 +236,7 @@ def pad_activations(tensor, length) -> t.Tensor:
     padding_size: int = length - tensor.size(1)
     padding: t.Tensor = t.zeros(tensor.size(0), padding_size, tensor.size(2))
 
-    if SMALL_MODEL_MODE:
+    if not LARGE_MODEL_MODE:
         padding: t.Tensor = padding.to(tensor.device)
 
     padding: t.Tensor = accelerator.prepare(padding)

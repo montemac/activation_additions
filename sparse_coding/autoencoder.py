@@ -40,14 +40,14 @@ tsfm_config = AutoConfig.from_pretrained(MODEL_DIR, token=HF_ACCESS_TOKEN)
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
 NUM_WORKERS = config.get("NUM_WORKERS")
-SMALL_MODEL_MODE = config.get("SMALL_MODEL_MODE")
+LARGE_MODEL_MODE = config.get("LARGE_MODEL_MODE")
 LOG_EVERY_N_STEPS = config.get("LOG_EVERY_N_STEPS", 5)
 EPOCHS = config.get("EPOCHS", 150)
 SYNC_DIST_LOGGING = config.get("SYNC_DIST_LOGGING", True)
 
-assert isinstance(SMALL_MODEL_MODE, bool), "SMALL_MODEL_MODE must be a bool."
+assert isinstance(LARGE_MODEL_MODE, bool), "LARGE_MODEL_MODE must be a bool."
 
-if SMALL_MODEL_MODE:
+if not LARGE_MODEL_MODE:
     NUM_WORKERS: int = 0
 
 # %%

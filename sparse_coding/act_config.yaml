@@ -2,8 +2,8 @@
 MODEL_DIR: "meta-llama/Llama-2-7b-chat-hf"
 ACTS_LAYER: 13
 
-# Small Model Mode
-SMALL_MODEL_MODE: False
+# Large Model Mode
+LARGE_MODEL_MODE: True
 
 # Encoder Size
 PROJECTION_FACTOR: 10

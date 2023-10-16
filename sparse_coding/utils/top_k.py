@@ -16,7 +16,7 @@ def calculate_effects(
     tokenizer: AutoTokenizer,
     accelerator: Accelerator,
     batch_size: int,
-    small_model_mode: bool,
+    large_model_mode: bool,
 ) -> defaultdict[int, defaultdict[str, float]]:
     """Calculate the per input token activation for each feature."""
 
@@ -35,7 +35,7 @@ def calculate_effects(
     # Deduplicate token ids.
     set_of_ids: list[int] = list(set(flat_input_ids))
 
-    if small_model_mode is True:
+    if large_model_mode is False:
         flat_input_ids: t.Tensor = t.tensor(flat_input_ids).to(
             model.encoder_layer.weight.device
         )

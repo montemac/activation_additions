@@ -40,7 +40,7 @@ tsfm_config = AutoConfig.from_pretrained(TOKENIZER_DIR, token=HF_ACCESS_TOKEN)
 EMBEDDING_DIM = tsfm_config.hidden_size
 PROJECTION_FACTOR = config.get("PROJECTION_FACTOR")
 PROJECTION_DIM = int(EMBEDDING_DIM * PROJECTION_FACTOR)
-SMALL_MODEL_MODE = config.get("SMALL_MODEL_MODE")
+LARGE_MODEL_MODE = config.get("LARGE_MODEL_MODE")
 TOP_K = config.get("TOP_K", 6)
 SIG_FIGS = config.get("SIG_FIGS", None)  # None means "round to int."
 DIMS_IN_BATCH = config.get("DIMS_IN_BATCH", 200)  # WIP tunable for `70B`.
@@ -50,7 +50,7 @@ if config.get("N_DIMS_PRINTED_OVERRIDE") is not None:
 else:
     N_DIMS_PRINTED = PROJECTION_DIM
 
-assert isinstance(SMALL_MODEL_MODE, bool), "SMALL_MODEL_MODE must be a bool."
+assert isinstance(LARGE_MODEL_MODE, bool), "LARGE_MODEL_MODE must be a bool."
 assert (
     0 < DIMS_IN_BATCH <= PROJECTION_DIM
 ), "DIMS_IN_BATCH must be at least 1 and at most PROJECTION_DIM."
@@ -87,7 +87,7 @@ class Encoder:
     def __call__(self, inputs):
         """Project to the sparse latent space."""
 
-        if SMALL_MODEL_MODE:
+        if not LARGE_MODEL_MODE:
             inputs = inputs.to(self.encoder_layer.weight.device)
 
         return self.encoder(inputs)
@@ -195,7 +195,7 @@ effects: defaultdict[int, defaultdict[str, float]] = top_k.calculate_effects(
     tokenizer,
     accelerator,
     DIMS_IN_BATCH,
-    SMALL_MODEL_MODE,
+    LARGE_MODEL_MODE,
 )
 
 # %%

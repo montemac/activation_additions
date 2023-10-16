@@ -67,7 +67,7 @@ def test_calculate_effects(  # pylint: disable=redefined-outer-name
     question_token_ids, feature_activations = mock_data
 
     batch_size = 1
-    small_model_mode = True
+    large_model_mode = False
 
     mock_effects = calculate_effects(
         question_token_ids,
@@ -76,7 +76,7 @@ def test_calculate_effects(  # pylint: disable=redefined-outer-name
         tokenizer,
         accelerator,
         batch_size,
-        small_model_mode,
+        large_model_mode,
     )
 
     assert isinstance(mock_effects, defaultdict)

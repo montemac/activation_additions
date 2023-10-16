@@ -2,8 +2,8 @@
 MODEL_DIR: "EleutherAI/pythia-70m"
 ACTS_LAYER: 1
 
-# Small Model Mode
-SMALL_MODEL_MODE: True
+# Large Model Mode
+LARGE_MODEL_MODE: False
 
 # Encoder Size
 PROJECTION_FACTOR: 1
