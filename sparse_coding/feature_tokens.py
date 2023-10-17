@@ -188,7 +188,9 @@ table.field_names = [
 ]
 # %%
 # Calculate per-input-token summed activation, for each feature dimension.
-effects: defaultdict[int, defaultdict[str, float]] = top_k.calculate_effects(
+effects: defaultdict[
+    int, defaultdict[str, float]
+] = top_k.per_input_token_effects(
     unpacked_ids,
     feature_acts,
     model,

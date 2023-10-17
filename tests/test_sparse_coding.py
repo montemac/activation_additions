@@ -9,7 +9,7 @@ import transformers
 from accelerate import Accelerator
 
 from sparse_coding.utils.top_k import (
-    calculate_effects,
+    per_input_token_effects,
     project_activations,
     select_top_k_tokens,
 )
@@ -46,7 +46,7 @@ def mock_autoencoder():
 
 @pytest.fixture
 def mock_data():
-    """Return mock token ids and autoencoder activations."""
+    """Return mock input token ids and autoencoder activation by q tensors."""
 
     question_token_ids: list[list[int]] = [
         [0, 1, 2, 3, 4, 0],
@@ -57,19 +57,19 @@ def mock_data():
     return question_token_ids, feature_activations
 
 
-def test_calculate_effects(  # pylint: disable=redefined-outer-name
+def test_per_input_token_effects(  # pylint: disable=redefined-outer-name
     mock_autoencoder, mock_data
 ):
-    """Test the `calculate_effects` function."""
+    """Test `per_input_token_effects`."""
 
     # Pytest fixture injections.
     mock_encoder, tokenizer, accelerator = mock_autoencoder
     question_token_ids, feature_activations = mock_data
 
-    batch_size = 1
+    batch_size = 200
     large_model_mode = False
 
-    mock_effects = calculate_effects(
+    mock_effects = per_input_token_effects(
         question_token_ids,
         feature_activations,
         mock_encoder,
@@ -88,7 +88,7 @@ def test_calculate_effects(  # pylint: disable=redefined-outer-name
 def test_project_activations(  # pylint: disable=redefined-outer-name
     mock_autoencoder,
 ):
-    """Test the `project_activations` function."""
+    """Test `project_activations`."""
 
     acts_list = [t.randn(5, 512) for _ in range(2)]
     mock_encoder, _, accelerator = mock_autoencoder
@@ -103,7 +103,7 @@ def test_project_activations(  # pylint: disable=redefined-outer-name
 
 
 def test_select_top_k_tokens():
-    """Test the `select_top_k_tokens` function."""
+    """Test `select_top_k_tokens`."""
 
     def inner_defaultdict():
         """Return a new inner defaultdict."""
