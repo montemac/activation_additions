@@ -249,19 +249,62 @@ def average_encoder_activations_at_input_token(
     dims_from_encoder_activations_at_input_token_in_batch, dims_per_batch
 ):
     """Average over encoder activations at a common input token."""
-    averaged_dim_from_encoder_activations_at_input_token_in_batch = t.mean(
-        dims_from_encoder_activations_at_input_token_in_batch, dim=0
-    )
-    # Remove the singleton dimension at dim=0.
-    averaged_dim_from_encoder_activations_at_input_token_in_batch = (
-        averaged_dim_from_encoder_activations_at_input_token_in_batch.squeeze(
-            0
+
+    # print(
+    #     textwrap.dedent(
+    #         f"""
+    #         `dims_from_encoder_activations_at_input_token_in_batch` shape:
+    #         {dims_from_encoder_activations_at_input_token_in_batch.shape}
+    #         """
+    #     )
+    # )
+
+    # assert not t.isnan(
+    #     dims_from_encoder_activations_at_input_token_in_batch
+    # ).any(), "Un-processed tensor contains NaNs!"
+
+    # Average across dimensional instances; handle the no-matching-dimensions
+    # edge case too.
+    if dims_from_encoder_activations_at_input_token_in_batch.shape[0] > 0:
+        averaged_dim_from_encoder_activations_at_input_token_in_batch = t.mean(
+            dims_from_encoder_activations_at_input_token_in_batch, dim=0
         )
+    elif dims_from_encoder_activations_at_input_token_in_batch.shape[0] == 0:
+        return t.zeros(
+            dims_from_encoder_activations_at_input_token_in_batch.shape[-1]
+        )
+
+    # Remove singleton dimensions.
+    averaged_dim_from_encoder_activations_at_input_token_in_batch = (
+        averaged_dim_from_encoder_activations_at_input_token_in_batch.squeeze()
     )
+
+    # print(
+    #     textwrap.dedent(
+    #         f"""
+    #         `averaged_dim_from_encoder_activations_at_input_token_in_batch`
+    #         shape:
+    #         {averaged_dim_from_encoder_activations_at_input_token_in_batch
+    #          .shape}
+    #         """
+    #     )
+    # )
+
     assert (
         averaged_dim_from_encoder_activations_at_input_token_in_batch.shape[0]
         <= dims_per_batch
-    )
+    ), "Tensor is longer than `dims_per_batch`!"
+
+    assert (
+        len(
+            averaged_dim_from_encoder_activations_at_input_token_in_batch.shape
+        )
+        == 1
+    ), "Tensor has more than one dimension! It should be a vector."
+
+    assert not t.isnan(
+        averaged_dim_from_encoder_activations_at_input_token_in_batch
+    ).any(), "Processed tensor contains NaNs!"
 
     return averaged_dim_from_encoder_activations_at_input_token_in_batch
 
