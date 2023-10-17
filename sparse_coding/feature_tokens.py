@@ -8,7 +8,6 @@ Requires a HF access token to get `Llama-2`'s tokenizer.
 
 import csv
 from collections import defaultdict
-from math import isnan
 from typing import Union
 
 import numpy as np

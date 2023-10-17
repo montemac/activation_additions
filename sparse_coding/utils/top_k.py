@@ -36,7 +36,7 @@ def per_input_token_effects(
         token_ids_by_q, encoder, accelerator, large_model_mode
     )
 
-    print("Pre-processing complete! Starting batch loop...")
+    print("Pre-processing complete!\nStarting batch loop...")
     # Loop over the batches.
     effect_scalar_by_dim_by_input_token = batches_loop(
         num_dim_batches,
