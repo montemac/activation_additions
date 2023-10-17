@@ -19,8 +19,8 @@ BIASES_PATH: "data/learned_biases.pt"
 TOP_K_INFO_PATH: "data/token_info.csv"
 
 # Autoencoder Training
-LAMBDA_L1: 1e-2
-LEARNING_RATE: 1e-2
+LAMBDA_L1: 1.0e-3
+LEARNING_RATE: 1.0e-3
 NUM_WORKERS: 4
 
 # Reproducibility

@@ -49,6 +49,9 @@ assert isinstance(LARGE_MODEL_MODE, bool), "LARGE_MODEL_MODE must be a bool."
 
 if not LARGE_MODEL_MODE:
     NUM_WORKERS: int = 0
+    ACCUMULATE_GRAD_BATCHES: int = 1
+else:
+    ACCUMULATE_GRAD_BATCHES: int = 4
 
 # %%
 # Use available tensor cores.
@@ -239,7 +242,7 @@ logger = L.pytorch.loggers.CSVLogger("logs", name="autoencoder")
 # autoencoders.
 trainer: L.Trainer = L.Trainer(
     accelerator="auto",
-    accumulate_grad_batches=4,
+    accumulate_grad_batches=ACCUMULATE_GRAD_BATCHES,
     callbacks=early_stop,
     log_every_n_steps=LOG_EVERY_N_STEPS,
     logger=logger,
