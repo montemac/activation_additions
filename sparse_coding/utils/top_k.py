@@ -125,6 +125,9 @@ def batches_loop(
         print(f"Starting batch {batch+1} of {num_dim_batches}...")
 
         ending_dim_index += dims_per_batch
+        if ending_dim_index > encoder.encoder_layer.weight.shape[0]:
+            ending_dim_index = encoder.encoder_layer.weight.shape[0]
+        print(f"Starting dim index: {starting_dim_index}")
 
         # Note that `batched_dims_from_encoder_activations` has
         # lost the question data that `encoder_activations_by_q` had.
@@ -169,15 +172,15 @@ def batches_loop(
                     input_token_string
                 ] = averaged_activation_per_dim.item()
 
-            print(
-                f"""
-                Batch {batch+1} complete: appended data for dims
-                {starting_dim_index} through {ending_dim_index}!
-                """
-            )
+        print(
+            f"""
+            Batch {batch+1} complete: appended data for dims
+            {starting_dim_index} through {ending_dim_index}!
+            """
+        )
 
-            # Update `starting_dim_index` for the next batch.
-            starting_dim_index = ending_dim_index
+        # Update `starting_dim_index` for the next batch.
+        starting_dim_index = ending_dim_index
 
     return effect_scalar_by_dim_by_input_token
 
@@ -246,6 +249,12 @@ def average_encoder_activations_at_input_token(
     """Average over encoder activations at a common input token."""
     averaged_dim_from_encoder_activations_at_input_token_in_batch = t.mean(
         dims_from_encoder_activations_at_input_token_in_batch, dim=0
+    )
+    # Remove the singleton dimension at dim=0.
+    averaged_dim_from_encoder_activations_at_input_token_in_batch = (
+        averaged_dim_from_encoder_activations_at_input_token_in_batch.squeeze(
+            0
+        )
     )
     assert (
         averaged_dim_from_encoder_activations_at_input_token_in_batch.shape[0]

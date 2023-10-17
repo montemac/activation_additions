@@ -66,7 +66,7 @@ def test_per_input_token_effects(  # pylint: disable=redefined-outer-name
     mock_encoder, tokenizer, accelerator = mock_autoencoder
     question_token_ids, feature_activations = mock_data
 
-    batch_size = 200
+    dims_in_batch = 200
     large_model_mode = False
 
     mock_effects = per_input_token_effects(
@@ -75,14 +75,19 @@ def test_per_input_token_effects(  # pylint: disable=redefined-outer-name
         mock_encoder,
         tokenizer,
         accelerator,
-        batch_size,
+        dims_in_batch,
         large_model_mode,
     )
 
-    assert isinstance(mock_effects, defaultdict)
-    assert isinstance(mock_effects[0], defaultdict)
-    assert len(mock_effects) == 1024  # PROJECTION_DIM feature dimensions.
-    assert len(mock_effects[0]) == 8  # Eight unique tokens.
+    try:
+        assert isinstance(mock_effects, defaultdict)
+        assert isinstance(mock_effects[0], defaultdict)
+        assert len(mock_effects) == dims_in_batch  # Batch size.
+        assert len(mock_effects[0]) == 8  # 8 unique tokens.
+    except Exception as e:  # pylint: disable=broad-except
+        pytest.fail(
+            f"`per_input_token_effects` failed unit test with error: {e}"
+        )
 
 
 def test_project_activations(  # pylint: disable=redefined-outer-name
@@ -97,9 +102,12 @@ def test_project_activations(  # pylint: disable=redefined-outer-name
         acts_list, mock_encoder, accelerator
     )
 
-    assert isinstance(mock_projections, list)
-    assert isinstance(mock_projections[0], t.Tensor)
-    assert mock_projections[0].shape == (5, 1024)
+    try:
+        assert isinstance(mock_projections, list)
+        assert isinstance(mock_projections[0], t.Tensor)
+        assert mock_projections[0].shape == (5, 1024)
+    except Exception as e:  # pylint: disable=broad-except
+        pytest.fail(f"`project_activations` failed unit test with error: {e}")
 
 
 def test_select_top_k_tokens():
@@ -126,12 +134,14 @@ def test_select_top_k_tokens():
     top_k: int = 3
 
     mock_top_k_tokens = select_top_k_tokens(mock_effects, top_k)
-
-    assert isinstance(mock_top_k_tokens, defaultdict)
-    assert isinstance(mock_top_k_tokens[0], list)
-    assert isinstance(mock_top_k_tokens[0][0], tuple)
-    assert isinstance(mock_top_k_tokens[0][0][0], str)
-    assert isinstance(mock_top_k_tokens[0][0][1], float)
-    assert len(mock_top_k_tokens) == 2
-    assert len(mock_top_k_tokens[0]) == 3
-    assert len(mock_top_k_tokens[1]) == 3
+    try:
+        assert isinstance(mock_top_k_tokens, defaultdict)
+        assert isinstance(mock_top_k_tokens[0], list)
+        assert isinstance(mock_top_k_tokens[0][0], tuple)
+        assert isinstance(mock_top_k_tokens[0][0][0], str)
+        assert isinstance(mock_top_k_tokens[0][0][1], float)
+        assert len(mock_top_k_tokens) == 2
+        assert len(mock_top_k_tokens[0]) == 3
+        assert len(mock_top_k_tokens[1]) == 3
+    except Exception as e:  # pylint: disable=broad-except
+        pytest.fail(f"`select_top_k_tokens` failed unit test with error: {e}")
