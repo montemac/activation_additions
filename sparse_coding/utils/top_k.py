@@ -175,7 +175,7 @@ def batches_loop(
         print(
             f"""
             Batch {batch+1} complete: appended data for dims
-            {starting_dim_index} through {ending_dim_index}!
+            {starting_dim_index} through {ending_dim_index-1}!
             """
         )
 
