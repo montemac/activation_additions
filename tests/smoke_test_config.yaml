@@ -16,8 +16,8 @@ BIASES_PATH: "smoke_test_data/smoke_test_learned_biases.pt"
 TOP_K_INFO_PATH: "smoke_test_data/smoke_test_token_info.csv"
 
 # Autoencoder Training
-LAMBDA_L1: 1
-LEARNING_RATE: 1.0e-2
+LAMBDA_L1: 1.0e-4
+LEARNING_RATE: 1.0e-4
 NUM_WORKERS: 0
 
 # Reproducibility

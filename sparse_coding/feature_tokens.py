@@ -8,6 +8,7 @@ Requires a HF access token to get `Llama-2`'s tokenizer.
 
 import csv
 from collections import defaultdict
+from math import isnan
 from typing import Union
 
 import numpy as np
@@ -133,10 +134,10 @@ feature_acts: list[t.Tensor] = top_k.project_activations(
 # Tabluation functionality.
 def round_floats(num: Union[float, int]) -> Union[float, int]:
     """Round floats to number decimal places."""
-    if isinstance(num, (float, int)):
-        return round(num, SIG_FIGS)
-    print(f"{num} is neither a float nor an int.")
-    return num
+    if isnan(num):
+        print(f"{num} is NaN.")
+        return num
+    return round(num, SIG_FIGS)
 
 
 def populate_table(_table, top_k_tokes) -> None:

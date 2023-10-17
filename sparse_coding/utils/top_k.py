@@ -1,6 +1,7 @@
 """Functions for processing autoencoders into top-k tokens."""
 
 
+import textwrap
 from collections import defaultdict
 from math import ceil
 
@@ -25,7 +26,7 @@ def per_input_token_effects(
     at each input token."""
 
     # Begin pre-processing. Calulate the number of dimensional batches to run.
-    print("Starting pre-processing.")
+    print("Starting pre-processing...")
     num_dim_batches: int = batching_setup(dims_per_batch, encoder)
 
     # Initialize the effects dictionary.
@@ -127,7 +128,6 @@ def batches_loop(
         ending_dim_index += dims_per_batch
         if ending_dim_index > encoder.encoder_layer.weight.shape[0]:
             ending_dim_index = encoder.encoder_layer.weight.shape[0]
-        print(f"Starting dim index: {starting_dim_index}")
 
         # Note that `batched_dims_from_encoder_activations` has
         # lost the question data that `encoder_activations_by_q` had.
@@ -173,10 +173,12 @@ def batches_loop(
                 ] = averaged_activation_per_dim.item()
 
         print(
-            f"""
-            Batch {batch+1} complete: appended data for dims
-            {starting_dim_index} through {ending_dim_index-1}!
-            """
+            textwrap.dedent(
+                f"""
+                Batch {batch+1} complete! Appended data for dims
+                {starting_dim_index} through {ending_dim_index-1}.
+                """
+            )
         )
 
         # Update `starting_dim_index` for the next batch.
