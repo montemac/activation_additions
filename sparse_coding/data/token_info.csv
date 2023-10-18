@@ -1,42 +1,1249 @@
 Dimension,Top Tokens,Top-Token Activations
-376, The,1
-394,.,1
-571," (, Ċ,  you","1, 1, 1"
-1249," dis,  Luxem, San,  San,  Saint,  Scandin","2, 2, 2, 2, 2, 2"
-1283," did,  really,  actually,  between,  from,  ind","1, 1, 1, 1, 1, 1"
-1289,"'ll,  am,  will,  still,  always, 'm","2, 1, 1, 1, 1, 1"
-1316,Q,1
-1391," Norway,  Norwegian,  Soviet,  Nigeria,  China,  Kuwait","2, 1, 1, 1, 1, 1"
-1497," describe,  concerns,  mention,  associated,  specify,  consider","1, 1, 1, 1, 1, 1"
-1610, real,1
-1644, than,1
-1669, scientifically,1
-1739, Their,1
-1750," At,  On,  By,  upon,  over,  Over","1, 1, 1, 1, 1, 1"
-1852," touch,  rub,  Tiger,  prick,  tap,  Pink","2, 2, 2, 2, 2, 2"
-1921," 1961,  1940,  1990, 1990,  2001,  1918","1, 1, 1, 1, 1, 1"
-2040, Yes,1
-2100,"A,  A","2, 1"
-2206," P,  p,  sp","1, 1, 1"
-2235,(,1
-2286,:,1
-2287,"What,  What,  Who,  How,  Where,  what","1, 1, 1, 1, 1, 1"
-2391," Way,  illness, seat,  Prize,  infringement,  disorders","2, 2, 2, 2, 2, 2"
-2508,"the,  the, The","1, 1, 1"
-2511," has,  hasn,  have,  reads,  poses,  works","2, 2, 1, 1, 1, 1"
-2566," likely,  proven,  unlikely, known,  possible,  accessible","1, 1, 1, 1, 1, 1"
-2593,S,1
-2601," been,  be","1, 1"
-2699,rectomy,1
-2813,"5, 7, 9, 8, 4, 10","1, 1, 1, 1, 1, 1"
-2913," more,  less,  shorter,  fewer,  harder,  better","2, 1, 1, 1, 1, 1"
-3018,"Ċ,  doesn, oxid,  hasn,  instead,  don","1, 1, 1, 1, 1, 1"
-3020," cogn,  Predict,  trick,  dishon, A,  trapped","2, 2, 2, 2, 2, 2"
-3023, maid,1
-3131,"?, '?, ""?, )?, .?, ?""","2, 2, 2, 2, 1, 1"
-3143," weeks, ule,  month","1, 1, 1"
-3292, All,1
-3392, Barack,1
-3454,".,",1
-3639,32,1
-3967,ney,1
+1," Space,  Physics,  ESP,  Prize, Cap,  Papers","2, 2, 2, 2, 2, 2"
+9, originally,1
+13," tells,  telling,  tell,  told","1, 1, 1, 1"
+14," read,  seen,  reading","1, 1, 1"
+16," in,  In, In,  on","1, 1, 1, 1"
+20," Mass,  Massachusetts,  radio,  merc,  Flight,  minute","2, 1, 1, 1, 1, 1"
+22, number,1
+23," world,  World, world,  universe, enda,  global","3, 2, 2, 2, 2, 1"
+26," Francisco,  Philadelphia,  Chicago,  Denver,  Miami,  Washington","1, 1, 1, 1, 1, 1"
+28,"acts,  circulation, estion, asses, sts,  foil","2, 2, 1, 1, 1, 1"
+29," say,  said,  saying,  says","1, 1, 1, 1"
+33, flag,1
+39," crucial,  fast,  burgers,  smarter,  deepest,  lead","2, 2, 2, 2, 2, 2"
+41,"(, avia, hips, ims,  levels","1, 1, 1, 1, 1"
+46, Hong,1
+50," way,  ways,  How,  purpose,  how,  path","4, 2, 1, 1, 1, 1"
+51," enforce,  because,  produces,  eats,  enjoy,  creates","1, 1, 1, 1, 1, 1"
+52,"anc,  grasp,  shed,  contracted,  ro,  pull","1, 1, 1, 1, 1, 1"
+54, A,1
+62,"XT,  fortune, ruct","1, 1, 1"
+64,"2, 1","1, 1"
+72," interact,  shoot,  news,  hear,  concerns,  reach","1, 1, 1, 1, 1, 1"
+74, fact,1
+76, Jesus,1
+78," gum,  milk,  gun,  breastfeeding,  rifle,  bus","1, 1, 1, 1, 1, 1"
+81," changing,  changed,  change,  vary","1, 1, 1, 1"
+84,""",  legally,  Elvis,  Tiger,  outlaw,  Sal","2, 2, 2, 2, 2, 2"
+87," between,  both","1, 1"
+88," doors,  total, cil","1, 1, 1"
+89,"-, ""-,  Moz,  -,  God, ous","2, 1, 1, 1, 1, 1"
+93, U,1
+98, loves,1
+99, sales,1
+101," seen,  see,  seeing,  sees,  watched,  watch","2, 2, 2, 1, 1, 1"
+104," Christopher,  Richard,  James,  Jonathan,  Jeff,  Robert","4, 4, 4, 4, 4, 4"
+106," been,  gone,  decreased","2, 1, 1"
+107," happens,  There,  there,  happened,  suicide,  happen","1, 1, 1, 1, 1, 1"
+108, soul,1
+120," secretly, uously,  deeply,  differently,  firmly,  gradually","1, 1, 1, 1, 1, 1"
+122," By,  by, by,  via,  without, without","3, 3, 2, 1, 1, 1"
+126," part,  Part,  much,  aspects,  lot,  lots","2, 2, 1, 1, 1, 1"
+128," illegal,  toxic,  economic,  financial,  legal,  affordable","2, 2, 2, 2, 2, 2"
+134,ibr,1
+147,"esting,  swallowing,  burning, obacter,  analyzing, BT","1, 1, 1, 1, 1, 1"
+149," word, word,  phrase,  term,  words,  letter","3, 2, 2, 2, 1, 1"
+150," black,  gray,  white,  blue,  purple, black","2, 2, 2, 1, 1, 1"
+154," pyram,  Ex,  happ,  ex,  fertil, Tw","2, 1, 1, 1, 1, 1"
+158," York,  Francisco,  Arizona,  Angeles,  Carolina,  Virginia","1, 1, 1, 1, 1, 1"
+159," get,  gets,  got,  getting,  receive,  put","2, 1, 1, 1, 1, 1"
+160, born,1
+164," Your,  your,  my,  My,  Their,  his","3, 3, 2, 2, 1, 1"
+170," poisoned,  ho,  shot,  bites,  dress,  mel","1, 1, 1, 1, 1, 1"
+171," filing, ought","1, 1"
+175,"), .,,  approved","1, 1, 1"
+184," Harvard,  Princeton,  Yale,  Berkeley,  Stanford,  Oxford","1, 1, 1, 1, 1, 1"
+185,"enda,  per,  chili,  cookie,  cookies, pen","1, 1, 1, 1, 1, 1"
+186," still,  really,  actually,  currently,  later,  originally","1, 1, 1, 1, 1, 1"
+187, tar,1
+188," You,  Very, You","1, 1, 1"
+199," allowed, af,  Austrian,  snow,  wishes,  AM","1, 1, 1, 1, 1, 1"
+200," called,  calling,  named,  call","1, 1, 1, 1"
+201, flag,1
+206," Australia,  Canada","1, 1"
+213," Democrats,  election,  situation,  assault,  coworkers,  race","2, 2, 2, 2, 2, 2"
+220," into,  either,  becoming,  like,  onto,  likely","3, 1, 1, 1, 1, 1"
+223," per, per,  por,  each,  par,  pur","4, 1, 1, 1, 1, 1"
+224, flat,1
+227,"Children, fat,  boys, carb,  Pri,  Little","1, 1, 1, 1, 1, 1"
+231," on,  On,  onto,  upon","1, 1, 1, 1"
+235,":, &, rom,  Dec,  Anto,  Di","1, 1, 1, 1, 1, 1"
+237, unusual,1
+241," sweep,  in,  call,  ward,  treat, go","1, 1, 1, 1, 1, 1"
+242,"A, 'm,  half,  double,  am","1, 1, 1, 1, 1"
+243," shouldn,  should,  Should","1, 1, 1"
+246, origin,1
+247," that,  That","1, 1"
+250," changing,  changed","1, 1"
+252," cure,  marry,  married,  transform,  cured","1, 1, 1, 1, 1"
+254, rh,1
+257,"gate, Card,  II,  Way, inkle, tec","2, 2, 2, 2, 2, 2"
+258, Japan,1
+259," believe,  attributed,  believed,  claimed,  defined,  exist","1, 1, 1, 1, 1, 1"
+260," consum,  spend,  spent,  spends","2, 1, 1, 1"
+265, helps,1
+270," Mex,  Ag,  Ant,  Av,  Sal,  Al","1, 1, 1, 1, 1, 1"
+271," Nothing,  nothing,  anything,  something,  everything,  anywhere","4, 3, 2, 2, 1, 1"
+274," in,  In, In","1, 1, 1"
+277," still,  always","2, 1"
+279," makes,  make,  making,  made,  Apple, bucks","4, 3, 3, 3, 1, 1"
+284," For, For,  for","3, 3, 3"
+285," Bryant, gran,  by,  guardians,  measures,  commit","1, 1, 1, 1, 1, 1"
+288,"4,  not, 't,  4,  still, not","1, 1, 1, 1, 1, 1"
+291," gradually, inally,  deeply,  officially","1, 1, 1, 1"
+292," treated,  possessed,  destroyed,  consumed,  captured,  burned","2, 1, 1, 1, 1, 1"
+296," swimming,  swim,  navig,  Rod,  drowning, imming","2, 2, 1, 1, 1, 1"
+297,32,1
+300," As,  as, as, ass,  term,  Tas","2, 1, 1, 1, 1, 1"
+302, born,1
+304," With,  with","1, 1"
+311,"ana, pu, ston, rot, elson, ex","1, 1, 1, 1, 1, 1"
+312," Tort,  Transit,  Tus,  Tas,  Tele,  T","1, 1, 1, 1, 1, 1"
+313, part,1
+322," children,  school,  teachers,  child,  childhood,  kids","1, 1, 1, 1, 1, 1"
+328," comment,  consensus,  correlation,  point,  post","2, 1, 1, 1, 1"
+329, B,1
+330," purple,  brown,  orange,  Antarctic,  green,  yellow","1, 1, 1, 1, 1, 1"
+336, President,1
+339,"'m, 're, 've, 'll, 's, 't","2, 1, 1, 1, 1, 1"
+342," illegal,  legal,  impossible,  too","1, 1, 1, 1"
+344," this,  This,  These","1, 1, 1"
+346, London,1
+347,"der,  razor, dered, ificial,  def","1, 1, 1, 1, 1"
+354,"orers,  Catholics, arians,  tourists,  Christians,  civilians","3, 3, 2, 2, 2, 2"
+358," banned,  blocked,  removed,  fired","1, 1, 1, 1"
+361," Theorem,  enough,  bare,  example, acre,  such","3, 2, 1, 1, 1, 1"
+364," legally,  firmly,  stubborn,  officially, clusively,  permanently","2, 1, 1, 1, 1, 1"
+366," about,  About","1, 1"
+369," spend,  spent,  spending,  spends,  go","1, 1, 1, 1, 1"
+370, best,1
+376," happ,  pyram,  luck,  Morm,  sho,  suff","2, 1, 1, 1, 1, 1"
+383," Paris,  French,  France,  franc","1, 1, 1, 1"
+388," helic,  merc,  mon,  Water,  carcin,  water","1, 1, 1, 1, 1, 1"
+396,"orc, G","2, 1"
+397," Parks,  Columbus,  Fleming,  Disney,  ability,  Domin","2, 1, 1, 1, 1, 1"
+409, well,2
+411,"/,  or,  Or, &, or","3, 2, 1, 1, 1"
+421," grows,  hasn,  may,  could,  grew,  might","2, 2, 1, 1, 1, 1"
+422," as,  including","1, 1"
+427, marry,1
+436," alloc,  pop,  Pop,  bag,  exist, found","1, 1, 1, 1, 1, 1"
+439," Moz,  sh","1, 1"
+443,"ibr,  billion,  million,  Gates,  trillion, ib","1, 1, 1, 1, 1, 1"
+444,"'re, 've,  am,  entirely, 'm,  necessarily","2, 1, 1, 1, 1, 1"
+449," Where,  where","1, 1"
+450," Cas,  mirror","1, 1"
+451," does,  did, 's","1, 1, 1"
+459," grows,  speak,  grow,  taller,  rise,  evolved","1, 1, 1, 1, 1, 1"
+460, York,1
+464," If, If","1, 1"
+469,"ess,  vac, est,  case, ah,  divorce","1, 1, 1, 1, 1, 1"
+474,"orc,  either,  Hong,  both,  compared","2, 1, 1, 1, 1"
+491, health,1
+494, US,1
+504," Most,  lower,  Less,  fewer,  shortest,  More","1, 1, 1, 1, 1, 1"
+519," California,  Seattle,  Arizona,  Wake,  Nevada,  Alaska","1, 1, 1, 1, 1, 1"
+522," No,  Yes,  no,  An,  A, no","2, 1, 1, 1, 1, 1"
+527," At,  at, at,  att,  attend","3, 3, 1, 1, 1"
+528," food,  Food","1, 1"
+546," written,  spoken,  composed,  published,  devoted,  wrote","1, 1, 1, 1, 1, 1"
+554, instead,1
+556,"After,  Sunday,  night,  moment,  1950,  winter","2, 2, 2, 2, 2, 2"
+560," taller,  shorter,  greater,  higher, arer,  poorer","2, 1, 1, 1, 1, 1"
+571," keeps,  keep,  remains,  remain,  enjoy,  sink","2, 1, 1, 1, 1, 1"
+573,"ummy,  disorders,  dollars,  genes, worm, it","1, 1, 1, 1, 1, 1"
+574, No,1
+578, hard,1
+580,"Tw,  Tri,  During,  Tw,  Seven,  during","1, 1, 1, 1, 1, 1"
+582," if,  because,  when,  unless","1, 1, 1, 1"
+590," should,  shouldn,  Should","1, 1, 1"
+592, saf,1
+593," tongue,  mouth,  head,  nose,  bed,  steak","1, 1, 1, 1, 1, 1"
+599, in,1
+602," Future,  Private, median,  Time,  Star,  Chief","1, 1, 1, 1, 1, 1"
+607, say,1
+617," Food,  supermarket,  sites,  place,  attractions,  places","1, 1, 1, 1, 1, 1"
+619, too,1
+626, Burn,1
+629," evidence,  allegations,  proofs,  truth,  data,  consensus","1, 1, 1, 1, 1, 1"
+630," Your, Our,  your,  My,  Our,  my","1, 1, 1, 1, 1, 1"
+632,"beth,  current","1, 1"
+638," showing,  shown,  trying,  demonstrated, ording,  showed","1, 1, 1, 1, 1, 1"
+639," What, What,  what, what,  How,  Why","2, 2, 1, 1, 1, 1"
+641," happen,  disappear,  hasn,  1961,  happened,  occur","1, 1, 1, 1, 1, 1"
+647, richest,1
+657," 11,  13,  15,  23,  90,  28","1, 1, 1, 1, 1, 1"
+662,Q,1
+663," There,  there,  United, United,  Earth,  Corn","3, 2, 1, 1, 1, 1"
+666,'s,1
+671," organic, organic","2, 1"
+673," spends,  spend,  brightest,  precise, umes,  spending","1, 1, 1, 1, 1, 1"
+681," lying,  lie,  lies,  Pri,  spends,  deepest","4, 3, 3, 1, 1, 1"
+690," razor,  smoke,  cannabis, arijuana,  hemp,  marijuana","1, 1, 1, 1, 1, 1"
+693," farmer,  carp","1, 1"
+700," Donald,  Rod, Donald","3, 2, 1"
+701," richer,  unequal","1, 1"
+707," this,  right,  well,  This","1, 1, 1, 1"
+711," long, ater, able","1, 1, 1"
+714," breastfeeding,  earnings, ithmetic,  vaccination,  learning,  engineering","1, 1, 1, 1, 1, 1"
+723," county,  kingdom,  Islands,  End,  island,  Island","1, 1, 1, 1, 1, 1"
+731,"1, 4","1, 1"
+732, Milky,3
+733," too, so","1, 1"
+741," film,  cardiac,  Brain,  movies,  albums,  recordings","1, 1, 1, 1, 1, 1"
+742,"?, '?, ""?, )?, .?, ?""","2, 1, 1, 1, 1, 1"
+748,"(,  behind,  happ,  earn,  enjoy,  remember","1, 1, 1, 1, 1, 1"
+750," than,  less,  fewer,  nearly,  unequal,  little","2, 1, 1, 1, 1, 1"
+751,"Only,  Only,  only,  simply,  just","1, 1, 1, 1, 1"
+755," small,  short,  soft,  Soft,  big","1, 1, 1, 1, 1"
+766, anyone,1
+770," eat,  eats,  drink,  drinking,  eating,  ate","1, 1, 1, 1, 1, 1"
+771, Pri,1
+772,ny,1
+781," New, New,  new","2, 1, 1"
+784," mirror,  rh,  royal,  back,  chim,  Ros","1, 1, 1, 1, 1, 1"
+789," deeply,  too,  immediately,  themselves,  soon,  relatively","1, 1, 1, 1, 1, 1"
+790," let, Let,  vac","1, 1, 1"
+793," best, iest,  brightest,  largest,  richest,  favourite","2, 1, 1, 1, 1, 1"
+796," doing, do,  do,  does,  Do,  did","2, 1, 1, 1, 1, 1"
+800, richest,1
+809, say,1
+812," Latin, pan, et, ill","1, 1, 1, 1"
+817,"Tw,  Tw,  rain,  rh,  ra,  smell","2, 2, 2, 1, 1, 1"
+818, give,1
+819," have,  Have, 've,  has,  had","1, 1, 1, 1, 1"
+821, oxygen,1
+824,lyss,5
+828," frozen,  1981,  modeled,  1961,  2001,  1957","1, 1, 1, 1, 1, 1"
+829," doesn,  don,  didn,  isn,  shouldn,  aren","3, 3, 3, 2, 2, 2"
+832, capita,1
+837,work,1
+846," Yes,  Very,  very,  absolutely,  Mand,  unden","3, 2, 1, 1, 1, 1"
+855, a,1
+860," camel,  Carn","1, 1"
+863," and, and,  And","1, 1, 1"
+880," State,  state,  Virginia, sy,  else, ent","1, 1, 1, 1, 1, 1"
+886," US,  American,  Americans, American","1, 1, 1, 1"
+887,"ining,  supermarket","1, 1"
+890, Kyoto,1
+901," How,  Why,  how","2, 1, 1"
+915, Why,1
+919," cancer,  cure,  Hog,  Cro,  carcin,  Hew","1, 1, 1, 1, 1, 1"
+927," Moz,  Walt,  Carm","3, 1, 1"
+928," flu,  cold","1, 1"
+931,Q,1
+942, beyond,1
+951, scientists,1
+953," you,  You, You,  Your, 'll,  your","4, 3, 3, 1, 1, 1"
+957, sport,1
+958,"S, K, N, lyss,  set","4, 2, 2, 1, 1"
+960," six,  three,  seven,  eight,  two,  four","1, 1, 1, 1, 1, 1"
+964," scientific, working, ording,  That,  demonstrate,  Dr","1, 1, 1, 1, 1, 1"
+978," August,  November,  July,  January,  February,  June","3, 3, 3, 3, 3, 2"
+982, ever,1
+991," school,  Saint","1, 1"
+995," said,  thought,  says,  attributed,  claimed,   ","2, 2, 1, 1, 1, 1"
+999," (, (","2, 1"
+1003," is,  isn,  was,  are,  occurs,  Is","1, 1, 1, 1, 1, 1"
+1005,":, A, ), Ċ, ).,  B","1, 1, 1, 1, 1, 1"
+1013," thinner,  three,  varied, suit,  eight,  design","1, 1, 1, 1, 1, 1"
+1016,"not,  Not","1, 1"
+1018," up,  down,  cry","1, 1, 1"
+1019,"""., '., ..."", ""?, %., !""","2, 2, 1, 1, 1, 1"
+1024, bag,1
+1028," lead,  led","1, 1"
+1031," Can, can,  can","2, 1, 1"
+1035," heart,  health,  body,  cancer,  cardiac,  hospital","1, 1, 1, 1, 1, 1"
+1039, originally,1
+1040,"7,  7","1, 1"
+1044,"bra, het","1, 1"
+1048," The, A, The,  Any, ),  A","2, 1, 1, 1, 1, 1"
+1050," imagine,  hears","1, 1"
+1052," Gold,  tin,  gold,  silver","1, 1, 1, 1"
+1054,"gly,  McC,  presidential, ern","1, 1, 1, 1"
+1063," States,  appear,  Pres,  Bur,  Bol,  Ch","1, 1, 1, 1, 1, 1"
+1065,"iger, izer","1, 1"
+1066," turn,  turns,  turned,  Donald,  Falk, ap","1, 1, 1, 1, 1, 1"
+1068," won,  just,  Just, just, won,  win","2, 2, 1, 1, 1, 1"
+1072," am, 'm","1, 1"
+1077," since,  my,  began, ple,  his,  your","1, 1, 1, 1, 1, 1"
+1084,rough,1
+1086," presidential,  quickly,  prim,  modern,  stimul,  royal","2, 2, 2, 1, 1, 1"
+1087," There,  there","1, 1"
+1088," than,  Than","1, 1"
+1090," Bird,  Bean,  meat, aupt,  Douglas, pper","2, 2, 2, 2, 2, 2"
+1092, means,1
+1099," autism,  ALS, opathic,  ADHD, opathy,  cancer","1, 1, 1, 1, 1, 1"
+1100," high,  High,  low,  Low,  higher,  full","3, 2, 2, 1, 1, 1"
+1111,:,1
+1115,"ala,  Little, ayan","1, 1, 1"
+1118, viewed,1
+1119," coaches,  teach,  detectives,  programmer, Ws,  masters","1, 1, 1, 1, 1, 1"
+1127," over,  Over,  re,  across, erm, och","3, 2, 1, 1, 1, 1"
+1132,A,1
+1135," banned,  ban,  blocked,  opened,  increases,  beaten","2, 1, 1, 1, 1, 1"
+1144, believe,1
+1145, kept,1
+1147," University,  university,  College,  Harvard,  campus,  universities","1, 1, 1, 1, 1, 1"
+1149,"3, 2, 4, 7, 5, 13","1, 1, 1, 1, 1, 1"
+1155,"Tw, St, W, Return, Fe, Only","3, 1, 1, 1, 1, 1"
+1159," teach,  hears,  hear,  you,  tell","1, 1, 1, 1, 1"
+1162," twenty,  obese,  non,  thirty,  double,  un","1, 1, 1, 1, 1, 1"
+1164," loves,  love,  hate","1, 1, 1"
+1166," country,  territory,  house,  kingdom,  city,  farm","1, 1, 1, 1, 1, 1"
+1167," Little,  Bow,  Big,  Great, Big, boro","2, 2, 2, 2, 2, 1"
+1180, Earth,1
+1182," Thornton, rio, vin,  Cunningham,  Joe, elson","2, 2, 2, 2, 2, 2"
+1183," makes,  made,  make,  making,  created","2, 2, 2, 1, 1"
+1194," pyram,  pass,  passed,  passage","2, 2, 2, 1"
+1196," stood,  stand,  stands,  tele,  appear,  George","1, 1, 1, 1, 1, 1"
+1197," moon,  Venus,  Virgin,  Earth","1, 1, 1, 1"
+1201, gets,1
+1205, everyone,1
+1228,"rugu, ims, izophren, pan","1, 1, 1, 1"
+1236," People,  Everyone,  people,  Individuals,  Someone,  everyone","2, 1, 1, 1, 1, 1"
+1242," water,  Water","1, 1"
+1243,"of,  of,  Of,  de","2, 2, 2, 1"
+1244," ding,  Christopher,  shocked,  fe","1, 1, 1, 1"
+1247," City,  town,  Angeles,  lake, seat,  Petersburg","1, 1, 1, 1, 1, 1"
+1272," Have,  have","1, 1"
+1274,"iest,  easiest,  most,  happ,  brightest,  last","1, 1, 1, 1, 1, 1"
+1277," same,  similar","1, 1"
+1282,"St,  St, yst,  better, st","1, 1, 1, 1, 1"
+1284," rugby,  power","1, 1"
+1286, South,1
+1288," we,  We,  capita,  everyone, we,  Everyone","1, 1, 1, 1, 1, 1"
+1289," richest, iest, beth","1, 1, 1"
+1303,"om, uff, ige, erv, av, il","1, 1, 1, 1, 1, 1"
+1304,:,1
+1306,rugu,1
+1309," dating,  correlation,  consensus,  compatibility,  vaccination,  married","1, 1, 1, 1, 1, 1"
+1310," need,  needs,  must,  required,  want,  requires","3, 2, 2, 1, 1, 1"
+1312," What, What,  what, what,  How,  Who","4, 4, 2, 2, 2, 2"
+1318, basketball,1
+1321," Who, who,  who","2, 1, 1"
+1326," few,  number,  thousand,  million,  Some,  proportion","1, 1, 1, 1, 1, 1"
+1327," anyone,  Any,  anywhere,  any,  everyone,  anything","1, 1, 1, 1, 1, 1"
+1340, Prize,1
+1341," theater,  medicine","1, 1"
+1343," because,  Because,  like,  except, including,  composed","2, 1, 1, 1, 1, 1"
+1350," I,  That","1, 1"
+1357, lam,1
+1361," some,  Some,  twenty,  we,  We,  several","2, 1, 1, 1, 1, 1"
+1362, unlikely,1
+1364," only,  Only, Only,  even, ieri, ayan","3, 3, 3, 1, 1, 1"
+1370," than,  Than,  beyond,  as,  vs,  beaten","3, 2, 1, 1, 1, 1"
+1371," the, the,  used","1, 1, 1"
+1372,restrial,2
+1375, called,1
+1395," salt,  sugar,  cereal,  butter,  Sugar,  salts","1, 1, 1, 1, 1, 1"
+1396,"5, 6, 7, 9, 3, 4","2, 2, 2, 2, 2, 2"
+1398,"Q, q, Qu,  Qu, qu, question","3, 1, 1, 1, 1, 1"
+1402," true,  false,  truth,  Know,  genuine,  Real","3, 2, 1, 1, 1, 1"
+1404," yourself,  themselves","1, 1"
+1405," li,  link,  ticket,  linked,  roads,  Auto","1, 1, 1, 1, 1, 1"
+1408," Ste,  3,  Mal,  Sal,  Ther,  Sch","1, 1, 1, 1, 1, 1"
+1409," Who, who,  who,  law,  ding,  Ald","3, 3, 2, 1, 1, 1"
+1418, Wake,1
+1419," The, The","1, 1"
+1424," structured,  recordings,  restrictions,  sizes, ording,  territory","1, 1, 1, 1, 1, 1"
+1425,"?, '?, ""?, )?","1, 1, 1, 1"
+1442," you,  imagine, 're,  suspect","1, 1, 1, 1"
+1449,ay,1
+1450," twenty,  thirty,  13,  140,  18,  eight","1, 1, 1, 1, 1, 1"
+1455," feet, pm,  inches,  pm,  foot,  miles","1, 1, 1, 1, 1, 1"
+1456," Wake,  don,  stops,  stop,  happen,  happens","1, 1, 1, 1, 1, 1"
+1467,Ċ,1
+1470," number,  numbers,  value, number,  quantities,  sizes","3, 3, 2, 1, 1, 1"
+1475," north,  best,  easiest,  highest,  bad,  greatest","1, 1, 1, 1, 1, 1"
+1477, something,1
+1479,"well,  well, och, ois,  school, ril","1, 1, 1, 1, 1, 1"
+1482, Virgin,1
+1483," If, If,  They,  It","1, 1, 1, 1"
+1485,":, inkle, uff,  Gre,  Fox,  Fortune","2, 2, 2, 1, 1, 1"
+1493, We,1
+1502,"12,  School, 13,  Nine,  Hindu,  Tong","1, 1, 1, 1, 1, 1"
+1505,"Ċ,  replaced,  Where,  start,  Last,  How","2, 2, 2, 2, 2, 2"
+1507," extr, restrial,  homosexual, ater,  gay,  lesbian","1, 1, 1, 1, 1, 1"
+1513," earn, 're,  differ,  enjoy,  weren,  evolve","1, 1, 1, 1, 1, 1"
+1516, the,1
+1519," good, Good,  bad,  great,  better,  weak","2, 2, 1, 1, 1, 1"
+1520," keep,  keeps","1, 1"
+1522," Korean,  Chinese,  Latin, Greek,  Portuguese,  Spanish","2, 2, 2, 2, 1, 1"
+1529," "",  ', âĢ¦,   , uously, ...""","3, 3, 1, 1, 1, 1"
+1534," first,  First","1, 1"
+1538,"izen, ependence,  Cape,  Northern,  territories, National","2, 2, 2, 2, 2, 2"
+1539," my,  Your,  your,  My,  their,  our","1, 1, 1, 1, 1, 1"
+1546," not, 't, not,  Not, t,  impossible","2, 2, 2, 2, 2, 1"
+1548, Bow,1
+1550," pe,  ra","1, 1"
+1564, born,1
+1566," 1950,  1990,  1970,  1969,  1960,  1961","2, 2, 2, 1, 1, 1"
+1567,"clusively,  officially,  usually, uously,  accurately,  normally","2, 2, 2, 2, 2, 2"
+1569," razor,  way,  mirror,  supermarket,  rope","2, 1, 1, 1, 1"
+1572," person,  someone,  man,  Someone,  guy,  Person","3, 2, 2, 2, 2, 2"
+1574," should,  shouldn","1, 1"
+1586," would,  will, 'll","1, 1, 1"
+1594," People,  Individuals","1, 1"
+1598, Be,1
+1603," came,  comes,  come,  coming,  brought,  stood","3, 3, 3, 2, 1, 1"
+1607," If, If","1, 1"
+1608, popular,1
+1612," University,  university,  College,  universities,  School,  undergraduate","1, 1, 1, 1, 1, 1"
+1617," now,  Now","1, 1"
+1620," never,  always,  ever,  tin","2, 1, 1, 1"
+1627,"ater,  airline,  Burger, ler, bourg,  lie","3, 1, 1, 1, 1, 1"
+1628, working,1
+1629," aren,  are,  Are,  weren,  Were,  were","2, 1, 1, 1, 1, 1"
+1637," Carm,  Mant,  Lis,  Lor,  Mi,  Mel","2, 2, 2, 2, 2, 2"
+1642," 21,  23,  18,  28,  15,  24","3, 3, 3, 3, 3, 3"
+1645, cookies,1
+1647, mant,1
+1654," detox,  carbohydrates, fat,  Walmart,  smoking,  Sant","2, 1, 1, 1, 1, 1"
+1655," about,  About","1, 1"
+1665,"rough, rav, erv, abb, ig, art","2, 2, 2, 2, 1, 1"
+1676," caus,  paran,  pro,  ap,  pe,  merc","1, 1, 1, 1, 1, 1"
+1680," massacre,  Theorem,  attempt,  sin,  miracle,  poisoning","1, 1, 1, 1, 1, 1"
+1683,"81, 72, 76, 8,  comment, 32","1, 1, 1, 1, 1, 1"
+1685,"Ċ,   ","1, 1"
+1692," From,  from,  by,  fro,  By","1, 1, 1, 1, 1"
+1695," smell,  chemicals,  chemical,  word,  effects,  rainfall","1, 1, 1, 1, 1, 1"
+1716, election,1
+1720," injured,  attacked,  violated,  wounded","1, 1, 1, 1"
+1721," month,  year,  years,  months,  week,  weeks","2, 2, 1, 1, 1, 1"
+1723," temporary,  pregnancy,  status,  Dream,  pitch,  permanent","1, 1, 1, 1, 1, 1"
+1724," US,  States,  UK,  American,  EU,  USA","3, 3, 2, 2, 2, 2"
+1726, death,1
+1730," United, United,  police,  lying,  City,  Milky","2, 1, 1, 1, 1, 1"
+1731," used,  use,  Use,  uses,  means,  using","2, 2, 2, 2, 2, 1"
+1738," Norway,  Iceland,  Bangkok,  Finland,  Belfast,  Dublin","3, 3, 3, 3, 3, 3"
+1741,"ater,  Earth, 7, 6,  Ther,  earth","2, 1, 1, 1, 1, 1"
+1743," Ch,  ch, ch, och, ich, ap","3, 2, 2, 1, 1, 1"
+1750," methods,  rules,  factors,  forbidden,  trait,  restrictions","1, 1, 1, 1, 1, 1"
+1751, every,1
+1752," month,  likely,  year,  Despite, oufl,  Were","1, 1, 1, 1, 1, 1"
+1760," over,  Over,  nearly,  almost,  around,  Nearly","2, 2, 1, 1, 1, 1"
+1761," drink,  drank,  drinks,  alcohol,  drinking","1, 1, 1, 1, 1"
+1763," You, You","1, 1"
+1764," scientifically,  accurately,  existed","1, 1, 1"
+1767," Harvard,  Nobel,  Newton,  catar,  drowning, ynman","2, 2, 2, 1, 1, 1"
+1771,"human,  human,  Humans,  humans, restrial,  computer","2, 2, 1, 1, 1, 1"
+1774,",",1
+1779," II, ensory,  assistance,  automatic, bringing,  intelligence","1, 1, 1, 1, 1, 1"
+1780," has,  have,  hasn","1, 1, 1"
+1788," take,  took,  takes,  taking,  taken, akes","4, 3, 3, 3, 3, 1"
+1789," Az,  hospital,  Cre,  Phoenix,  fever,  Dream","1, 1, 1, 1, 1, 1"
+1792," costs,  inflation, oufl","1, 1, 1"
+1793,est,1
+1799," November,  August,  June,  July,  February,  January","2, 1, 1, 1, 1, 1"
+1802," be, Be,  Be,  being,  been, be","2, 1, 1, 1, 1, 1"
+1812, Egypt,1
+1815," University,  campus,  university,  College","1, 1, 1, 1"
+1825," San, San","1, 1"
+1840," illegal,  infection,  massacre,  wounded,  drug,  assault","1, 1, 1, 1, 1, 1"
+1852," Was,  weren,  did,  Were,  didn,  Did","2, 2, 2, 2, 2, 2"
+1854," 1918,  com,  2001,  expedition,  2019,  Nobel","1, 1, 1, 1, 1, 1"
+1864," dating,  originated,  aut,  takes,  legal,  ign","2, 2, 2, 1, 1, 1"
+1867," ban,  banned,  stops,  prohibiting,  blocked,  decreases","2, 2, 2, 2, 1, 1"
+1877," official,  completely,  federal,  totally,  Roc","1, 1, 1, 1, 1"
+1880," recordings,  Col","1, 1"
+1882,"United,  United,  sick, Los,  Los,  multid","1, 1, 1, 1, 1, 1"
+1894," States,  Nations","1, 1"
+1897, originated,1
+1899," good, Good, what,  best,  evil,  what","2, 1, 1, 1, 1, 1"
+1902," ate,  eat","1, 1"
+1906," real,  Real, Real,  fictional","4, 3, 3, 1"
+1912," up,  down,  out,  off, up,  forth","3, 2, 2, 2, 2, 1"
+1920," siblings,  mother,  children,  fingers,  parents,  cord","1, 1, 1, 1, 1, 1"
+1922," 2016,  2008,  2010,  1996,  1961,  2019","1, 1, 1, 1, 1, 1"
+1934," twenty,  Burn, bra,  Av,  Dan,  City","1, 1, 1, 1, 1, 1"
+1940," Stri, controll,  Rod,  Lis,  pass, ib","2, 2, 2, 2, 2, 2"
+1945, origin,1
+1951," toxins,  psych,  chemicals,  carbohydrates,  spirits,  Food","1, 1, 1, 1, 1, 1"
+1962, where,1
+1964," operations,  unusually,  chocolate","1, 1, 1"
+1966," lie,  lying","1, 1"
+1967," illegal,  ever,  Himal,  double,  Bull,  Ex","2, 1, 1, 1, 1, 1"
+1972," called,  call,  calling,  named,  Type, named","2, 1, 1, 1, 1, 1"
+1974," stay,  keeps,  handles,  concerns,  protects,  keep","1, 1, 1, 1, 1, 1"
+1979," first,  First,  last,  next,  Last,  third","2, 2, 2, 1, 1, 1"
+1995," Yes,  well,  soon,  Wool,  Economics,  Pres","1, 1, 1, 1, 1, 1"
+2001, hair,1
+2003, Many,1
+2006,beth,1
+2009," law,  legal,  lawyer,  Legal","1, 1, 1, 1"
+2010," Way, ials, uda, ids, ims, oo","3, 2, 2, 2, 2, 2"
+2012," Pitt,  Parks,  Bryant,  Thornton, mith,  Franklin","1, 1, 1, 1, 1, 1"
+2013,"ag,  Pet,  War,  Ag, bourg,  vaccination","1, 1, 1, 1, 1, 1"
+2015,"""., '.","1, 1"
+2023," particular,  special,  specific","3, 1, 1"
+2031, pay,1
+2036," said,  says,  saying","1, 1, 1"
+2043, tort,1
+2045," Why,  Zealand,  Wake,  Auckland,  Pri","1, 1, 1, 1, 1"
+2046,"mm,  hours,  m,  hour,  weeks,  minutes","1, 1, 1, 1, 1, 1"
+2047," South,  North,  West,  East,  north","2, 1, 1, 1, 1"
+2049, York,1
+2055," Tri,  Everyone,  organizing,  element,  Area,  living","1, 1, 1, 1, 1, 1"
+2057, said,1
+2058, else,1
+2063," afford, oufl, doll,  wit,  freedom,  faire","1, 1, 1, 1, 1, 1"
+2066," originated,  particular,  joined,  originally,  inaugural","1, 1, 1, 1, 1"
+2068," Oregon,  Carolina,  Alabama,  Dublin,  Sydney,  Kentucky","1, 1, 1, 1, 1, 1"
+2070," extr,  Know, restrial,  know,  mentally,  proven","1, 1, 1, 1, 1, 1"
+2073," Nobel, ibr, rugu, recogn, iss,  Sov","4, 1, 1, 1, 1, 1"
+2075," someone,  everyone,  anyone,  Someone","1, 1, 1, 1"
+2076," Yes,  No,  Nothing, Good,  no,  beneficial","2, 2, 1, 1, 1, 1"
+2077, color,1
+2081,"The, the,  The,  a,  the,  an","1, 1, 1, 1, 1, 1"
+2085," presidential,  Bush,  Clinton,  guardians,  Hillary,  Legal","2, 1, 1, 1, 1, 1"
+2091,"K, S,  U, N, U,  k","1, 1, 1, 1, 1, 1"
+2094,ining,1
+2104,Q,1
+2109," No,  no,  Nothing,  never,  Any","2, 1, 1, 1, 1"
+2122, has,1
+2124," wounded,  penetrate,  bites,  sweep,  jump,  attacked","1, 1, 1, 1, 1, 1"
+2125," gone,  went,  go,  goes,  going,  came","2, 2, 2, 2, 1, 1"
+2134," twenty,  north,  Type, enties,  old,  elderly","1, 1, 1, 1, 1, 1"
+2135," a,  an","1, 1"
+2142," Luther, culus,  1918,  Massachusetts,  reasons,  tragedy","1, 1, 1, 1, 1, 1"
+2143," film,  films,  post,  Album","1, 1, 1, 1"
+2144,:,1
+2147," human,  animal, worm,  Ital,  cardiac, Mind","2, 2, 2, 2, 2, 2"
+2149, was,1
+2150, sales,1
+2159, Yes,1
+2169," disagree,  agree","1, 1"
+2170," British,  Welsh,  Scottish,  Scots,  German,  Italian","1, 1, 1, 1, 1, 1"
+2176," just,  Just, just,  simply, 11","2, 2, 2, 1, 1"
+2177," than,  except,  Than, hip","1, 1, 1, 1"
+2182," turned,  turn, tal,  Gal, Los,  Angel","1, 1, 1, 1, 1, 1"
+2189," agree,  disagree,  accept,  enjoy,  accepted,  considers","3, 2, 1, 1, 1, 1"
+2191, happ,1
+2192," star,  sun,  Stars,  Star,  sky,  aster","1, 1, 1, 1, 1, 1"
+2193,2,1
+2201," Brain,  bias,  psychology, beth, brain,  brain","1, 1, 1, 1, 1, 1"
+2204,"rist,  allows","1, 1"
+2210," dating,  Catholic, Christian,  Christian,  attendance","1, 1, 1, 1, 1"
+2216,"A,  A, An,  An","3, 1, 1, 1"
+2218," the, the, The,  The","1, 1, 1, 1"
+2221," primordial,  remember,  purple,  master,  magical,  classical","1, 1, 1, 1, 1, 1"
+2224," notable,  useful,  impressive,  terrible,  populated,  ideal","2, 2, 2, 2, 1, 1"
+2225, best,1
+2227, Disney,1
+2229," How,  how,  Why,  Where,  Tw,  Hew","3, 3, 2, 1, 1, 1"
+2231," animal,  biological,  gastrointestinal,  medical, American, human","2, 2, 2, 2, 2, 1"
+2232," buried,  abundant","1, 1"
+2237," fat, fat,  fats,  Food","2, 1, 1, 1"
+2240," notable, including","1, 1"
+2245, free,1
+2247, Y,1
+2249, I,1
+2254," heavens,  yards,  going,  Gal,  everything,  penny","2, 2, 2, 2, 2, 2"
+2255,"'t, t","1, 1"
+2258," Tw, Tw, Sometimes,  sometimes","1, 1, 1, 1"
+2269," banned,  arrested,  captured,  painted,  conceived,  collected","2, 2, 2, 2, 2, 2"
+2271," Yellow,  weaving,  tin,  rich,  gray, ithmetic","1, 1, 1, 1, 1, 1"
+2290,"FI,  Moz,  Hoover,  Cant,  supply, burg","1, 1, 1, 1, 1, 1"
+2295," average,  US, &,  NY, waters,  hum","1, 1, 1, 1, 1, 1"
+2298," different,  every,  each","1, 1, 1"
+2302," kept,  restored,  captured,  proven,  stayed,  demonstrated","1, 1, 1, 1, 1, 1"
+2303," some,  Some,  few,  Many","1, 1, 1, 1"
+2305,bra,1
+2309," It,  it,  Its,  They,  its, it","4, 3, 1, 1, 1, 1"
+2312,"who,  who,  claimed,  said,  says","1, 1, 1, 1, 1"
+2313," what,  languages,  anything, what,  something","1, 1, 1, 1, 1"
+2318," combust,  smash,  produces,  has,  digestive","1, 1, 1, 1, 1"
+2322," His,  Her,  He,  She,  she,  his","1, 1, 1, 1, 1, 1"
+2325," if,  because, If,  unless,  they,  although","1, 1, 1, 1, 1, 1"
+2336," Monroe, ials,  Pitt, anca, ston, izers","1, 1, 1, 1, 1, 1"
+2342," completion,  rope,  supply,  substitute,  expedition,  arriv","1, 1, 1, 1, 1, 1"
+2355," Back,  Valley,  Garden,  Hung,  Building,  shopping","1, 1, 1, 1, 1, 1"
+2368,"3, 13,  3, 9, 7, 6","2, 1, 1, 1, 1, 1"
+2370,"3, 5, 4, 6, 13, 9","1, 1, 1, 1, 1, 1"
+2372, extr,1
+2374," petty, (,  spiritual,  chocolate,  mentally,  People","1, 1, 1, 1, 1, 1"
+2379," bad,  brewing,  terrible,  clean,  Cra,  cow","1, 1, 1, 1, 1, 1"
+2383," month,  minute,  mile","1, 1, 1"
+2386," herb,  aid,  lectures,  GE,  chemicals,  tre","1, 1, 1, 1, 1, 1"
+2388,"6,  6, out, 76,  stove, 72","1, 1, 1, 1, 1, 1"
+2394," killed,  murdered,  kill,  kills","1, 1, 1, 1"
+2396," trying,  attempting,  either","1, 1, 1"
+2397," SAT,  human,  therapy,  Swift,  Diet, known","1, 1, 1, 1, 1, 1"
+2405, living,1
+2409," Did,  Should,  did,  Does,  shouldn,  Can","1, 1, 1, 1, 1, 1"
+2414,"urop, cip, pp,  us,  Pres, waters","1, 1, 1, 1, 1, 1"
+2419," sport, art,  art,  sports","1, 1, 1, 1"
+2424," incon,  h,  cl","1, 1, 1"
+2427," sailor,  politician,  physicist,  man,  businessman, pper","1, 1, 1, 1, 1, 1"
+2440," about,  About","1, 1"
+2449," Sm,  Sw,  Sal,  Sch,  Bor,  St","1, 1, 1, 1, 1, 1"
+2456," die,  twenty,  thirty","1, 1, 1"
+2457," mil,  Leon,  humid,  sales, ze,  hum","1, 1, 1, 1, 1, 1"
+2458," get,  getting,  got,  gets,  Getting","1, 1, 1, 1, 1"
+2459," razor,  desert,  reserves,  farm,  kingdom,  Burger","1, 1, 1, 1, 1, 1"
+2461,"?, '?, .?, ""?, )?","1, 1, 1, 1, 1"
+2469," you,  scholars,  participants,  students","1, 1, 1, 1"
+2470," working,  work,  worked, working,  works,  living","1, 1, 1, 1, 1, 1"
+2472, It,1
+2474,"4, 6, 5, 8, 9, 7","1, 1, 1, 1, 1, 1"
+2475, B,1
+2480, currently,1
+2482," let, Let","1, 1"
+2488," in, In,  In","1, 1, 1"
+2489," about,  About,  around","1, 1, 1"
+2496,restrial,1
+2497," February,  extr,  Melbourne,  August,  Australia,  January","1, 1, 1, 1, 1, 1"
+2502," shouldn,  should,  Should,  must,  need","1, 1, 1, 1, 1"
+2512," Barack,  Rod, rugu","1, 1, 1"
+2520," rugby,  cheese,  grape,  candy,  snakes,  bats","2, 2, 2, 2, 2, 2"
+2521," shown,  demonstrated","1, 1"
+2528," speak,  speaks,  intellig,  spoken,  autism,  aut","1, 1, 1, 1, 1, 1"
+2533,"ym,  Method,  changed,  change,  changing,  technique","1, 1, 1, 1, 1, 1"
+2534,"on, restrial","1, 1"
+2547," Muslim,  tissues","1, 1"
+2549,"rav, uck","1, 1"
+2551," Pil,  penny,  Port,  Mant,  Lind,  lit","2, 2, 2, 2, 2, 2"
+2552," Is,  Does, If,  Should,  Can,  If","2, 2, 1, 1, 1, 1"
+2554,""", ..."", !"", ', ?"", ""-","3, 2, 2, 2, 2, 2"
+2562," can,  could,  cannot,  Can,  may, can","3, 2, 2, 2, 2, 1"
+2564," artificial, ificial,  atomic,  camel,  Neural,  gold","1, 1, 1, 1, 1, 1"
+2565,"%,  percent,  percentage,  proportion,  half,  majority","5, 4, 2, 1, 1, 1"
+2568," Walt,  Angel","2, 1"
+2571,"4, 2, 3, 6, 1, 8","3, 2, 2, 2, 2, 1"
+2577," Mitt,  resolution,  rifle,  languages,  hat,  War","2, 1, 1, 1, 1, 1"
+2586, see,1
+2588," films,  movies,  film,  novels","1, 1, 1, 1"
+2592," In, In,  During,  On,  At,  By","1, 1, 1, 1, 1, 1"
+2596," time,  Time,  long,  multi,  fast,  warmth","1, 1, 1, 1, 1, 1"
+2597, depends,1
+2602, S,1
+2603," tell,  inform,  telling,  tells,  Internet,  told","1, 1, 1, 1, 1, 1"
+2607, perfect,1
+2611," statues,  needs,  forbidden,  wishes,  cuisine,  similar","1, 1, 1, 1, 1, 1"
+2612," Barack,  Donald","5, 1"
+2618," All, All,  all,  everything,  Everyone,  every","3, 3, 2, 1, 1, 1"
+2621, Art,1
+2627," Ital,  particular","1, 1"
+2629, analogous,1
+2636," arriv,  back,  Back, Return, back,  front","2, 2, 1, 1, 1, 1"
+2638,ron,1
+2643," well, well,  soon, ater","3, 1, 1, 1"
+2645," type,  Type,  when,  class, open,  When","1, 1, 1, 1, 1, 1"
+2649, Ital,1
+2657,"Q, ep,  em","1, 1, 1"
+2661, Ital,1
+2673," billionaire,  arrogant,  ambitious,  ruthless, ering","1, 1, 1, 1, 1"
+2675, banned,1
+2679," City,  health,  city,  snow,  ice,  last","1, 1, 1, 1, 1, 1"
+2682," Which,  which,  Because,  because,  These","3, 2, 1, 1, 1"
+2683," rest, rest","1, 1"
+2687," vamp,  Vamp,  vampire","5, 3, 1"
+2698," abundant,  representing, ording,  represent,  associated,  beneath","2, 2, 2, 1, 1, 1"
+2699," vast,  Many,  rest,  might,  relatively","1, 1, 1, 1, 1"
+2700," If, If, if,  unless","1, 1, 1, 1"
+2701," that,  That,  whether","1, 1, 1"
+2706," lead,  passed,  pass","1, 1, 1"
+2710," spells,  rods, ls,  ghosts, asses,  pillars","1, 1, 1, 1, 1, 1"
+2715," Pri,  sport,  ra,  sports,  science,  Motors","2, 2, 2, 2, 2, 2"
+2716," prosecutor,  attempting,  banned,  permission,  illegal,  official","1, 1, 1, 1, 1, 1"
+2717," more,  most,  Most,  More,  less,  Less","1, 1, 1, 1, 1, 1"
+2718,420,1
+2721," first,  First,  originally,  started,  third,  next","2, 2, 1, 1, 1, 1"
+2724," penny,  pen","1, 1"
+2725,"digit,  cousins, controll,  patrol,  straw, organic","2, 2, 2, 2, 2, 2"
+2731," Muslim,  terrorist,  Hindu,  Sunday","1, 1, 1, 1"
+2749, Yes,1
+2751, US,1
+2752," If, If","1, 1"
+2754, next,1
+2756," happ, culus,  gy,  dominance,  vision,  innocence","1, 1, 1, 1, 1, 1"
+2760," UK,  Kingdom,  Britain","1, 1, 1"
+2765," to, to","1, 1"
+2769,"erm, em,  back","1, 1, 1"
+2771," learn,  teach,  learned,  learning","1, 1, 1, 1"
+2772," sleep,  Sleep,  asleep,  sleeping,  bed,  N","1, 1, 1, 1, 1, 1"
+2774," Pink,  pink,  purple,  red,  color,  Black","2, 2, 2, 2, 2, 2"
+2780," lets,  let,  Many","1, 1, 1"
+2782," this,  This","1, 1"
+2787," I, I,  i,  My,  am,  my","3, 3, 2, 2, 1, 1"
+2791," trying,  thought","1, 1"
+2798," winter,  cooler,  warmer,  faster,  shorter,  better","1, 1, 1, 1, 1, 1"
+2801," never,  ever,  always,  just,  gradually,  normally","2, 2, 2, 1, 1, 1"
+2815," sun,  Sun,  moon,  Star,  Mercury","2, 2, 2, 1, 1"
+2818, Jeff,1
+2821," UFO,  ey,  ding,  assass,  York,  ind","1, 1, 1, 1, 1, 1"
+2825,"After,  after,  before","1, 1, 1"
+2828, add,1
+2833," New, New,  new,  Old,  Great,  N","4, 3, 2, 1, 1, 1"
+2841," Earth,  earth,  tin,  ET,  computer,  tooth","1, 1, 1, 1, 1, 1"
+2852, swallow,1
+2859," kill,  marry,  murder,  smash,  kidnapping,  kills","1, 1, 1, 1, 1, 1"
+2861,"enda,  school,  next","2, 1, 1"
+2863," Britain,  UK,  Europe,  Kingdom,  EU,  England","1, 1, 1, 1, 1, 1"
+2866,ining,1
+2874, A,1
+2881," lets,  spend,  let,  taking","1, 1, 1, 1"
+2883, Greg,1
+2886," about,  around,  About","1, 1, 1"
+2888,"S, K, N, uda,  Cod,  carp","3, 2, 1, 1, 1, 1"
+2890," favors,  Why","1, 1"
+2898," helicopters,  chopped,  boiled","1, 1, 1"
+2899," U, ur, U,  P, number,  sp","2, 1, 1, 1, 1, 1"
+2900," First, ammers, ringer, Christ","1, 1, 1, 1"
+2901, where,1
+2903," wear,  wearing,  wore, earing,  carry,  Eston","3, 2, 2, 1, 1, 1"
+2904," An,  Un,  un","1, 1, 1"
+2906,riving,1
+2915," time,  Time, time,  times","3, 2, 1, 1"
+2916," what,  how, what","1, 1, 1"
+2919,"aw, ah,  sh, aff, oh, sh","1, 1, 1, 1, 1, 1"
+2926,"digit,  Milky","1, 1"
+2932," University,  am,  School,  College,  un,  university","2, 1, 1, 1, 1, 1"
+2937,'s,1
+2948," tap,  golf,  pop,  swimming,  hockey,  chop","1, 1, 1, 1, 1, 1"
+2951," Disney, yland","3, 1"
+2959," US,  UK,  States,  Kingdom,  Netherlands,  Americas","1, 1, 1, 1, 1, 1"
+2961," U,  L,  Cl,  h,  H,  K","1, 1, 1, 1, 1, 1"
+2963, is,1
+2965," determined,  pulled,  turned,  proven,  turn,  sent","1, 1, 1, 1, 1, 1"
+2966, consum,1
+2967," Jesus,  Christ,  God,  Bible","1, 1, 1, 1"
+2968," disagree,  signals,  mean,  says,  say,  agree","1, 1, 1, 1, 1, 1"
+2972, Many,1
+2973,"'s, 'm,  paw,  cereal,  expectancy,  razor","2, 1, 1, 1, 1, 1"
+2975," type,  kind,  Type","1, 1, 1"
+2977," now,  Now","1, 1"
+2979," Prize,  know,  knew,  knows,  Know,  known","2, 2, 1, 1, 1, 1"
+2981," happens,  happened,  happen,  occur,  happening,  occurs","3, 2, 2, 1, 1, 1"
+2982," same,  similar,  analogous,  like,  similarly,  such","3, 2, 2, 1, 1, 1"
+2990," never,  col","1, 1"
+2996," say,  agree,  said","1, 1, 1"
+3001," when,  if,  unless,  When,  If,  while","2, 2, 1, 1, 1, 1"
+3014," Which,  which","1, 1"
+3018," have,  has,  Have, 've,  had,  hasn","1, 1, 1, 1, 1, 1"
+3024," The, The,  Use","1, 1, 1"
+3026," double,  single","1, 1"
+3027, dating,1
+3029," proven,  Mexican,  faire,  petty,  constitutional,  Polish","1, 1, 1, 1, 1, 1"
+3031," keep,  keeps","1, 1"
+3033," cousins,  hospitals,  cousin","1, 1, 1"
+3040," go,  gone,  goes,  went,  going, go","3, 3, 3, 3, 2, 2"
+3041," Saint,  Cra,  Sant, St,  Stri,  Pres","2, 1, 1, 1, 1, 1"
+3054,"amental, ithmetic,  qual,  class,  Jur","1, 1, 1, 1, 1"
+3056, next,2
+3058," Democrats,  aut,  their,  charged,  Allied,  suspected","1, 1, 1, 1, 1, 1"
+3063,der,1
+3064," abdomen,  lung,  nose,  Lung","1, 1, 1, 1"
+3065," basketball,  rugby,  hockey,  baseball,  Sox,  Disney","3, 2, 2, 2, 2, 2"
+3070, again,1
+3078, would,1
+3087,:,1
+3090," 8,  5","1, 1"
+3091,"""., '.","1, 1"
+3096, top,1
+3102,"1,  1,  prim,  ent, tox, one","3, 2, 2, 2, 1, 1"
+3105," qu, Qu,  Qu, hab, bra,  qual","1, 1, 1, 1, 1, 1"
+3109,"If,  if,  If, if","2, 2, 1, 1"
+3120," All, All,  all,  Al,  Diamond,  Natural","3, 2, 1, 1, 1, 1"
+3124,"-, ""-","3, 1"
+3126," richest,  rich,  artificial,  richer,  Deep,  Rich","1, 1, 1, 1, 1, 1"
+3136," Ital,  Mac","1, 1"
+3146," largest,  biggest,  greatest,  smallest, iest,  easiest","4, 4, 3, 3, 3, 2"
+3152," someone,  Jonathan,  everyone,  Dorothy,  Jean,  James","1, 1, 1, 1, 1, 1"
+3153," Will,  will","2, 1"
+3160," there,  There,  am,  existed","1, 1, 1, 1"
+3161," against,  onto, cip,  marry,  interact,  between","1, 1, 1, 1, 1, 1"
+3170," just,  simply","1, 1"
+3181," sun,  Sun,  9,  Seven,  moon,  light","1, 1, 1, 1, 1, 1"
+3182," In, In,  On,  For,  From","2, 1, 1, 1, 1"
+3183," cat,  cats,  dog,  pets,  animal,  Cat","1, 1, 1, 1, 1, 1"
+3189," cousin,  king,  creator,  Egypt, law,  witch","1, 1, 1, 1, 1, 1"
+3191,""", ', ""-, ..."", !"", ?""","2, 2, 1, 1, 1, 1"
+3199, upon,1
+3200," Fund,  fund","4, 2"
+3202," stand,  stands","1, 1"
+3204," Fortune,  richest","1, 1"
+3205, well,1
+3212,"),  Yes,  Did,  abundant,  You,  What","3, 2, 2, 2, 2, 2"
+3214, Which,1
+3220, number,1
+3225,",, .,, ',","1, 1, 1"
+3228,"ores, acts, izers,  cousins,  balloons, ellers","1, 1, 1, 1, 1, 1"
+3242," Buzz,  Larry,  red,  Red,  Mant,  Leon","1, 1, 1, 1, 1, 1"
+3243," said,  asking,  asked,  ask,  told,  says","1, 1, 1, 1, 1, 1"
+3248," own,  single","2, 1"
+3250, Yes,1
+3251," Cann,  always,  Imm,  Champ, Cit,  Veget","3, 2, 1, 1, 1, 1"
+3258,"Tw, inde, bra,  Tw, tw, board","1, 1, 1, 1, 1, 1"
+3261, been,1
+3262," There,  there","2, 1"
+3264," ever,  never","1, 1"
+3265," stars,  spells,  marks, ts,  star,  cast","1, 1, 1, 1, 1, 1"
+3267, depends,1
+3268, heart,1
+3269,"iest, less, icked, gered, iless, istic","1, 1, 1, 1, 1, 1"
+3276," heart,  siblings,  victim,  parents,  child,  father","1, 1, 1, 1, 1, 1"
+3287," learn, rugu,  Lear","1, 1, 1"
+3291,"What, aging,  guardians, ining,  analyzing,  spying","1, 1, 1, 1, 1, 1"
+3294," Hillary,  Clinton,  Trump,  Obama, illary,  Bush","4, 3, 2, 2, 1, 1"
+3298," Eating,  eating,  political,  design","1, 1, 1, 1"
+3301," rainfall,  rain,  attempting","1, 1, 1"
+3304, richest,1
+3305,ater,1
+3308,Q,1
+3312," comment,  disagree,  humor,  correlation,  point,  opinion","3, 1, 1, 1, 1, 1"
+3317,"och, well, iele, lock, ure, ond","3, 3, 3, 3, 3, 3"
+3319," happ,  Boh,  Alzheimer, opath,  kinder,  winter","2, 1, 1, 1, 1, 1"
+3328," Men, Men,  Man","1, 1, 1"
+3331,"A,  A","1, 1"
+3333, English,1
+3339,"Christ,  Schw,  prim,  Saint, Blood,  cogn","2, 2, 2, 2, 1, 1"
+3340," born, born","1, 1"
+3342," navig,  learn,  star,  learned,  international,  where","1, 1, 1, 1, 1, 1"
+3347," Tele,  tele","1, 1"
+3349, as,1
+3350," long,  short,  shorter,  tall,  longer,  taller","2, 2, 2, 2, 2, 1"
+3356," grows,  grew,  growing,  grown,  grow,  Pow","1, 1, 1, 1, 1, 1"
+3358," came,  coming,  come,  comes","1, 1, 1, 1"
+3360," them,  him","1, 1"
+3370," average, Average,  Average,  median,  mean, median","2, 1, 1, 1, 1, 1"
+3373,"ering,  striking, ouses, bringing,  hot, ides","2, 2, 2, 2, 2, 2"
+3377, popular,1
+3382,ym,1
+3386,Q,2
+3389,1,1
+3392," holder,  regular,  lungs,  Regular,  elderly","1, 1, 1, 1, 1"
+3394," How,  What","1, 1"
+3395," just, just,  Just","1, 1, 1"
+3398," using,  used,  Use,  giving,  use,  ours","1, 1, 1, 1, 1, 1"
+3400, flag,1
+3403, called,1
+3404," rh,  sm,  ro,  Scottish,  British, lim","1, 1, 1, 1, 1, 1"
+3407," legal,  illegal,  vertically,  metric,  costs,  constitutional","1, 1, 1, 1, 1, 1"
+3409, fall,1
+3428, The,1
+3431," declined, 'll,  decreased","1, 1, 1"
+3434," disagree,  agree","1, 1"
+3442,acting,1
+3443, Musk,1
+3447,inkle,1
+3449," With,  with, without,  similar,  without,  using","2, 2, 1, 1, 1, 1"
+3457," weather,  cold,  rain,  wet,  rainfall,  water","1, 1, 1, 1, 1, 1"
+3461, find,1
+3466," presented,  Ste","1, 1"
+3467," 1957,  1969,  1961,  1968,  1970,  1981","4, 4, 4, 4, 4, 3"
+3468, don,1
+3469," Prize,  Nobel,  Pri,  La,  won,  Pon","3, 3, 1, 1, 1, 1"
+3470,"est, iest","1, 1"
+3480, disagree,2
+3481," who, who,  Bur","1, 1, 1"
+3482," Ireland,  Canada","1, 1"
+3483," fact,  question,  belief,  result, question,  claim","1, 1, 1, 1, 1, 1"
+3485," U,  N,  C,  L,  W,  F","2, 2, 2, 1, 1, 1"
+3487," save,  teach,  protect, icides,  vaccinated,  Pow","2, 2, 1, 1, 1, 1"
+3497," because,  Because","1, 1"
+3500," more,  less,  fewer","1, 1, 1"
+3504," Do,  do, go, Be,  Have","3, 1, 1, 1, 1"
+3506, cross,1
+3511," drink,  wine,  beer,  drinks,  water,  coffee","1, 1, 1, 1, 1, 1"
+3514, too,1
+3515," Mant,  Ros,  Pl,  Pil,  Tw,  Prov","1, 1, 1, 1, 1, 1"
+3521," still,  also","1, 1"
+3523," number,  numbers","1, 1"
+3525," extr,  Ext,  Ex,  El, El,  ex","4, 2, 1, 1, 1, 1"
+3526," What, What","1, 1"
+3527,"?, '?, .?, )?, ""?","2, 1, 1, 1, 1"
+3534,"uda, ery, uit, ability, ume, ieri","1, 1, 1, 1, 1, 1"
+3535,"ure, &, un, ond","1, 1, 1, 1"
+3541," need,  required,  needs,  require,  requires,  want","2, 2, 1, 1, 1, 1"
+3549," virgin,  spicy,  rugby,  Virgin,  Mercedes,  wooden","1, 1, 1, 1, 1, 1"
+3551," he,  His,  his,  their,  Their,  He","1, 1, 1, 1, 1, 1"
+3554," happ,  tell,  tells,  told,  telling,  long","2, 1, 1, 1, 1, 1"
+3555," People,  people","1, 1"
+3561,"?, '?, ""?, )?, .?, ).","2, 2, 2, 1, 1, 1"
+3562, Happy,1
+3563," purge,  mount,  save,  organize,  purchase,  payment","1, 1, 1, 1, 1, 1"
+3566," first,  marry","1, 1"
+3571," Yes,  healthier,  Wait,  bad,  weak,  hungry","1, 1, 1, 1, 1, 1"
+3572,"'ll,  will,  would,  Will,  might,  may","4, 4, 3, 2, 2, 2"
+3579,"t, 't,  not, not,  cannot,  Not","2, 2, 1, 1, 1, 1"
+3584, face,1
+3585," lying,  lie,  live,  living,  lies,  lived","1, 1, 1, 1, 1, 1"
+3591,"., ).","1, 1"
+3595," but, although, but,  although,  except,  Despite","3, 3, 3, 2, 1, 1"
+3598,"etz,  Dirac","1, 1"
+3599," depends, bourg, end, After,  arriv,  after","1, 1, 1, 1, 1, 1"
+3601,"P, C","1, 1"
+3602," They,  they","1, 1"
+3605," die,  survive,  succeed,  died, ern,  fly","1, 1, 1, 1, 1, 1"
+3606," unclear,  tell,  telling, t,  unknown,  told","1, 1, 1, 1, 1, 1"
+3607,"32,  1966, 11, 76, 46","1, 1, 1, 1, 1"
+3610," less,  Less,  more,  fewer,  More,  greater","2, 2, 1, 1, 1, 1"
+3616," comment,  consensus,  evidence,  Wait,  correlation,  luck","3, 1, 1, 1, 1, 1"
+3622,"32, 46, 76,  Ex, 72, 81","1, 1, 1, 1, 1, 1"
+3630, flag,1
+3638, turned,1
+3640," who, who,  Who, pro","1, 1, 1, 1"
+3647,8,1
+3650," entirely,  gradually,  deeply,  officially,  unusually,  almost","1, 1, 1, 1, 1, 1"
+3656, am,1
+3663," and,  or,  And,  but, and, but","2, 2, 1, 1, 1, 1"
+3664,"(,  (, 6, 7, 12, 9","4, 3, 2, 2, 2, 2"
+3669," them,  freeze,  disappear,  UFO,  him,  Use","1, 1, 1, 1, 1, 1"
+3671," neurons,  restrictions,  ulcers,  $","1, 1, 1, 1"
+3672," closer,  shorter,  cooler,  taller","1, 1, 1, 1"
+3684," should,  shouldn,  would,  Should,  might,  could","1, 1, 1, 1, 1, 1"
+3688, sky,1
+3690," As,  as","2, 2"
+3694," contracted,  lift,  raise,  operating,  tries,  shooting","1, 1, 1, 1, 1, 1"
+3697," ambiguous,  structured,  curious, clusive,  forward,  likely","1, 1, 1, 1, 1, 1"
+3702," stops,  dating,  twenty,  stands,  stop,  moves","1, 1, 1, 1, 1, 1"
+3705," never,  ever,  once","1, 1, 1"
+3708," chefs,  clients,  Everyone, men,  entrepreneur,  grapes","1, 1, 1, 1, 1, 1"
+3714," film,  movie,  films,  video,  television","1, 1, 1, 1, 1"
+3719,"The,  The, the","1, 1, 1"
+3725," In, In","1, 1"
+3728," real, Real,  Real,  really,  artificial,  natural","2, 2, 2, 1, 1, 1"
+3735," Los, Los, El,  El, San,  Yale","1, 1, 1, 1, 1, 1"
+3753, (,1
+3756," autism,  sp,  ADHD,  ALS,  diabetes,  OCD","2, 1, 1, 1, 1, 1"
+3757," You, You","1, 1"
+3759," she,  he,  they,  gets,  He,  She","1, 1, 1, 1, 1, 1"
+3763," favorite,  favourite","1, 1"
+3769," believe,  believed,  think,  thought,  belief,  suspect","4, 3, 2, 2, 2, 2"
+3771,unk,1
+3773," San, San,  Pri","1, 1, 1"
+3786," pen,  blood,  Light,  Blood","1, 1, 1, 1"
+3787,"5, 7, 6, 13, 9, 10","2, 2, 2, 2, 1, 1"
+3788," col,  Col,  verte,  election,  double,  punct","2, 1, 1, 1, 1, 1"
+3789," today,  now,  Now,  current,  currently,  soon","1, 1, 1, 1, 1, 1"
+3801, unanimously,1
+3803,"5,  5,  Five,  five","1, 1, 1, 1"
+3810," letters, uckles,  views,  thoughts,  desires,  wishes","1, 1, 1, 1, 1, 1"
+3812," UFO, opot, restrial,  artifacts,  LSD, osaurs","1, 1, 1, 1, 1, 1"
+3814," disagree,  agree","1, 1"
+3815," happening,  happen,  happens,  occurs,  occur,  happened","1, 1, 1, 1, 1, 1"
+3816," current,  previous,  existing,  currently,  recent,  past","1, 1, 1, 1, 1, 1"
+3821," left,  right,  leaving,  leave,  leaves,  red","3, 3, 2, 2, 1, 1"
+3829," York, Boston, yland,  NY,  mirror,  Disney","2, 1, 1, 1, 1, 1"
+3830," men,  Men, Men,  women,  male,  woman","2, 2, 2, 2, 1, 1"
+3838," short,  last,  no,  bare,  stunt,  trouble","1, 1, 1, 1, 1, 1"
+3839," part,  Part,  future,  cause,  next,  main","1, 1, 1, 1, 1, 1"
+3840," follow,  followed,  below,  beneath,  contain,  kept","1, 1, 1, 1, 1, 1"
+3841," Earth,  Americas,  Mercury,  America,  Asia,  humanity","1, 1, 1, 1, 1, 1"
+3848,"Let,  Rec,  Rod,  keep, oc, ensory","1, 1, 1, 1, 1, 1"
+3849," Kid,  McC,  Tar,  Bach, Cap, Arthur","1, 1, 1, 1, 1, 1"
+3850," American, American","1, 1"
+3864," just,  Just, just,  simply","3, 2, 2, 2"
+3866," P,  B,  b,  p, P,  D","1, 1, 1, 1, 1, 1"
+3867," vac,  election,  vote,  menstrual,  presidential,  Sw","1, 1, 1, 1, 1, 1"
+3869," they,  them,  one, anca,  yours, inally","1, 1, 1, 1, 1, 1"
+3870,Q,1
+3871," Mex, ern, rying, orn","1, 1, 1, 1"
+3879," more,  More, more,  faster,  harder,  ever","2, 2, 2, 1, 1, 1"
+3891," stands,  stood,  face,  stand","1, 1, 1, 1"
+3895," St,  Saint,  Ros,  Brad, St,  Buzz","1, 1, 1, 1, 1, 1"
+3900," won,  win,  luck, won,  col,  gained","2, 1, 1, 1, 1, 1"
+3901," legally,  slightly","1, 1"
+3903," most,  more,  Most,  much,  More,  lot","2, 1, 1, 1, 1, 1"
+3905, signed,1
+3907,"San,  South,  Milky,  Central, iforn,  Middle","2, 2, 2, 2, 2, 2"
+3908,"wart, beth, ved","1, 1, 1"
+3911," well,  soon,  firmly","1, 1, 1"
+3921," I,  we, I,  We,  i,  she","1, 1, 1, 1, 1, 1"
+3924,"ails, kes,  Species, immer","1, 1, 1, 1"
+3927," there,  There,  Last,  here,  trying, ym","2, 2, 1, 1, 1, 1"
+3929," legal,  Legal,  legally, riminal,  law, law","3, 3, 2, 1, 1, 1"
+3934," mouth,  mind,  body,  hands,  stomach,  lungs","1, 1, 1, 1, 1, 1"
+3946," whether,  shows,  quantities,  find,  exact,  identify","1, 1, 1, 1, 1, 1"
+3953,"hab, ri,  outside,  Domin,  rest, opot","1, 1, 1, 1, 1, 1"
+3962," P, P,  p,  F,  Francisco, F","1, 1, 1, 1, 1, 1"
+3966,"TH, iston, Mind,  gray, fall,  bed","1, 1, 1, 1, 1, 1"
+3972," Mat,  Mal, Tw,  Tw,  Kar,  Fox","1, 1, 1, 1, 1, 1"
+3973," most,  easiest,  highest","1, 1, 1"
+3977," Lung,  lung,  Breast","1, 1, 1"
+3978," origin,  originated","1, 1"
+3981, An,1
+3985," petty,  Grand","1, 1"
+3988," vaccine,  chili,  pepper,  heroin,  marijuana,  steak","1, 1, 1, 1, 1, 1"
+3989, Person,1
+3992, Who,1
+3994," used, Q,  use,  Can,  can,  Use","1, 1, 1, 1, 1, 1"
+3999, to,1
+4005," Fortune,  since,  fortune","1, 1, 1"
+4007," Prize,  Nobel,  Harvard,  Economics,  Phys,  Stanford","2, 2, 1, 1, 1, 1"
+4015," winter,  summer,  February,  January,  November,  August","2, 1, 1, 1, 1, 1"
+4018," been,  formerly","1, 1"
+4023, Ital,1
+4026," What, What,  Who,  what, what,  Where","2, 2, 2, 1, 1, 1"
+4029," English,  Spanish,  French,  Portuguese,  Arabic,  Welsh","1, 1, 1, 1, 1, 1"
+4035," called,  kick","1, 1"
+4036,"izards, ologists,  knights,  pilots,  sharks,  knives","1, 1, 1, 1, 1, 1"
+4043," Cra,  metric","1, 1"
+4047,A,1
+4049,"Q,  gy, buck, 5,  fe,  5","1, 1, 1, 1, 1, 1"
+4050," Legal,  legally,  law,  psych,  spiritual,  psychic","1, 1, 1, 1, 1, 1"
+4053,"6, 5, 10,  Nevada, 9,  Jamaica","2, 2, 2, 2, 2, 2"
+4055," K,  k, K,  Kn,  M,  G","1, 1, 1, 1, 1, 1"
+4061," 1968,  1957,  1961,  1981,  1969,  1996","2, 2, 2, 2, 2, 2"
+4066," Mass,  much,  Bur,  Ther,  vast,  consum","2, 2, 2, 1, 1, 1"
+4067," humans,  Humans","1, 1"
+4071," cause,  caused,  causes","1, 1, 1"
+4075," pl,  f,  fl,  dad,  cousin","1, 1, 1, 1, 1"
+4077," name,  word,  title,  phrase,  term,  Name","2, 2, 2, 2, 2, 1"
+4088," accessible,  knew,  Known,  gained,  purchase,  known","1, 1, 1, 1, 1, 1"
+4089," p,  P, P, p,  pe,  Pet","2, 2, 2, 1, 1, 1"
+4090," fro,  ra,  w,  f","1, 1, 1, 1"
+4110, doing,1
+4113," sued,  won,  stolen,  wounded,  paid,  lost","1, 1, 1, 1, 1, 1"
+4116, tall,1
+4121," don,  lying,  dishon, don,  doesn,  ign","2, 1, 1, 1, 1, 1"
+4131," reflection,  idea,  effect,  useful, clusively,  plan","1, 1, 1, 1, 1, 1"
+4132, pylori,1
+4134," Prize,  die,  dead,  died,  kills,  wounded","2, 2, 2, 1, 1, 1"
+4135, cookies,1
+4144," does,  Does","1, 1"
+4152," Physics,  Motion","1, 1"
+4157, Canada,1
+4159, part,1
+4162, An,1
+4166,beth,1
+4168," get,  gets,  getting,  average,  got,  Average","2, 1, 1, 1, 1, 1"
+4173," (,  openly,  artificial,  Neo,  Aber, âĢĻ","3, 1, 1, 1, 1, 1"
+4174,"ails, izers,  cards,  masks,  mirror,  results","1, 1, 1, 1, 1, 1"
+4176," capita, NI, FI,  Drive","1, 1, 1, 1"
+4177," die,  died","1, 1"
+4193, richest,1
+4195," left,  leaving,  leave,  mean,  leaves,  inform","2, 2, 2, 1, 1, 1"
+4197, exact,1
+4208," cardiac,  fund,  nuclear,  Card, igm,  Class","1, 1, 1, 1, 1, 1"
+4215," flying,  gone,  swimming,  fly,  going,  went","1, 1, 1, 1, 1, 1"
+4221," Cann,  Burn","1, 1"
+4222, Who,1
+4223,1,1
+4225," Ob, inj,  night","1, 1, 1"
+4226," ESP,  AD,  RA,  H,  S,  Sha","1, 1, 1, 1, 1, 1"
+4228," smell,  Poland,  Butler,  Thornton,  Mars,  Portuguese","1, 1, 1, 1, 1, 1"
+4233," Where,  where,  When,  when,  while, here","3, 2, 2, 1, 1, 1"
+4243,"., ).","1, 1"
+4244,orc,1
+4258," Musk,  Kid,  Kas,  Mus,  Ki,  billionaire","4, 2, 1, 1, 1, 1"
+4261," diab, cover,  freedom,  happened,  crypt,  unusual","1, 1, 1, 1, 1, 1"
+4263," country,  city,  Country,  nation,  county,  countries","2, 1, 1, 1, 1, 1"
+4274," grow,  evolve,  grown,  rising,  fall,  grows","1, 1, 1, 1, 1, 1"
+4275," Mass,  flav,  fl,  mass,  class,  cens","2, 1, 1, 1, 1, 1"
+4279,"If,  If,  if, if,  unless,  When","3, 3, 3, 2, 2, 1"
+4281,"bringing,  verge,  Luxem","1, 1, 1"
+4283," but, but","1, 1"
+4285,(,1
+4287,"on,  On,  car,  on, carb,  ra","1, 1, 1, 1, 1, 1"
+4291," AI,  Jane,  detectives, stra,  torture,  lovers","1, 1, 1, 1, 1, 1"
+4292," his,  His,  its,  Her,  Its,  her","1, 1, 1, 1, 1, 1"
+4295,"rugu, /","1, 1"
+4299," who, who,  which,  that,  where,  chim","2, 2, 1, 1, 1, 1"
+4305, York,1
+4307, every,1
+4309," best,  out, Out,  shortest,  easiest,  most","3, 1, 1, 1, 1, 1"
+4313," inventor,  partner,  farmer,  enough,  billionaire,  victim","2, 1, 1, 1, 1, 1"
+4326," born, born","1, 1"
+4328," hard,  harder,  still, hard, der,  soft","3, 2, 2, 2, 1, 1"
+4332,"pt,  verte, sing,  Di,  aster,  chi","1, 1, 1, 1, 1, 1"
+4334," Magic,  Port, Salt,  Physics,  Witch,  Wizard","1, 1, 1, 1, 1, 1"
+4335, word,1
+4338," next,  recent,  last,  richest,  ask,  other","1, 1, 1, 1, 1, 1"
+4346," no,  No, no,  never,  nothing, without","3, 2, 2, 1, 1, 1"
+4347," York,  drink","1, 1"
+4351," warming,  War,  extinction","1, 1, 1"
+4352," health,  psych,  Psych,  healing","1, 1, 1, 1"
+4360," everyone,  Most,  whole,  Everyone,  Many,  Some","1, 1, 1, 1, 1, 1"
+4361,"ern, ston, mith,  monarch,  Joyce,  lightly","1, 1, 1, 1, 1, 1"
+4369," Archae,  Chart,  Fortune,  Mat,  book, bra","1, 1, 1, 1, 1, 1"
+4372," full,  composed","1, 1"
+4375," outdoors,  golf,  chess","1, 1, 1"
+4389," death,  kill, life,  euthan,  life,  suicide","1, 1, 1, 1, 1, 1"
+4400," much,  lot,  greatly","1, 1, 1"
+4402," does,  did,  Does,  do,  kind,  Did","2, 2, 1, 1, 1, 1"
+4405, less,1
+4411,:,1
+4421, Marl,1
+4422," B,  P, P","1, 1, 1"
+4427," German,  Portuguese,  Russian,  Dutch,  French,  Chinese","3, 3, 3, 3, 2, 2"
+4429," coffee,  burgers,  Coffee,  beer,  cigar,  cheese","1, 1, 1, 1, 1, 1"
+4449," blue,  green,  purple,  brown","1, 1, 1, 1"
+4451,"Only,  Only,  only,  stop,  stops,  wait","1, 1, 1, 1, 1, 1"
+4452,:,1
+4456," Ros,  type,  Type","1, 1, 1"
+4460," From,  from","2, 2"
+4464,der,1
+4466," work,  working, working,  worked,  works, work","1, 1, 1, 1, 1, 1"
+4473, only,1
+4484," has,  have,  hasn,  had,  Have,  Has","2, 1, 1, 1, 1, 1"
+4485,"9, 13, 8, 10, 12,  90","1, 1, 1, 1, 1, 1"
+4486, Their,1
+4492,"ucky, work, ition, gly, aces, ging","1, 1, 1, 1, 1, 1"
+4494," What, :,  Are, Q,  Does, What","2, 2, 2, 2, 2, 2"
+4500," frozen,  deeply","1, 1"
+4502," Is,  Are,  Does,  Was,  Can,  Do","3, 2, 2, 2, 2, 2"
+4514," Sox,  butter","1, 1"
+4516,ont,1
+4519," butter,  Dec,  salad, ston, bringing, rand","1, 1, 1, 1, 1, 1"
+4521," In,  During","1, 1"
+4522,"""., '., ...""","1, 1, 1"
+4524," star,  stars,  Star,  Sox,  City,  Stars","1, 1, 1, 1, 1, 1"
+4525," Most,  most","1, 1"
+4532," organic,  tilt,  legal, organic,  moved,  illegal","1, 1, 1, 1, 1, 1"
+4535," Iceland,  Scotland","1, 1"
+4537," helium,  tin,  so","1, 1, 1"
+4542," Have,  have,  has,  had,  shares","1, 1, 1, 1, 1"
+4545, you,1
+4550," Any,  any,  anyone","1, 1, 1"
+4560," reasonable, reasonable","1, 1"
+4561," Eve, ails,  returns, ines, off,  presidential","1, 1, 1, 1, 1, 1"
+4569," Which, unk","1, 1"
+4576, solar,1
+4578," possible,  impossible,  estimated,  unlikely, time,  illegal","2, 2, 2, 1, 1, 1"
+4580," no,  highest","1, 1"
+4584, was,1
+4585,Q,1
+4586,"8, 9,  8, 12, 10, 13","2, 2, 1, 1, 1, 1"
+4589," big, Big","1, 1"
+4595,"Cit,  entirely","1, 1"
+4614,use,1
+4616," all, All,  All,  least","1, 1, 1, 1"
+4619," stops,  turned,  turn","1, 1, 1"
+4621,"dis, aff,  Dis, pu,  f,  dis","2, 2, 2, 2, 2, 2"
+4626," many,  2015, l,  long, op,  bears","2, 1, 1, 1, 1, 1"
+4627," famous, known, rious,  ancient, ied,  planned","2, 2, 2, 2, 1, 1"
+4632," extend,  long, ron,  short","1, 1, 1, 1"
+4640," All, All,  Everyone,  everyone,  everything,  all","1, 1, 1, 1, 1, 1"
+4641, C,1
+4643, hard,1
+4645," Gates,  cancer","1, 1"
+4649, living,1
+4654,"A,  coworkers","1, 1"
+4657, Are,1
+4671, health,1
+4673," coffee,  beer","1, 1"
+4674," scientifically,  critically,  deeply,  physically,  spontaneously,  moderately","2, 2, 2, 2, 2, 2"
+4675," United, United,  U","3, 2, 1"
+4680," The, The,  It,  These","1, 1, 1, 1"
+4681," gives,  deny,  version,  produces,  won,  opened","1, 1, 1, 1, 1, 1"
+4682," highest,  incon,  f,  0,  aut,  m","1, 1, 1, 1, 1, 1"
+4688," sometimes,  can,  doesn,  could, Sometimes,  may","1, 1, 1, 1, 1, 1"
+4691," California,  (,  Boston, Boston,  Denver,  Oregon","1, 1, 1, 1, 1, 1"
+4701," inc,  contributes, Ind,  Co,  contribute,  abbrev","1, 1, 1, 1, 1, 1"
+4709, am,1
+4710," Is,  Are,  Was, Is,  Were","2, 1, 1, 1, 1"
+4717," Earth,  flat,  heavens,  earth,  vertically,  ground","1, 1, 1, 1, 1, 1"
+4719," did,  does,  Does,  Did,  do,  Do","2, 2, 2, 2, 2, 1"
+4728," Musk,  saying,  telling,  About,  sleeping,  speak","1, 1, 1, 1, 1, 1"
+4729,"?, '?, )?, ""?, .?, ?""","2, 1, 1, 1, 1, 1"
+4732," 67,  44,  330","1, 1, 1"
+4736, sh,1
+4742," flag,  f,  h,  score, FI,  H","2, 1, 1, 1, 1, 1"
+4744," sing,  evolve,  chim,  evolved, ut,  dialect","1, 1, 1, 1, 1, 1"
+4748," some,  Some","1, 1"
+4755," higher,  more,  greater,  faster,  larger,  shorter","1, 1, 1, 1, 1, 1"
+4756," most,  Most,  ten","1, 1, 1"
+4757," then,  Executive, user","1, 1, 1"
+4762,"2,  2,  Two","2, 1, 1"
+4764, Australia,1
+4766," a,  an,  notable,  impressive,  au","1, 1, 1, 1, 1"
+4768,'ll,1
+4771, ever,1
+4774," Theorem, enda,  Year","1, 1, 1"
+4780," happens,  happened,  happen,  happ,  occurs,  happening","1, 1, 1, 1, 1, 1"
+4792,"10, 8, 12","1, 1, 1"
+4796," normally,  recently,  mentally,  historically,  originally,  regularly","1, 1, 1, 1, 1, 1"
+4803,"10, 13, 12, 11,  10,  presidential","3, 2, 2, 2, 2, 1"
+4805," more,  More,  fewer,  less,  much,  big","2, 2, 1, 1, 1, 1"
+4806,not,1
+4807," than,  Than","1, 1"
+4808," Old,  old","1, 1"
+4811,ater,1
+4812," inequality,  tea,  Tea,  extinction,  action,  Friedman","1, 1, 1, 1, 1, 1"
+4813, rainfall,1
+4816," decades,  years","1, 1"
+4821," all,  everything, All","1, 1, 1"
+4828," your,  Your, the,  Rafael,  Angeles,  my","1, 1, 1, 1, 1, 1"
+4833,"ess, ang, og, iels, ey, ag","2, 1, 1, 1, 1, 1"
+4835, Himal,1
+4841," Kid,  Disney,  Joyce,  Gates,  Musk, rough","2, 2, 1, 1, 1, 1"
+4846," learn,  learned,  teach,  knows,  learning,  knew","1, 1, 1, 1, 1, 1"
+4847," Prize,  Nobel,  War","2, 1, 1"
+4849," diabetes,  weight,  being","1, 1, 1"
+4852," snow, Snow,  rain,  winter,  thunder,  frost","3, 2, 2, 1, 1, 1"
+4853," speak,  speaks,  obese,  tells,  talk","1, 1, 1, 1, 1"
+4862," abortion,  breastfeeding,  marry,  drinking,  menstrual,  police","1, 1, 1, 1, 1, 1"
+4863,Ċ,1
+4865, 330,1
+4870," speak,  speaks,  spoken,  talk,  speakers,  communicate","4, 3, 3, 2, 1, 1"
+4878," other,  else,  Moz,  previous","1, 1, 1, 1"
+4883,"lock,  thing","1, 1"
+4886," Imm,  imm","1, 1"
+4887, learned,1
+4890,"arettes,  Brun,  gives,  Bruno, arijuana,  Books","1, 1, 1, 1, 1, 1"
+4891, face,1
+4895," they,  They,  he,  she,  He,  She","1, 1, 1, 1, 1, 1"
+4896, No,1
+4910,"ains, ron","1, 1"
+4915," name,  Name,  named,  famous,  title, named","3, 2, 1, 1, 1, 1"
+4917," turned,  turn,  turns,  un,  El","1, 1, 1, 1, 1"
+4920," allowed,  allow,  allows,  granted","1, 1, 1, 1"
+4921," other, orc, oc,  alternative, erv, inc","2, 1, 1, 1, 1, 1"
+4923," weeks,  hours,  minutes,  hour,  years,  days","3, 3, 2, 2, 2, 2"
+4925," Greece,  catar,  Kosovo,  chi,  Brazil,  Bulgaria","1, 1, 1, 1, 1, 1"
+4926," world,  States, world","1, 1, 1"
+4928," Christian, Christian,  Christianity,  Christians,  Catholic,  Christ","1, 1, 1, 1, 1, 1"
+4931, Food,1
+4934," cough,  Wake,  Henry","1, 1, 1"
+4941," all, All,  All,  both","1, 1, 1, 1"
+4951," happens,  happen,  happened,  die,  occurs,  occur","2, 2, 2, 1, 1, 1"
+4953, Wake,1
+4954,"'m, 's, 're,  am, 've,  is","2, 1, 1, 1, 1, 1"
+4966," see,  hears,  seen,  hear,  seeing,  heard","2, 2, 2, 2, 2, 2"
+4969," since,  because,  Because,  until,  due,  hair","2, 2, 1, 1, 1, 1"
+4972," rest,  full,  end,  finished,  part,  ended","1, 1, 1, 1, 1, 1"
+4974, still,1
+4977," drink,  sing,  smoke,  earn,  enjoy,  drank","1, 1, 1, 1, 1, 1"
+4979," am, 'm","1, 1"
+4993," allowed,  Mex","1, 1"
+4994, Very,1
+4995," next,  last,  Last","1, 1, 1"
+4999," got,  gets,  get,  Getting,  getting","1, 1, 1, 1, 1"
+5004," am, 're","1, 1"
+5007," flat,  hard","1, 1"
+5015," tell,  tells,  telling,  know,  told,  knows","2, 2, 1, 1, 1, 1"
+5017," among,  Theorem,  next,  Among, ber, oston","1, 1, 1, 1, 1, 1"
+5019," Canada, NC,  Commonwealth,  PIN,  States,  UK","1, 1, 1, 1, 1, 1"
+5020," shouldn,  should","1, 1"
+5021," family,  population,  household,  farm,  obligation,  afford","1, 1, 1, 1, 1, 1"
+5023," Nations,  missing","1, 1"
+5028," hard,  dominance,  outdoors,  pushing,  harder,  brown","1, 1, 1, 1, 1, 1"
+5033," Luxem,  Mon","1, 1"
+5035, been,1
+5036," How,  how","1, 1"
+5041," high,  Low,  High,  low,  highest,  higher","1, 1, 1, 1, 1, 1"
+5042," determines,  depends,  requires","1, 1, 1"
+5043," In, In,  For,  On, For,  Ex","2, 1, 1, 1, 1, 1"
+5044, or,1
+5051," enough,  too","1, 1"
+5060,ame,1
+5066," catch,  getting,  playing","1, 1, 1"
+5067," luck,  knows,  know,  L,  knew,  this","1, 1, 1, 1, 1, 1"
+5071, beef,1
+5072," Less, 13,  potent, 10,  Prov, 12","2, 2, 2, 2, 2, 2"
+5086," decreases,  drops,  sc,  dress,  pH,  decrease","1, 1, 1, 1, 1, 1"
+5087," delicious,  miserable,  calorie, fat,  wet,  healthier","2, 2, 2, 2, 2, 2"
+5091,"7, 9, 13, 8,  hair,  7","2, 1, 1, 1, 1, 1"
+5094,"San,  San,  Los, Los,  Santa","1, 1, 1, 1, 1"
+5095," should,  Should","1, 1"
+5098," That,  that,  this,  This","1, 1, 1, 1"
+5099," ideal,  millions,  analytical,  arrogant,  thirty,  active","2, 2, 2, 2, 2, 1"
+5103," twenty,  ten,  thirty,  20,  hundred,  10","1, 1, 1, 1, 1, 1"
+5107,"what,  corrupted,  Nothing,  nothing,  ambiguous,  flawed","1, 1, 1, 1, 1, 1"
+5114," cause,  achieved,  prevent,  affect,  impacts,  gained","2, 2, 1, 1, 1, 1"
+5115, You,1
+5117,"s,  s, es, ds, h, e","2, 1, 1, 1, 1, 1"

@@ -227,6 +227,7 @@ def pre_process_encoder_activations_by_batch(
     return batched_dims_from_encoder_activations
 
 
+# Remember that dimensional batch slicing is already done coming in.
 def filter_encoder_activations_by_input_token(
     flat_input_token_ids: t.Tensor,
     input_token_id: int,
