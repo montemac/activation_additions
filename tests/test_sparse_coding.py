@@ -46,14 +46,17 @@ def mock_autoencoder():
 
 @pytest.fixture
 def mock_data():
-    """Return mock input token ids by q and autoencoder activation by q block."""
+    """Return mock input token ids by q and encoder activations by q."""
 
+    # "Just say, oops."
+    # "Just say, hello world!"
     input_token_ids_by_q: list[list[int]] = [
-        [0, 1, 2, 3, 4, 0],
-        [9, 10, 11, 1, 2, 3],
+        [6300, 1333, 13, 258, 2695, 15],
+        [6300, 1333, 13, 23120, 1533, 2],
     ]
     encoder_activations_by_q_block: list[t.Tensor] = [
-        t.randn(6, 1024) for _ in range(2)
+        (t.ones(6, 1024)) * 7,
+        (t.ones(6, 1024)) * 11,
     ]
 
     return input_token_ids_by_q, encoder_activations_by_q_block
@@ -82,10 +85,13 @@ def test_per_input_token_effects(  # pylint: disable=redefined-outer-name
     )
 
     try:
+        # Structural asserts.
         assert isinstance(mock_effects, defaultdict)
         assert isinstance(mock_effects[0], defaultdict)
         assert len(mock_effects) == dims_in_batch  # Batch size.
         assert len(mock_effects[0]) == 8  # 8 unique tokens.
+        # Semantic asserts.
+
     except Exception as e:  # pylint: disable=broad-except
         pytest.fail(
             f"`per_input_token_effects` failed unit test with error: {e}"
