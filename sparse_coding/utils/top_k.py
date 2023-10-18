@@ -38,7 +38,6 @@ def per_input_token_effects(
     )
 
     print("Pre-processing complete!")
-    # Loop over the batches.
     effect_scalar_by_dim_by_input_token = batches_loop(
         num_dim_batches,
         dims_per_batch,
@@ -129,6 +128,11 @@ def batches_loop(
         if ending_dim_index > encoder.encoder_layer.weight.shape[0]:
             ending_dim_index = encoder.encoder_layer.weight.shape[0]
 
+        if batch + 1 > num_dim_batches:
+            assert starting_dim_index - ending_dim_index == dims_per_batch
+        elif batch + 1 == num_dim_batches:
+            assert starting_dim_index - ending_dim_index <= dims_per_batch
+
         # Note that `batched_dims_from_encoder_activations` has
         # lost the question data that `encoder_activations_by_q` had.
         batched_dims_from_encoder_activations = (
@@ -143,7 +147,8 @@ def batches_loop(
             )
         )
 
-        # Run the batch.
+        assert not t.isnan(batched_dims_from_encoder_activations).any()
+
         for input_token_id in unique_input_token_ids:
             input_token_string = tokenizer.convert_ids_to_tokens(
                 input_token_id
@@ -160,7 +165,6 @@ def batches_loop(
             averaged_dim_from_encoder_activations_at_input_token_in_batch = (
                 average_encoder_activations_at_input_token(
                     dims_from_encoder_activations_at_input_token_in_batch,
-                    dims_per_batch,
                 )
             )
 
@@ -168,14 +172,14 @@ def batches_loop(
             for dim_in_batch, averaged_activation_per_dim in enumerate(
                 averaged_dim_from_encoder_activations_at_input_token_in_batch
             ):
-                effect_scalar_by_dim_by_input_token[dim_in_batch][
-                    input_token_string
-                ] = averaged_activation_per_dim.item()
+                effect_scalar_by_dim_by_input_token[
+                    starting_dim_index + dim_in_batch
+                ][input_token_string] = averaged_activation_per_dim.item()
 
         print(
             textwrap.dedent(
                 f"""
-                Batch {batch+1} complete: data for encoder dims
+                Batch {batch+1} complete: data for encoder dims index
                 {starting_dim_index} through {ending_dim_index-1} appended!
                 """
             )
@@ -195,7 +199,7 @@ def pre_process_encoder_activations_by_batch(
     starting_dim_index,
     ending_dim_index,
     large_model_mode,
-):
+) -> t.Tensor:
     """Pre-process the `encoder_activations_by_q` for each batch."""
     batched_dims_from_encoder_activations: list = []
 
@@ -208,7 +212,7 @@ def pre_process_encoder_activations_by_batch(
         batched_dims_from_encoder_activations
     )
     # Remove the question data.
-    batched_dims_from_encoder_activations = t.cat(
+    batched_dims_from_encoder_activations: t.Tensor = t.cat(
         batched_dims_from_encoder_activations, dim=0
     )
 
@@ -225,20 +229,31 @@ def pre_process_encoder_activations_by_batch(
     return batched_dims_from_encoder_activations
 
 
+# Zero dimension value/NaNs from t.mean bug _must_ originate here.
 def filter_encoder_activations_by_input_token(
     flat_input_token_ids,
     input_token_id,
-    batched_dims_from_encoder_activations,
+    batched_dims_from_encoder_activations: t.Tensor,
     start_dim_index,
     end_dim_index,
 ):
     """Isolate just the activations at an input token id."""
-    indices_encoder_activations_in_batch_at_input_token = (
-        t.nonzero(flat_input_token_ids == input_token_id)
-    )[start_dim_index:end_dim_index]
+    indices_encoder_activations_in_batch_at_input_token: list[
+        list[int]
+    ] = t.nonzero(
+        flat_input_token_ids[start_dim_index:end_dim_index] == input_token_id
+    ).tolist()
+
+    indices_encoder_activations_in_batch_at_input_token: list[int] = [
+        i
+        for sublist in indices_encoder_activations_in_batch_at_input_token
+        for i in sublist
+    ]
+
+    # Note that we fancy index along dim=1.
     dims_from_encoder_activations_at_input_token_in_batch = (
         batched_dims_from_encoder_activations[
-            indices_encoder_activations_in_batch_at_input_token
+            :, indices_encoder_activations_in_batch_at_input_token
         ]
     )
 
@@ -246,54 +261,24 @@ def filter_encoder_activations_by_input_token(
 
 
 def average_encoder_activations_at_input_token(
-    dims_from_encoder_activations_at_input_token_in_batch, dims_per_batch
+    dims_from_encoder_activations_at_input_token_in_batch,
 ):
     """Average over encoder activations at a common input token."""
 
-    # print(
-    #     textwrap.dedent(
-    #         f"""
-    #         `dims_from_encoder_activations_at_input_token_in_batch` shape:
-    #         {dims_from_encoder_activations_at_input_token_in_batch.shape}
-    #         """
-    #     )
-    # )
-
-    assert not t.isnan(
-        dims_from_encoder_activations_at_input_token_in_batch
-    ).any(), "Un-processed tensor contains NaNs!"
-
     # Average across dimensional instances; handle the no-matching-dimensions
     # edge case too.
-    if dims_from_encoder_activations_at_input_token_in_batch.shape[0] > 0:
-        averaged_dim_from_encoder_activations_at_input_token_in_batch = t.mean(
-            dims_from_encoder_activations_at_input_token_in_batch, dim=0
-        )
-    elif dims_from_encoder_activations_at_input_token_in_batch.shape[0] == 0:
-        return t.zeros(
-            dims_from_encoder_activations_at_input_token_in_batch.shape[-1]
-        )
-
-    # Remove singleton dimensions.
-    averaged_dim_from_encoder_activations_at_input_token_in_batch = (
-        averaged_dim_from_encoder_activations_at_input_token_in_batch.squeeze()
+    # if dims_from_encoder_activations_at_input_token_in_batch.shape[0] > 0:
+    averaged_dim_from_encoder_activations_at_input_token_in_batch = t.mean(
+        dims_from_encoder_activations_at_input_token_in_batch, dim=0
     )
-
-    # print(
-    #     textwrap.dedent(
-    #         f"""
-    #         `averaged_dim_from_encoder_activations_at_input_token_in_batch`
-    #         shape:
-    #         {averaged_dim_from_encoder_activations_at_input_token_in_batch
-    #          .shape}
-    #         """
+    # elif dims_from_encoder_activations_at_input_token_in_batch.shape[0] == 0:
+    #     return t.zeros(
+    #         dims_from_encoder_activations_at_input_token_in_batch.shape[-1]
     #     )
-    # )
 
-    assert (
-        averaged_dim_from_encoder_activations_at_input_token_in_batch.shape[0]
-        <= dims_per_batch
-    ), "Tensor is longer than `dims_per_batch`!"
+    print(
+        f"averaged vec at token shape: {averaged_dim_from_encoder_activations_at_input_token_in_batch.shape}"
+    )
 
     assert (
         len(

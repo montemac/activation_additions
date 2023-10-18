@@ -88,9 +88,20 @@ def test_per_input_token_effects(  # pylint: disable=redefined-outer-name
         # Structural asserts.
         assert isinstance(mock_effects, defaultdict)
         assert isinstance(mock_effects[0], defaultdict)
-        assert len(mock_effects) == dims_in_batch  # Batch size.
-        assert len(mock_effects[0]) == 8  # 8 unique tokens.
+        assert len(mock_effects) == 1024  # 1024 encoder dimensions.
+        assert len(mock_effects[0]) == 9  # 9 unique tokens.
         # Semantic asserts.
+        assert mock_effects[0]["Just"] == (7 + 11) / 2
+        assert mock_effects[100]["Ġsay"] == (7 + 11) / 2
+        assert mock_effects[200][","] == (7 + 11) / 2
+
+        assert mock_effects[0]["Ġo"] == 7
+        assert mock_effects[100]["ops"] == 7
+        assert mock_effects[200]["."] == 7
+
+        assert mock_effects[0]["Ġhello"] == 11
+        assert mock_effects[100]["Ġworld"] == 11
+        assert mock_effects[200]["!"] == 11
 
     except Exception as e:  # pylint: disable=broad-except
         pytest.fail(
