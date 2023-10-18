@@ -158,8 +158,6 @@ def batches_loop(
                     flat_input_token_ids,
                     input_token_id,
                     batched_dims_from_encoder_activations,
-                    starting_dim_index,
-                    ending_dim_index,
                 )
             )
             averaged_dim_from_encoder_activations_at_input_token_in_batch = (
@@ -179,7 +177,7 @@ def batches_loop(
         print(
             textwrap.dedent(
                 f"""
-                Batch {batch+1} complete: data for encoder dims index
+                Batch {batch+1} complete: data for encoder dims indices
                 {starting_dim_index} through {ending_dim_index-1} appended!
                 """
             )
@@ -229,31 +227,23 @@ def pre_process_encoder_activations_by_batch(
     return batched_dims_from_encoder_activations
 
 
-# Zero dimension value/NaNs from t.mean bug _must_ originate here.
 def filter_encoder_activations_by_input_token(
-    flat_input_token_ids,
-    input_token_id,
+    flat_input_token_ids: t.Tensor,
+    input_token_id: int,
     batched_dims_from_encoder_activations: t.Tensor,
-    start_dim_index,
-    end_dim_index,
 ):
     """Isolate just the activations at an input token id."""
-    indices_encoder_activations_in_batch_at_input_token: list[
-        list[int]
-    ] = t.nonzero(
-        flat_input_token_ids[start_dim_index:end_dim_index] == input_token_id
-    ).tolist()
+    indices_of_encoder_activations_at_input_token = t.nonzero(
+        flat_input_token_ids == input_token_id
+    )
+    flat_indices_of_encoder_activations_at_input_token = (
+        indices_of_encoder_activations_at_input_token.squeeze(dim=1)
+    )
 
-    indices_encoder_activations_in_batch_at_input_token: list[int] = [
-        i
-        for sublist in indices_encoder_activations_in_batch_at_input_token
-        for i in sublist
-    ]
-
-    # Note that we fancy index along dim=1.
+    # Fancy index along dim=0.
     dims_from_encoder_activations_at_input_token_in_batch = (
         batched_dims_from_encoder_activations[
-            :, indices_encoder_activations_in_batch_at_input_token
+            flat_indices_of_encoder_activations_at_input_token
         ]
     )
 
@@ -265,19 +255,9 @@ def average_encoder_activations_at_input_token(
 ):
     """Average over encoder activations at a common input token."""
 
-    # Average across dimensional instances; handle the no-matching-dimensions
-    # edge case too.
-    # if dims_from_encoder_activations_at_input_token_in_batch.shape[0] > 0:
+    # Average across dimensional instances.
     averaged_dim_from_encoder_activations_at_input_token_in_batch = t.mean(
         dims_from_encoder_activations_at_input_token_in_batch, dim=0
-    )
-    # elif dims_from_encoder_activations_at_input_token_in_batch.shape[0] == 0:
-    #     return t.zeros(
-    #         dims_from_encoder_activations_at_input_token_in_batch.shape[-1]
-    #     )
-
-    print(
-        f"averaged vec at token shape: {averaged_dim_from_encoder_activations_at_input_token_in_batch.shape}"
     )
 
     assert (
