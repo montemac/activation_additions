@@ -37,7 +37,7 @@ def per_input_token_effects(
         token_ids_by_q, encoder, accelerator, large_model_mode
     )
 
-    print("Pre-processing complete!\nStarting batch loop...")
+    print("Pre-processing complete!")
     # Loop over the batches.
     effect_scalar_by_dim_by_input_token = batches_loop(
         num_dim_batches,
@@ -175,8 +175,8 @@ def batches_loop(
         print(
             textwrap.dedent(
                 f"""
-                Batch {batch+1} complete! Appended data for dims
-                {starting_dim_index} through {ending_dim_index-1}.
+                Batch {batch+1} complete: data for encoder dims
+                {starting_dim_index} through {ending_dim_index-1} appended!
                 """
             )
         )
@@ -233,8 +233,8 @@ def filter_encoder_activations_by_input_token(
     end_dim_index,
 ):
     """Isolate just the activations at an input token id."""
-    indices_encoder_activations_in_batch_at_input_token = t.nonzero(
-        flat_input_token_ids == input_token_id
+    indices_encoder_activations_in_batch_at_input_token = (
+        t.nonzero(flat_input_token_ids == input_token_id)
     )[start_dim_index:end_dim_index]
     dims_from_encoder_activations_at_input_token_in_batch = (
         batched_dims_from_encoder_activations[
@@ -259,9 +259,9 @@ def average_encoder_activations_at_input_token(
     #     )
     # )
 
-    # assert not t.isnan(
-    #     dims_from_encoder_activations_at_input_token_in_batch
-    # ).any(), "Un-processed tensor contains NaNs!"
+    assert not t.isnan(
+        dims_from_encoder_activations_at_input_token_in_batch
+    ).any(), "Un-processed tensor contains NaNs!"
 
     # Average across dimensional instances; handle the no-matching-dimensions
     # edge case too.
