@@ -1,12 +1,12 @@
 # Model
-MODEL_DIR: "EleutherAI/pythia-70m"
-ACTS_LAYER: 2
+MODEL_DIR: "meta-llama/Llama-2-7b-hf"
+ACTS_LAYER: 13
 
 # Batching
 DIMS_IN_BATCH: 4000
 
 # Large Model Mode
-LARGE_MODEL_MODE: False
+LARGE_MODEL_MODE: True
 
 # Encoder Size
 PROJECTION_FACTOR: 10
@@ -19,7 +19,7 @@ BIASES_PATH: "data/learned_biases.pt"
 TOP_K_INFO_PATH: "data/token_info.csv"
 
 # Autoencoder Training
-LAMBDA_L1: 1.0e-3
+LAMBDA_L1: 1.0
 LEARNING_RATE: 1.0e-3
 NUM_WORKERS: 4
 
