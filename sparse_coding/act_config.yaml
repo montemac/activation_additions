@@ -1,5 +1,5 @@
 # Model
-MODEL_DIR: "meta-llama/Llama-2-7b-hf"
+MODEL_DIR: "meta-llama/Llama-2-70b-hf"
 ACTS_LAYER: 13
 
 # Batching
@@ -19,9 +19,9 @@ BIASES_PATH: "data/learned_biases.pt"
 TOP_K_INFO_PATH: "data/token_info.csv"
 
 # Autoencoder Training
-LAMBDA_L1: 1.0
+LAMBDA_L1: 3.0
 LEARNING_RATE: 1.0e-3
-NUM_WORKERS: 4
+NUM_WORKERS: 16
 
 # Reproducibility
 SEED: 0

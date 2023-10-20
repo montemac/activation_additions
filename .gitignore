@@ -156,3 +156,4 @@ wandb_restored_files
 *.ckpt
 *.npy
 act_access.yaml
+tests/smoke_test_data/smoke_test_token_info.csv
