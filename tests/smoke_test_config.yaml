@@ -1,0 +1,41 @@
+# Smoke Test Model
+MODEL_DIR: "EleutherAI/pythia-70m"
+ACTS_LAYER: 1
+
+# Large Model Mode
+LARGE_MODEL_MODE: False
+
+# Encoder Size
+PROJECTION_FACTOR: 1
+
+# Smoke Test Save Paths
+PROMPT_IDS_PATH: "smoke_test_data/smoke_test_activations_prompt_ids.npy"
+ACTS_DATA_PATH: "smoke_test_data/smoke_test_activations_dataset.pt"
+ENCODER_PATH: "smoke_test_data/smoke_test_learned_encoder.pt"
+BIASES_PATH: "smoke_test_data/smoke_test_learned_biases.pt"
+TOP_K_INFO_PATH: "smoke_test_data/smoke_test_token_info.csv"
+
+# Autoencoder Training
+LAMBDA_L1: 1.0e-4
+LEARNING_RATE: 1.0e-4
+NUM_WORKERS: 0
+
+# Reproducibility
+SEED: 0
+
+# Smoke Test Constants (`acts_collect.py`)
+MAX_NEW_TOKENS: 1
+NUM_RETURN_SEQUENCES: 1
+NUM_SHOT: 6
+NUM_QUESTIONS_EVALED: 10
+
+# Smoke Test Constants (`autoencoder.py`)
+LOG_EVERY_N_STEPS: 5
+EPOCHS: 1
+SYNC_DIST_LOGGING: True
+
+# Smoke Test Constants (`feature_tokens.py`)
+# _Leave out entries_ for None: None values will be interpreted as "None"
+# strings.
+TOP_K: 6
+DIMS_IN_BATCH: 200

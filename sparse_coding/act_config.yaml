@@ -1,0 +1,43 @@
+# Model
+MODEL_DIR: "meta-llama/Llama-2-70b-hf"
+ACTS_LAYER: 13
+
+# Batching
+DIMS_IN_BATCH: 4000
+
+# Large Model Mode
+LARGE_MODEL_MODE: True
+
+# Encoder Size
+PROJECTION_FACTOR: 10
+
+# Save Paths
+PROMPT_IDS_PATH: "data/activations_prompt_ids.npy"
+ACTS_DATA_PATH: "data/activations_dataset.pt"
+ENCODER_PATH: "data/learned_encoder.pt"
+BIASES_PATH: "data/learned_biases.pt"
+TOP_K_INFO_PATH: "data/token_info.csv"
+
+# Autoencoder Training
+LAMBDA_L1: 3.0
+LEARNING_RATE: 1.0e-3
+NUM_WORKERS: 16
+
+# Reproducibility
+SEED: 0
+
+# Stable Dev Constants (`acts_collect.py`)
+MAX_NEW_TOKENS: 1
+NUM_RETURN_SEQUENCES: 1
+NUM_SHOT: 6
+NUM_QUESTIONS_EVALED: 817
+
+# Stable Dev Constants (`autoencoder.py`)
+LOG_EVERY_N_STEPS: 5
+EPOCHS: 150
+SYNC_DIST_LOGGING: True
+
+# Stable Dev Constants (`feature_tokens.py`)
+# _Leave out entries_ for None: None values will be interpreted as "None"
+# strings.
+TOP_K: 6

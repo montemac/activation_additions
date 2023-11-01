@@ -131,6 +131,10 @@ dmypy.json
 # Code profiling
 *prof
 
+# lightning logs
+/sparse_coding/logs/
+/tests/logs/
+
 # Misc
 *.pkl
 .vscode
@@ -150,5 +154,6 @@ scripts/KL_bug.py
 wandb_restored_files
 *.pt
 *.ckpt
-*..npy
+*.npy
 act_access.yaml
+tests/smoke_test_data/smoke_test_token_info.csv
